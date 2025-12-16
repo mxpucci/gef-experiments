@@ -47,31 +47,49 @@ jobs:
           git clone --depth 1 https://github.com/quixdb/squash.git /tmp/squash
           cd /tmp/squash
           
-          # Try to initialize submodules, but don't fail if some are inaccessible
-          # Only init the plugins we actually need (lz4, zstd, bzip2, zlib)
-          git submodule update --init --recursive plugins/lz4 plugins/zstd plugins/bz2 plugins/zlib || true
+          # Try to initialize only the submodules that exist and work
+          git submodule update --init plugins/lz4/lz4 || true
+          git submodule update --init plugins/zstd/zstd || true
+          git submodule update --init plugins/zlib/zlib || true
           
-          # If that fails, try without recursive and skip broken ones
-          git submodule update --init plugins/lz4 || true
-          git submodule update --init plugins/zstd || true
-          git submodule update --init plugins/bz2 || true
-          git submodule update --init plugins/zlib || true
-          
-          # Build with meson - disable plugins that failed to clone
-          meson setup build --prefix=/usr/local --buildtype=release \
-            -Dplugins=lz4,zstd,bz2,zlib || \
-          meson setup build --prefix=/usr/local --buildtype=release
-          
-          cd build
-          ninja || exit 1
-          sudo ninja install
+          # Check if meson.build exists
+          if [ -f "meson.build" ]; then
+            echo "Found meson.build in root"
+            meson setup builddir --prefix=/usr/local --buildtype=release
+            cd builddir
+            ninja
+            sudo ninja install
+          elif [ -f "CMakeLists.txt" ]; then
+            echo "Found CMakeLists.txt, using cmake"
+            mkdir -p builddir && cd builddir
+            cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
+            make -j$(nproc)
+            sudo make install
+          else
+            echo "No build system found, trying autotools"
+            if [ -f "configure.ac" ]; then
+              autoreconf -i
+              ./configure --prefix=/usr/local
+              make -j$(nproc)
+              sudo make install
+            else
+              echo "ERROR: No recognized build system"
+              exit 1
+            fi
+          fi
           
           # Update library cache
           sudo ldconfig
           
           # Verify installation
-          echo "Squash installed to:"
-          ls -la /usr/local/include/squash-0.7/ && echo "SQUASH_INSTALLED=true" >> $GITHUB_OUTPUT || echo "SQUASH_INSTALLED=false" >> $GITHUB_OUTPUT
+          echo "Checking Squash installation:"
+          if [ -d "/usr/local/include/squash-0.7" ]; then
+            ls -la /usr/local/include/squash-0.7/
+            echo "SQUASH_INSTALLED=true" >> $GITHUB_OUTPUT
+          else
+            echo "Squash headers not found"
+            echo "SQUASH_INSTALLED=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Configure CMake
         run: |
