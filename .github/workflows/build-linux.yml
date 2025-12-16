@@ -54,8 +54,9 @@ jobs:
           # Core dependencies + small helpers for utils/tests to prevent CMake errors
           git submodule update --init squash/hedley || true
           git submodule update --init squash/tinycthread || true
-          git submodule update --init squash/parg || true
-          git submodule update --init squash/munit || true
+          # NOTE: these submodules live under utils/ and tests/ (not squash/)
+          git submodule update --init utils/parg || true
+          git submodule update --init tests/munit || true
           
           # Plugins we need for the benchmark - use system libraries instead
           # lz4, zstd, brotli, snappy, lzma/xz, zlib, bzip2 - all use system libs
