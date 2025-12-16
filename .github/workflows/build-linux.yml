@@ -56,8 +56,11 @@ jobs:
           git submodule update --init squash/tinycthread || true
           
           # Disable utils (CLI) and tests in CMakeLists.txt to avoid needing parg/munit submodules
-          sed -i 's/^add_subdirectory (utils)/# add_subdirectory (utils)/' CMakeLists.txt
-          sed -i 's/^add_subdirectory (tests)/# add_subdirectory (tests)/' CMakeLists.txt
+          sed -i 's/^[[:space:]]*add_subdirectory (utils)/# add_subdirectory (utils)/' CMakeLists.txt
+          sed -i 's/^[[:space:]]*add_subdirectory (tests)/# add_subdirectory (tests)/' CMakeLists.txt
+          
+          # Debug: verify the change
+          grep "add_subdirectory" CMakeLists.txt || true
           
           # Plugins we need for the benchmark - use system libraries instead
           # lz4, zstd, brotli, snappy, lzma/xz, zlib, bzip2 - all use system libs
