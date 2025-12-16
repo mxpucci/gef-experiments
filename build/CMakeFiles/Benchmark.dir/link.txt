@@ -1,0 +1,1 @@
+/opt/homebrew/bin/g++-14  -mcpu=native -fno-math-errno -O3 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.2.sdk -mmacosx-version-min=13.5 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/Benchmark.dir/benchmark/neats_lossless.cpp.o -o Benchmark   -L/usr/local/lib  -Wl,-rpath,/usr/local/lib -lsquash0.7

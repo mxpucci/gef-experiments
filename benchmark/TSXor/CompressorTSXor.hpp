@@ -8,10 +8,10 @@
 
 template<typename T>
 struct CompressorTSXor {
-    uint countA = 0;
-    uint countB = 0;
-    uint countC = 0;
-    uint countB_bytes = 0;
+    unsigned int countA = 0;
+    unsigned int countB = 0;
+    unsigned int countC = 0;
+    unsigned int countB_bytes = 0;
 
     Window window{};
     std::vector<uint8_t> bytes{};
