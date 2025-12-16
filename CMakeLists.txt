@@ -52,9 +52,32 @@ target_link_libraries(LosslessBenchmark sdsl sux)
 include_directories(/usr/local/include/squash-0.8)
 link_directories(/usr/local/lib)
 if(EXISTS "/usr/local/include/squash-0.8")
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(LZ4 REQUIRED liblz4)
+    pkg_check_modules(ZSTD REQUIRED libzstd)
+    pkg_check_modules(SNAPPY REQUIRED libsnappy)
+    pkg_check_modules(BROTLI REQUIRED libbrotlienc libbrotlidec libbrotlicommon)
+    find_package(ZLIB REQUIRED)
+    find_package(BZip2 REQUIRED)
+    find_package(LibLZMA REQUIRED)
+
     add_executable(LosslessBenchmarkFull benchmark/lossless_benchmark.cpp
             benchmark/NeaTS/NeaTS.hpp
             benchmark/NeaTS/algorithms.hpp)
     target_compile_definitions(LosslessBenchmarkFull PRIVATE USE_SQUASH)
-    target_link_libraries(LosslessBenchmarkFull sdsl squash0.8 sux)
+    
+    # Link squash statically + all its dependencies
+    target_link_libraries(LosslessBenchmarkFull 
+        sdsl 
+        sux
+        squash0.8
+        ${LZ4_LIBRARIES}
+        ${ZSTD_LIBRARIES}
+        ${SNAPPY_LIBRARIES}
+        ${BROTLI_LIBRARIES}
+        ZLIB::ZLIB
+        BZip2::BZip2
+        LibLZMA::LibLZMA
+        dl
+    )
 endif()
