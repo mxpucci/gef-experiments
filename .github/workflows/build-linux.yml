@@ -67,8 +67,8 @@ jobs:
           
           # Force static build for Squash and its plugins by patching CMakeLists.txt
           # (Squash 0.8 defaults to SHARED/MODULE and doesn't fully respect BUILD_SHARED_LIBS=OFF for plugins)
-          find . -name "CMakeLists.txt" -exec sed -i 's/\bSHARED\b/STATIC/g' {} +
-          find . -name "CMakeLists.txt" -exec sed -i 's/\bMODULE\b/STATIC/g' {} +
+          find . -name "CMakeLists.txt" -exec sed -i 's/SHARED/STATIC/g' {} +
+          find . -name "CMakeLists.txt" -exec sed -i 's/MODULE/STATIC/g' {} +
 
           mkdir -p builddir && cd builddir
           
@@ -78,6 +78,7 @@ jobs:
             -DCMAKE_INSTALL_PREFIX=/usr/local \
             -DBUILD_TESTING=OFF \
             -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
             -DFORCE_EXTERNAL_LZ4=ON \
             -DFORCE_EXTERNAL_ZSTD=ON \
             -DFORCE_EXTERNAL_ZLIB=ON \
@@ -129,11 +130,12 @@ jobs:
             echo ""
             echo "Libraries found:"
             ls -la /usr/local/lib/libsquash* 2>/dev/null || true
-            if [ -f "/usr/local/lib/libsquash0.8.a" ]; then
-              echo "Static library found."
+            if [ -f "/usr/local/lib/libsquash0.8.a" ] && [ -f "/usr/local/lib/libsquash0.8-plugin-lz4.a" ]; then
+              echo "Static libraries found."
               echo "SQUASH_INSTALLED=true" >> $GITHUB_OUTPUT
             else
-              echo "Static library NOT found."
+              echo "Static libraries NOT found (checked core and lz4 plugin)."
+              ls -la /usr/local/lib/libsquash*
               echo "SQUASH_INSTALLED=false" >> $GITHUB_OUTPUT
               exit 1
             fi
