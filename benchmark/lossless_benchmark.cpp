@@ -754,10 +754,10 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
         }
         
         size_t uncompressed_size = data_bytes.size();
-        size_t compressed_size = squash_get_max_compressed_size(compressor_name.c_str(), uncompressed_size);
+        size_t compressed_size = squash_codec_get_max_compressed_size(codec, uncompressed_size);
         auto *compressed_data = (uint8_t*)malloc(compressed_size);
         
-        squash_compress_with_options(compressor_name.c_str(), &compressed_size, compressed_data,
+        squash_codec_compress_with_options(codec, &compressed_size, compressed_data,
                                      uncompressed_size, data_bytes.data(), opts);
         
         compressed_blocks[ib] = {compressed_data, compressed_size};
@@ -778,7 +778,7 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
         size_t decompressed_size = bs * sizeof(T) + 1;
         auto *decompressed_bytes = (uint8_t*)malloc(decompressed_size);
         
-        squash_decompress(compressor_name.c_str(), &decompressed_size, decompressed_bytes,
+        squash_codec_decompress_with_options(codec, &decompressed_size, decompressed_bytes,
                           compressed_blocks[ib].second, compressed_blocks[ib].first, opts);
         
         for (size_t i = 0; i < bs; ++i) {
@@ -810,7 +810,7 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
         size_t decompressed_size = bs * sizeof(T) + 1;
         auto *decompressed_bytes = (uint8_t*)malloc(decompressed_size);
         
-        squash_decompress(compressor_name.c_str(), &decompressed_size, decompressed_bytes,
+        squash_codec_decompress_with_options(codec, &decompressed_size, decompressed_bytes,
                           compressed_blocks[ib].second, compressed_blocks[ib].first, nullptr);
         
         T value = 0;
@@ -846,7 +846,7 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
                 size_t bs = std::min(block_size, n - ib * block_size);
                 size_t decompressed_size = bs * sizeof(T) + 1;
                 
-                squash_decompress(compressor_name.c_str(), &decompressed_size,
+                squash_codec_decompress_with_options(codec, &decompressed_size,
                                   decompressed_bytes.data() + byte_offset,
                                   compressed_blocks[ib].second, compressed_blocks[ib].first, nullptr);
                 byte_offset += bs * sizeof(T);
