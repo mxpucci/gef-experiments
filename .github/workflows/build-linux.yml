@@ -22,14 +22,12 @@ jobs:
             cmake \
             git \
             pkg-config \
-            meson \
-            ninja-build \
-            ragel \
             libglib2.0-dev \
             liblz4-dev \
             libzstd-dev \
             libbz2-dev \
-            zlib1g-dev
+            zlib1g-dev \
+            libsnappy-dev
 
       - name: Show CPU info
         run: |
@@ -43,40 +41,54 @@ jobs:
         continue-on-error: true
         id: squash
         run: |
-          # Clone squash library
-          git clone --depth 1 https://github.com/quixdb/squash.git /tmp/squash
+          # Clone squash library with all submodules
+          git clone --recursive --depth 1 https://github.com/quixdb/squash.git /tmp/squash || {
+            # If recursive clone fails, try without and init only what we need
+            git clone --depth 1 https://github.com/quixdb/squash.git /tmp/squash
+            cd /tmp/squash
+            git submodule update --init --recursive plugins/lz4 || true
+            git submodule update --init --recursive plugins/zstd || true
+            git submodule update --init --recursive plugins/zlib || true
+            git submodule update --init --recursive plugins/snappy || true
+          }
+          
           cd /tmp/squash
+          mkdir -p builddir && cd builddir
           
-          # Try to initialize only the submodules that exist and work
-          git submodule update --init plugins/lz4/lz4 || true
-          git submodule update --init plugins/zstd/zstd || true
-          git submodule update --init plugins/zlib/zlib || true
+          # Configure with CMake, disabling problematic plugins
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr/local \
+            -DENABLE_ZLIB_NG=OFF \
+            -DENABLE_FARI=OFF \
+            -DENABLE_CSC=OFF \
+            -DENABLE_DENSITY=OFF \
+            -DENABLE_GIPFELI=OFF \
+            -DENABLE_HEATSHRINK=OFF \
+            -DENABLE_LZHAM=OFF \
+            -DENABLE_LZJB=OFF \
+            -DENABLE_PITHY=OFF \
+            -DENABLE_ZPAQ=OFF \
+            -DENABLE_BROTLI=OFF \
+            -DENABLE_CRUSH=OFF \
+            -DENABLE_DOBOZ=OFF \
+            -DENABLE_FASTLZ=OFF \
+            -DENABLE_LZFSE=OFF \
+            -DENABLE_LZMAT=OFF \
+            -DENABLE_LZO=OFF \
+            -DENABLE_MINIZ=OFF \
+            -DENABLE_QUICKLZ=OFF \
+            -DENABLE_WFLZ=OFF \
+            -DENABLE_YALZ77=OFF \
+            -DENABLE_ZLING=OFF \
+            -DENABLE_MS_COMPRESS=OFF \
+            -DENABLE_NCOMPRESS=OFF \
+            -DBUILD_TESTS=OFF \
+            -DBUILD_SHARED_LIBS=ON \
+            || cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DBUILD_TESTS=OFF
           
-          # Check if meson.build exists
-          if [ -f "meson.build" ]; then
-            echo "Found meson.build in root"
-            meson setup builddir --prefix=/usr/local --buildtype=release
-            cd builddir
-            ninja
-            sudo ninja install
-          elif [ -f "CMakeLists.txt" ]; then
-            echo "Found CMakeLists.txt, using cmake"
-            mkdir -p builddir && cd builddir
-            cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
-            make -j$(nproc)
-            sudo make install
-          else
-            echo "No build system found, trying autotools"
-            if [ -f "configure.ac" ]; then
-              autoreconf -i
-              ./configure --prefix=/usr/local
-              make -j$(nproc)
-              sudo make install
-            else
-              echo "ERROR: No recognized build system"
-              exit 1
-            fi
-          fi
+          make -j$(nproc) || exit 1
+          sudo make install
           
           # Update library cache
           sudo ldconfig
@@ -87,7 +99,9 @@ jobs:
             ls -la /usr/local/include/squash-0.7/
             echo "SQUASH_INSTALLED=true" >> $GITHUB_OUTPUT
           else
-            echo "Squash headers not found"
+            echo "Squash headers not found in /usr/local/include/squash-0.7"
+            # Check other locations
+            find /usr/local -name "squash*" -type f 2>/dev/null | head -20
             echo "SQUASH_INSTALLED=false" >> $GITHUB_OUTPUT
           fi
 
