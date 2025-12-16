@@ -50,24 +50,17 @@ jobs:
           git clone --depth 1 https://github.com/quixdb/squash.git /tmp/squash
           cd /tmp/squash
           
-          # Initialize ONLY the submodules we need (skip broken ones like FastARI)
+          # Initialize ONLY the submodules we need
           # Core dependencies
           git submodule update --init squash/hedley || true
           git submodule update --init squash/tinycthread || true
           
-          # Plugins we need for the benchmark (lz4, zstd, brotli, snappy, xz/lzma)
-          git submodule update --init plugins/lz4/lz4 || true
-          git submodule update --init plugins/zstd/zstd || true
-          git submodule update --init plugins/brotli/brotli || true
-          git submodule update --init plugins/snappy/snappy || true
-          # Note: xz/lzma uses system library, no submodule needed
-          
-          # Also init zlib since it's commonly used
-          git submodule update --init plugins/zlib/zlib || true
+          # Plugins we need for the benchmark - use system libraries instead
+          # lz4, zstd, brotli, snappy, lzma/xz, zlib, bzip2 - all use system libs
           
           mkdir -p builddir && cd builddir
           
-          # Configure with CMake, disabling ALL plugins with missing/broken submodules
+          # Configure with CMake - DISABLE ALL bundled plugins, use only system libraries
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=/usr/local \
@@ -77,30 +70,35 @@ jobs:
             -DFORCE_EXTERNAL_SNAPPY=ON \
             -DFORCE_EXTERNAL_BROTLI=ON \
             -DFORCE_EXTERNAL_LZMA=ON \
-            -DENABLE_ZLIB_NG=OFF \
-            -DENABLE_FARI=OFF \
+            -DFORCE_EXTERNAL_BZIP2=ON \
+            -DENABLE_BRIEFLZ=OFF \
+            -DENABLE_BSC=OFF \
+            -DENABLE_COPY=OFF \
+            -DENABLE_CRUSH=OFF \
             -DENABLE_CSC=OFF \
             -DENABLE_DENSITY=OFF \
+            -DENABLE_DOBOZ=OFF \
+            -DENABLE_FARI=OFF \
+            -DENABLE_FASTLZ=OFF \
             -DENABLE_GIPFELI=OFF \
             -DENABLE_HEATSHRINK=OFF \
+            -DENABLE_LIBDEFLATE=OFF \
+            -DENABLE_LZF=OFF \
+            -DENABLE_LZFSE=OFF \
+            -DENABLE_LZG=OFF \
             -DENABLE_LZHAM=OFF \
             -DENABLE_LZJB=OFF \
-            -DENABLE_PITHY=OFF \
-            -DENABLE_ZPAQ=OFF \
-            -DENABLE_CRUSH=OFF \
-            -DENABLE_DOBOZ=OFF \
-            -DENABLE_FASTLZ=OFF \
-            -DENABLE_LZFSE=OFF \
-            -DENABLE_LZMAT=OFF \
             -DENABLE_LZO=OFF \
             -DENABLE_MINIZ=OFF \
+            -DENABLE_MS_COMPRESS=OFF \
+            -DENABLE_NCOMPRESS=OFF \
+            -DENABLE_PITHY=OFF \
             -DENABLE_QUICKLZ=OFF \
             -DENABLE_WFLZ=OFF \
             -DENABLE_YALZ77=OFF \
+            -DENABLE_ZLIB_NG=OFF \
             -DENABLE_ZLING=OFF \
-            -DENABLE_MS_COMPRESS=OFF \
-            -DENABLE_NCOMPRESS=OFF \
-            -DENABLE_COPY=OFF \
+            -DENABLE_ZPAQ=OFF \
             -DBUILD_TESTS=OFF \
             -DBUILD_SHARED_LIBS=ON
           
