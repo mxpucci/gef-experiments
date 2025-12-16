@@ -65,6 +65,11 @@ jobs:
           # Plugins we need for the benchmark - use system libraries instead
           # lz4, zstd, brotli, snappy, lzma/xz, zlib, bzip2 - all use system libs
           
+          # Force static build for Squash and its plugins by patching CMakeLists.txt
+          # (Squash 0.8 defaults to SHARED/MODULE and doesn't fully respect BUILD_SHARED_LIBS=OFF for plugins)
+          find . -name "CMakeLists.txt" -exec sed -i 's/\bSHARED\b/STATIC/g' {} +
+          find . -name "CMakeLists.txt" -exec sed -i 's/\bMODULE\b/STATIC/g' {} +
+
           mkdir -p builddir && cd builddir
           
           # Configure with CMake - DISABLE ALL bundled plugins, use only system libraries
@@ -124,7 +129,14 @@ jobs:
             echo ""
             echo "Libraries found:"
             ls -la /usr/local/lib/libsquash* 2>/dev/null || true
-            echo "SQUASH_INSTALLED=true" >> $GITHUB_OUTPUT
+            if [ -f "/usr/local/lib/libsquash0.8.a" ]; then
+              echo "Static library found."
+              echo "SQUASH_INSTALLED=true" >> $GITHUB_OUTPUT
+            else
+              echo "Static library NOT found."
+              echo "SQUASH_INSTALLED=false" >> $GITHUB_OUTPUT
+              exit 1
+            fi
           else
             echo "Squash headers not found"
             echo "SQUASH_INSTALLED=false" >> $GITHUB_OUTPUT

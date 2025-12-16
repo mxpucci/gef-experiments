@@ -66,11 +66,21 @@ if(EXISTS "/usr/local/include/squash-0.8")
             benchmark/NeaTS/algorithms.hpp)
     target_compile_definitions(LosslessBenchmarkFull PRIVATE USE_SQUASH)
     
-    # Link squash statically + all its dependencies
+    # Link squash statically + all its dependencies + static plugins
+    # We use -Wl,--whole-archive for plugins to ensure self-registration constructors are included
     target_link_libraries(LosslessBenchmarkFull 
         sdsl 
         sux
         /usr/local/lib/libsquash0.8.a
+        -Wl,--whole-archive
+        /usr/local/lib/libsquash0.8-plugin-lz4.a
+        /usr/local/lib/libsquash0.8-plugin-zstd.a
+        /usr/local/lib/libsquash0.8-plugin-snappy.a
+        /usr/local/lib/libsquash0.8-plugin-brotli.a
+        /usr/local/lib/libsquash0.8-plugin-zlib.a
+        /usr/local/lib/libsquash0.8-plugin-bzip2.a
+        /usr/local/lib/libsquash0.8-plugin-lzma.a
+        -Wl,--no-whole-archive
         ${LZ4_LIBRARIES}
         ${ZSTD_LIBRARIES}
         ${SNAPPY_LIBRARIES}
