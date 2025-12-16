@@ -51,12 +51,13 @@ jobs:
           cd /tmp/squash
           
           # Initialize ONLY the submodules we need
-          # Core dependencies + small helpers for utils/tests to prevent CMake errors
+          # Core dependencies
           git submodule update --init squash/hedley || true
           git submodule update --init squash/tinycthread || true
-          # NOTE: these submodules live under utils/ and tests/ (not squash/)
-          git submodule update --init utils/parg || true
-          git submodule update --init tests/munit || true
+          
+          # Disable utils (CLI) and tests in CMakeLists.txt to avoid needing parg/munit submodules
+          sed -i 's/^add_subdirectory (utils)/# add_subdirectory (utils)/' CMakeLists.txt
+          sed -i 's/^add_subdirectory (tests)/# add_subdirectory (tests)/' CMakeLists.txt
           
           # Plugins we need for the benchmark - use system libraries instead
           # lz4, zstd, brotli, snappy, lzma/xz, zlib, bzip2 - all use system libs
