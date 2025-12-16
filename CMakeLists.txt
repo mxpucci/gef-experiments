@@ -49,12 +49,12 @@ target_link_libraries(LosslessBenchmark sdsl sux)
 
 # Comprehensive lossless compressor benchmark (with squash - optional)
 # Requires squash library to be installed
-include_directories(/usr/local/include/squash-0.7)
+include_directories(/usr/local/include/squash-0.8)
 link_directories(/usr/local/lib)
-if(EXISTS "/usr/local/include/squash-0.7")
+if(EXISTS "/usr/local/include/squash-0.8")
     add_executable(LosslessBenchmarkFull benchmark/lossless_benchmark.cpp
             benchmark/NeaTS/NeaTS.hpp
             benchmark/NeaTS/algorithms.hpp)
     target_compile_definitions(LosslessBenchmarkFull PRIVATE USE_SQUASH)
-    target_link_libraries(LosslessBenchmarkFull sdsl squash0.7 sux)
+    target_link_libraries(LosslessBenchmarkFull sdsl squash0.8 sux)
 endif()

@@ -117,9 +117,9 @@ jobs:
           
           # Verify installation
           echo "=== Checking Squash installation ==="
-          if [ -d "/usr/local/include/squash-0.7" ]; then
+          if [ -d "/usr/local/include/squash-0.8" ]; then
             echo "Headers found:"
-            ls -la /usr/local/include/squash-0.7/
+            ls -la /usr/local/include/squash-0.8/
             echo ""
             echo "Libraries found:"
             ls -la /usr/local/lib/libsquash* 2>/dev/null || ls -la /usr/local/lib/*/libsquash* 2>/dev/null || true
