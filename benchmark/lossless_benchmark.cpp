@@ -35,8 +35,8 @@
 #endif
 
 // Local includes
-#include "../include/NeaTS.hpp"
-#include "../include/algorithms.hpp"
+#include "NeaTS/NeaTS.hpp"
+#include "NeaTS/algorithms.hpp"
 
 // Streaming compressors
 #include "Chimp/CompressorChimp.hpp"

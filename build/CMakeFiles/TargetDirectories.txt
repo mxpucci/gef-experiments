@@ -1,9 +1,0 @@
-/Users/michelangelopucci/NeaTSLatest/build/CMakeFiles/LeaTS.dir
-/Users/michelangelopucci/NeaTSLatest/build/CMakeFiles/DecompressorSIMD.dir
-/Users/michelangelopucci/NeaTSLatest/build/CMakeFiles/SNeaTS.dir
-/Users/michelangelopucci/NeaTSLatest/build/CMakeFiles/NeaTSL.dir
-/Users/michelangelopucci/NeaTSLatest/build/CMakeFiles/Benchmark.dir
-/Users/michelangelopucci/NeaTSLatest/build/CMakeFiles/LosslessBenchmark.dir
-/Users/michelangelopucci/NeaTSLatest/build/CMakeFiles/NeatsPGM.dir
-/Users/michelangelopucci/NeaTSLatest/build/CMakeFiles/edit_cache.dir
-/Users/michelangelopucci/NeaTSLatest/build/CMakeFiles/rebuild_cache.dir

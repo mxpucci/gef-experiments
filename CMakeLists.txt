@@ -21,42 +21,20 @@ target_include_directories(sux INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/lib/sux)
 add_library(sdsl INTERFACE)
 target_include_directories(sdsl INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/lib/sdsl-lite/include)
 
-add_executable(LeaTS LeaTS.cpp)
-target_link_libraries(LeaTS PRIVATE sux sdsl)
-
-add_executable(DecompressorSIMD main_simd.cpp)
-target_link_libraries(DecompressorSIMD PRIVATE sux sdsl)
-
-add_executable(SNeaTS SNeaTS.cpp)
-target_link_libraries(SNeaTS PRIVATE sux sdsl)
-
-add_executable(NeaTSL NeaTSL.cpp)
-target_link_libraries(NeaTSL PRIVATE sux sdsl)
-
-include_directories(/usr/local/include/squash-0.7)
-link_directories(/usr/local/lib)
-
-add_executable(Benchmark benchmark/neats_lossless.cpp
-        include/NeaTSL.hpp
-        include/algorithms.hpp
-        include/coefficients_space.hpp)
-target_link_libraries(Benchmark sdsl squash0.7 sux)
-
 # Comprehensive lossless compressor benchmark (without squash)
 add_executable(LosslessBenchmark benchmark/lossless_benchmark.cpp
-        include/NeaTS.hpp
-        include/algorithms.hpp)
+        benchmark/NeaTS/NeaTS.hpp
+        benchmark/NeaTS/algorithms.hpp)
 target_link_libraries(LosslessBenchmark sdsl sux)
 
 # Comprehensive lossless compressor benchmark (with squash - optional)
 # Requires squash library to be installed
+include_directories(/usr/local/include/squash-0.7)
+link_directories(/usr/local/lib)
 if(EXISTS "/usr/local/include/squash-0.7")
     add_executable(LosslessBenchmarkFull benchmark/lossless_benchmark.cpp
-            include/NeaTS.hpp
-            include/algorithms.hpp)
+            benchmark/NeaTS/NeaTS.hpp
+            benchmark/NeaTS/algorithms.hpp)
     target_compile_definitions(LosslessBenchmarkFull PRIVATE USE_SQUASH)
     target_link_libraries(LosslessBenchmarkFull sdsl squash0.7 sux)
 endif()
-
-add_executable(NeatsPGM include/simple.cpp)
-target_link_libraries(NeatsPGM sdsl sux)

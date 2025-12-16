@@ -1,0 +1,121 @@
+name: build-linux
+
+# Trigger manually from the GitHub Actions tab, or on push/PR to main
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            git \
+            pkg-config \
+            meson \
+            ninja-build \
+            ragel \
+            libglib2.0-dev
+
+      - name: Build and install Squash compression library
+        run: |
+          # Clone squash library
+          git clone --depth 1 https://github.com/quixdb/squash.git /tmp/squash
+          cd /tmp/squash
+          
+          # Initialize submodules for codec plugins
+          git submodule update --init --recursive
+          
+          # Build with meson
+          meson setup build --prefix=/usr/local --buildtype=release
+          cd build
+          ninja
+          sudo ninja install
+          
+          # Update library cache
+          sudo ldconfig
+          
+          # Verify installation
+          echo "Squash installed to:"
+          ls -la /usr/local/include/squash-0.7/ || echo "Headers not found in expected location"
+          ls -la /usr/local/lib/libsquash* || echo "Libraries not found"
+
+      - name: Configure CMake
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_STANDARD=23
+
+      - name: Build LosslessBenchmark (without Squash)
+        run: |
+          cd build
+          cmake --build . --target LosslessBenchmark -- -j$(nproc)
+
+      - name: Build LosslessBenchmarkFull (with Squash)
+        run: |
+          cd build
+          cmake --build . --target LosslessBenchmarkFull -- -j$(nproc) || echo "LosslessBenchmarkFull not available (Squash not detected by CMake)"
+
+      - name: Verify executables
+        run: |
+          echo "Built executables:"
+          ls -lh build/LosslessBenchmark || echo "LosslessBenchmark not found"
+          ls -lh build/LosslessBenchmarkFull 2>/dev/null || echo "LosslessBenchmarkFull not built (Squash support may not be available)"
+          
+          # Check if at least the basic benchmark was built
+          if [ -x "build/LosslessBenchmark" ]; then
+            echo "✓ LosslessBenchmark built successfully"
+          else
+            echo "❌ LosslessBenchmark build failed"
+            exit 1
+          fi
+
+      - name: Upload benchmark executables
+        uses: actions/upload-artifact@v4
+        with:
+          name: neats-linux-benchmarks
+          path: |
+            build/LosslessBenchmark
+            build/LosslessBenchmarkFull
+          if-no-files-found: warn
+
+  # Alternative build without Squash (guaranteed to work)
+  build-minimal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install minimal build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake
+
+      - name: Build LosslessBenchmark
+        run: |
+          mkdir -p build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=23
+          cmake --build . --target LosslessBenchmark -- -j$(nproc)
+
+      - name: Verify executable
+        run: |
+          ls -lh build/LosslessBenchmark
+          echo "✓ LosslessBenchmark built successfully"
+
+      - name: Upload benchmark executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: neats-linux-benchmark-minimal
+          path: build/LosslessBenchmark
+
