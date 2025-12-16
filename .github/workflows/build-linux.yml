@@ -51,9 +51,11 @@ jobs:
           cd /tmp/squash
           
           # Initialize ONLY the submodules we need
-          # Core dependencies
+          # Core dependencies + small helpers for utils/tests to prevent CMake errors
           git submodule update --init squash/hedley || true
           git submodule update --init squash/tinycthread || true
+          git submodule update --init squash/parg || true
+          git submodule update --init squash/munit || true
           
           # Plugins we need for the benchmark - use system libraries instead
           # lz4, zstd, brotli, snappy, lzma/xz, zlib, bzip2 - all use system libs
@@ -64,6 +66,7 @@ jobs:
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=/usr/local \
+            -DBUILD_TESTING=OFF \
             -DFORCE_EXTERNAL_LZ4=ON \
             -DFORCE_EXTERNAL_ZSTD=ON \
             -DFORCE_EXTERNAL_ZLIB=ON \
@@ -99,7 +102,6 @@ jobs:
             -DENABLE_ZLIB_NG=OFF \
             -DENABLE_ZLING=OFF \
             -DENABLE_ZPAQ=OFF \
-            -DBUILD_TESTS=OFF \
             -DBUILD_SHARED_LIBS=ON
           
           make -j$(nproc)
