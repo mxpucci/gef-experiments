@@ -70,7 +70,7 @@ if(EXISTS "/usr/local/include/squash-0.8")
     target_link_libraries(LosslessBenchmarkFull 
         sdsl 
         sux
-        squash0.8
+        /usr/local/lib/libsquash0.8.a
         ${LZ4_LIBRARIES}
         ${ZSTD_LIBRARIES}
         ${SNAPPY_LIBRARIES}
