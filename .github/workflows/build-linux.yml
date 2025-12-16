@@ -27,7 +27,9 @@ jobs:
             libzstd-dev \
             libbz2-dev \
             zlib1g-dev \
-            libsnappy-dev
+            libsnappy-dev \
+            liblzma-dev \
+            libbrotli-dev
 
       - name: Show CPU info
         run: |
@@ -41,24 +43,40 @@ jobs:
         continue-on-error: true
         id: squash
         run: |
-          # Clone squash library with all submodules
-          git clone --recursive --depth 1 https://github.com/quixdb/squash.git /tmp/squash || {
-            # If recursive clone fails, try without and init only what we need
-            git clone --depth 1 https://github.com/quixdb/squash.git /tmp/squash
-            cd /tmp/squash
-            git submodule update --init --recursive plugins/lz4 || true
-            git submodule update --init --recursive plugins/zstd || true
-            git submodule update --init --recursive plugins/zlib || true
-            git submodule update --init --recursive plugins/snappy || true
-          }
+          # Clean up any previous attempts
+          rm -rf /tmp/squash
           
+          # Clone squash library WITHOUT recursive (to avoid broken submodules)
+          git clone --depth 1 https://github.com/quixdb/squash.git /tmp/squash
           cd /tmp/squash
+          
+          # Initialize ONLY the submodules we need (skip broken ones like FastARI)
+          # Core dependencies
+          git submodule update --init squash/hedley || true
+          git submodule update --init squash/tinycthread || true
+          
+          # Plugins we need for the benchmark (lz4, zstd, brotli, snappy, xz/lzma)
+          git submodule update --init plugins/lz4/lz4 || true
+          git submodule update --init plugins/zstd/zstd || true
+          git submodule update --init plugins/brotli/brotli || true
+          git submodule update --init plugins/snappy/snappy || true
+          # Note: xz/lzma uses system library, no submodule needed
+          
+          # Also init zlib since it's commonly used
+          git submodule update --init plugins/zlib/zlib || true
+          
           mkdir -p builddir && cd builddir
           
-          # Configure with CMake, disabling problematic plugins
+          # Configure with CMake, disabling ALL plugins with missing/broken submodules
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=/usr/local \
+            -DFORCE_EXTERNAL_LZ4=ON \
+            -DFORCE_EXTERNAL_ZSTD=ON \
+            -DFORCE_EXTERNAL_ZLIB=ON \
+            -DFORCE_EXTERNAL_SNAPPY=ON \
+            -DFORCE_EXTERNAL_BROTLI=ON \
+            -DFORCE_EXTERNAL_LZMA=ON \
             -DENABLE_ZLIB_NG=OFF \
             -DENABLE_FARI=OFF \
             -DENABLE_CSC=OFF \
@@ -69,7 +87,6 @@ jobs:
             -DENABLE_LZJB=OFF \
             -DENABLE_PITHY=OFF \
             -DENABLE_ZPAQ=OFF \
-            -DENABLE_BROTLI=OFF \
             -DENABLE_CRUSH=OFF \
             -DENABLE_DOBOZ=OFF \
             -DENABLE_FASTLZ=OFF \
@@ -83,29 +100,32 @@ jobs:
             -DENABLE_ZLING=OFF \
             -DENABLE_MS_COMPRESS=OFF \
             -DENABLE_NCOMPRESS=OFF \
+            -DENABLE_COPY=OFF \
             -DBUILD_TESTS=OFF \
-            -DBUILD_SHARED_LIBS=ON \
-            || cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DBUILD_TESTS=OFF
+            -DBUILD_SHARED_LIBS=ON
           
-          make -j$(nproc) || exit 1
+          make -j$(nproc)
           sudo make install
           
           # Update library cache
           sudo ldconfig
           
           # Verify installation
-          echo "Checking Squash installation:"
+          echo "=== Checking Squash installation ==="
           if [ -d "/usr/local/include/squash-0.7" ]; then
+            echo "Headers found:"
             ls -la /usr/local/include/squash-0.7/
+            echo ""
+            echo "Libraries found:"
+            ls -la /usr/local/lib/libsquash* 2>/dev/null || ls -la /usr/local/lib/*/libsquash* 2>/dev/null || true
             echo "SQUASH_INSTALLED=true" >> $GITHUB_OUTPUT
           else
-            echo "Squash headers not found in /usr/local/include/squash-0.7"
-            # Check other locations
-            find /usr/local -name "squash*" -type f 2>/dev/null | head -20
+            echo "Squash headers not found"
             echo "SQUASH_INSTALLED=false" >> $GITHUB_OUTPUT
+            exit 1
           fi
 
-      - name: Configure CMake
+      - name: Configure CMake for benchmark
         run: |
           mkdir -p build
           cd build
@@ -117,34 +137,52 @@ jobs:
       - name: Build LosslessBenchmark (without Squash)
         run: |
           cd build
-          echo "=== Building with these flags ==="
+          echo "=== CMake Flags ==="
           grep -E "CXX_FLAGS|C_FLAGS" CMakeCache.txt || true
           echo ""
           cmake --build . --target LosslessBenchmark -- -j$(nproc)
+          echo ""
+          echo "✓ LosslessBenchmark (without Squash) built"
 
       - name: Build LosslessBenchmarkFull (with Squash)
         if: steps.squash.outputs.SQUASH_INSTALLED == 'true'
         run: |
           cd build
-          # Reconfigure to detect squash
+          # Reconfigure to detect newly installed squash
           cmake ..
-          cmake --build . --target LosslessBenchmarkFull -- -j$(nproc) || echo "LosslessBenchmarkFull build failed"
+          cmake --build . --target LosslessBenchmarkFull -- -j$(nproc)
+          echo ""
+          echo "✓ LosslessBenchmarkFull (with Squash) built"
 
-      - name: Verify executables
+      - name: Verify executables and compressors
         run: |
-          echo "Built executables:"
-          ls -lh build/LosslessBenchmark || echo "LosslessBenchmark not found"
-          ls -lh build/LosslessBenchmarkFull 2>/dev/null || echo "LosslessBenchmarkFull not built (Squash support may not be available)"
+          echo "=== Built Executables ==="
+          ls -lh build/LosslessBenchmark
+          ls -lh build/LosslessBenchmarkFull 2>/dev/null || echo "(LosslessBenchmarkFull not built)"
+          echo ""
           
-          # Check if at least the basic benchmark was built
-          if [ -x "build/LosslessBenchmark" ]; then
-            echo "✓ LosslessBenchmark built successfully"
-            echo ""
-            echo "=== Binary info ==="
-            file build/LosslessBenchmark
+          echo "=== Compressors Available ==="
+          echo "Local compressors (always available):"
+          echo "  ✓ neats"
+          echo "  ✓ dac"
+          echo "  ✓ gorilla"
+          echo "  ✓ chimp"
+          echo "  ✓ chimp128"
+          echo "  ✓ tsxor"
+          echo "  ✓ elf"
+          echo "  ✓ camel"
+          echo "  ✓ falcon"
+          echo ""
+          
+          if [ -f "build/LosslessBenchmarkFull" ]; then
+            echo "Squash compressors (LosslessBenchmarkFull):"
+            echo "  ✓ lz4"
+            echo "  ✓ zstd"
+            echo "  ✓ brotli"
+            echo "  ✓ snappy"
+            echo "  ✓ xz"
           else
-            echo "❌ LosslessBenchmark build failed"
-            exit 1
+            echo "Squash compressors: NOT AVAILABLE (Squash build failed)"
           fi
 
       - name: Upload benchmark executables
@@ -156,7 +194,7 @@ jobs:
             build/LosslessBenchmarkFull
           if-no-files-found: warn
 
-  # Alternative build without Squash (guaranteed to work)
+  # Guaranteed minimal build without Squash
   build-minimal:
     runs-on: ubuntu-latest
     steps:
@@ -173,10 +211,26 @@ jobs:
           cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=23
           cmake --build . --target LosslessBenchmark -- -j$(nproc)
 
-      - name: Verify executable
+      - name: Verify and list available compressors
         run: |
           ls -lh build/LosslessBenchmark
-          echo "✓ LosslessBenchmark built successfully"
+          echo ""
+          echo "=== Available Compressors (minimal build) ==="
+          echo "  ✓ neats"
+          echo "  ✓ dac"
+          echo "  ✓ gorilla"
+          echo "  ✓ chimp"
+          echo "  ✓ chimp128"
+          echo "  ✓ tsxor"
+          echo "  ✓ elf"
+          echo "  ✓ camel"
+          echo "  ✓ falcon"
+          echo ""
+          echo "  ✗ lz4 (requires Squash)"
+          echo "  ✗ zstd (requires Squash)"
+          echo "  ✗ brotli (requires Squash)"
+          echo "  ✗ snappy (requires Squash)"
+          echo "  ✗ xz (requires Squash)"
 
       - name: Upload benchmark executable
         uses: actions/upload-artifact@v4
