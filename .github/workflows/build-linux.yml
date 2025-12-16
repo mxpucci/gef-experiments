@@ -65,20 +65,27 @@ jobs:
           # Plugins we need for the benchmark - use system libraries instead
           # lz4, zstd, brotli, snappy, lzma/xz, zlib, bzip2 - all use system libs
           
-          # Force static build for Squash and its plugins by patching CMakeLists.txt
-          # (Squash 0.8 defaults to SHARED/MODULE and doesn't fully respect BUILD_SHARED_LIBS=OFF for plugins)
-          find . -name "CMakeLists.txt" -exec sed -i 's/SHARED/STATIC/g' {} +
-          find . -name "CMakeLists.txt" -exec sed -i 's/MODULE/STATIC/g' {} +
+          # Force static build for Squash and its plugins by patching CMakeLists.txt and *.cmake
+          # (Squash 0.8 defaults to SHARED/MODULE. We must patch macros too.)
+          find . \( -name "CMakeLists.txt" -o -name "*.cmake" \) -exec sed -i 's/\bSHARED\b/STATIC/g' {} +
+          find . \( -name "CMakeLists.txt" -o -name "*.cmake" \) -exec sed -i 's/\bMODULE\b/STATIC/g' {} +
+          
+          # Debug: check if patch applied to a plugin
+          echo "=== Debug: Checking lz4 CMakeLists.txt after patch ==="
+          cat plugins/lz4/CMakeLists.txt || true
+          echo "======================================================"
 
           mkdir -p builddir && cd builddir
           
           # Configure with CMake - DISABLE ALL bundled plugins, use only system libraries
+          # Pass -fPIC via env vars to ensure it applies to static libs too
+          export CFLAGS="-fPIC"
+          export CXXFLAGS="-fPIC"
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=/usr/local \
             -DBUILD_TESTING=OFF \
             -DBUILD_SHARED_LIBS=OFF \
-            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
             -DFORCE_EXTERNAL_LZ4=ON \
             -DFORCE_EXTERNAL_ZSTD=ON \
             -DFORCE_EXTERNAL_ZLIB=ON \
