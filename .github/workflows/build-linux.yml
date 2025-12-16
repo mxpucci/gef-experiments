@@ -25,21 +25,45 @@ jobs:
             meson \
             ninja-build \
             ragel \
-            libglib2.0-dev
+            libglib2.0-dev \
+            liblz4-dev \
+            libzstd-dev \
+            libbz2-dev \
+            zlib1g-dev
+
+      - name: Show CPU info
+        run: |
+          echo "=== CPU Information ==="
+          lscpu | grep -E "Model name|Architecture|CPU\(s\)|Flags"
+          echo ""
+          echo "=== Compiler Version ==="
+          g++ --version
 
       - name: Build and install Squash compression library
+        continue-on-error: true
+        id: squash
         run: |
           # Clone squash library
           git clone --depth 1 https://github.com/quixdb/squash.git /tmp/squash
           cd /tmp/squash
           
-          # Initialize submodules for codec plugins
-          git submodule update --init --recursive
+          # Try to initialize submodules, but don't fail if some are inaccessible
+          # Only init the plugins we actually need (lz4, zstd, bzip2, zlib)
+          git submodule update --init --recursive plugins/lz4 plugins/zstd plugins/bz2 plugins/zlib || true
           
-          # Build with meson
+          # If that fails, try without recursive and skip broken ones
+          git submodule update --init plugins/lz4 || true
+          git submodule update --init plugins/zstd || true
+          git submodule update --init plugins/bz2 || true
+          git submodule update --init plugins/zlib || true
+          
+          # Build with meson - disable plugins that failed to clone
+          meson setup build --prefix=/usr/local --buildtype=release \
+            -Dplugins=lz4,zstd,bz2,zlib || \
           meson setup build --prefix=/usr/local --buildtype=release
+          
           cd build
-          ninja
+          ninja || exit 1
           sudo ninja install
           
           # Update library cache
@@ -47,8 +71,7 @@ jobs:
           
           # Verify installation
           echo "Squash installed to:"
-          ls -la /usr/local/include/squash-0.7/ || echo "Headers not found in expected location"
-          ls -la /usr/local/lib/libsquash* || echo "Libraries not found"
+          ls -la /usr/local/include/squash-0.7/ && echo "SQUASH_INSTALLED=true" >> $GITHUB_OUTPUT || echo "SQUASH_INSTALLED=false" >> $GITHUB_OUTPUT
 
       - name: Configure CMake
         run: |
@@ -56,17 +79,24 @@ jobs:
           cd build
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_CXX_STANDARD=23
+            -DCMAKE_CXX_STANDARD=23 \
+            -DCMAKE_VERBOSE_MAKEFILE=ON
 
       - name: Build LosslessBenchmark (without Squash)
         run: |
           cd build
+          echo "=== Building with these flags ==="
+          grep -E "CXX_FLAGS|C_FLAGS" CMakeCache.txt || true
+          echo ""
           cmake --build . --target LosslessBenchmark -- -j$(nproc)
 
       - name: Build LosslessBenchmarkFull (with Squash)
+        if: steps.squash.outputs.SQUASH_INSTALLED == 'true'
         run: |
           cd build
-          cmake --build . --target LosslessBenchmarkFull -- -j$(nproc) || echo "LosslessBenchmarkFull not available (Squash not detected by CMake)"
+          # Reconfigure to detect squash
+          cmake ..
+          cmake --build . --target LosslessBenchmarkFull -- -j$(nproc) || echo "LosslessBenchmarkFull build failed"
 
       - name: Verify executables
         run: |
@@ -77,6 +107,9 @@ jobs:
           # Check if at least the basic benchmark was built
           if [ -x "build/LosslessBenchmark" ]; then
             echo "✓ LosslessBenchmark built successfully"
+            echo ""
+            echo "=== Binary info ==="
+            file build/LosslessBenchmark
           else
             echo "❌ LosslessBenchmark build failed"
             exit 1
@@ -118,4 +151,3 @@ jobs:
         with:
           name: neats-linux-benchmark-minimal
           path: build/LosslessBenchmark
-

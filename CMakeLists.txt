@@ -4,15 +4,35 @@ project(NeaTS)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
 
+# Build type - default to Release for maximum optimization
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+# Common optimization flags for both architectures
+set(COMMON_OPT_FLAGS "-O3 -DNDEBUG -fno-math-errno -funroll-loops -ftree-vectorize")
+
 # Detect architecture and set appropriate flags
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
-    # Apple Silicon / ARM64 - use mcpu instead of march for GCC
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=native -fno-math-errno -O3")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -D_FILE_OFFSET_BITS=64 -O3 -funroll-loops -mcpu=native")
+    # Apple Silicon / ARM64
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=native ${COMMON_OPT_FLAGS}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=native ${COMMON_OPT_FLAGS} -Wall -D_FILE_OFFSET_BITS=64")
 else()
-    # x86_64
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -mtune=native -mfpmath=sse -mavx512f -fno-math-errno -ldl")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -D_FILE_OFFSET_BITS=64 -m64 -O3 -funroll-loops -lm -lrt -ldl")
+    # x86_64 - enable AVX-512 and all SIMD extensions available on native CPU
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -mtune=native ${COMMON_OPT_FLAGS} -mfpmath=sse")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native -mtune=native ${COMMON_OPT_FLAGS} -mfpmath=sse -Wall -D_FILE_OFFSET_BITS=64 -m64")
+endif()
+
+# Link-time optimization for Release builds (significant performance improvement)
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
+    if(IPO_SUPPORTED)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        message(STATUS "LTO enabled")
+    else()
+        message(STATUS "LTO not supported: ${IPO_ERROR}")
+    endif()
 endif()
 
 add_library(sux INTERFACE)
