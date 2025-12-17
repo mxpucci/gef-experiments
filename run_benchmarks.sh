@@ -17,9 +17,15 @@ if [ -f "./build/LosslessBenchmarkFull" ]; then
     # Setup library path for bundled libraries
     # Assuming 'build/lib' contains the libraries relative to the script location
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    if [ -d "$SCRIPT_DIR/build/lib" ]; then
-        echo "Adding bundled libraries to LD_LIBRARY_PATH: $SCRIPT_DIR/build/lib"
-        export LD_LIBRARY_PATH="$SCRIPT_DIR/build/lib:$LD_LIBRARY_PATH"
+    LIB_DIR="$SCRIPT_DIR/build/lib"
+    
+    if [ -d "$LIB_DIR" ]; then
+        echo "Using bundled Squash libraries from: $LIB_DIR"
+        export LD_LIBRARY_PATH="$LIB_DIR:$LD_LIBRARY_PATH"
+    else
+        echo "WARNING: Bundled 'lib' directory not found at $LIB_DIR"
+        echo "If Squash is not installed system-wide, the benchmark will fail."
+        echo "Please ensure you copied the 'build/lib' directory along with the executable."
     fi
 elif [ -f "./build/LosslessBenchmark" ]; then
     BENCH_EXE="./build/LosslessBenchmark"
