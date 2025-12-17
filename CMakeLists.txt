@@ -73,13 +73,13 @@ if(EXISTS "/usr/local/include/squash-0.8")
         sux
         /usr/local/lib/libsquash0.8.a
         -Wl,--whole-archive
-        /usr/local/lib/libsquash0.8-plugin-lz4.a
-        /usr/local/lib/libsquash0.8-plugin-zstd.a
-        /usr/local/lib/libsquash0.8-plugin-snappy.a
-        /usr/local/lib/libsquash0.8-plugin-brotli.a
-        /usr/local/lib/libsquash0.8-plugin-zlib.a
-        /usr/local/lib/libsquash0.8-plugin-bzip2.a
-        /usr/local/lib/libsquash0.8-plugin-lzma.a
+        /usr/local/lib/squash/0.8/plugins/lz4/libsquash0.8-plugin-lz4.a
+        /usr/local/lib/squash/0.8/plugins/zstd/libsquash0.8-plugin-zstd.a
+        /usr/local/lib/squash/0.8/plugins/snappy/libsquash0.8-plugin-snappy.a
+        /usr/local/lib/squash/0.8/plugins/brotli/libsquash0.8-plugin-brotli.a
+        /usr/local/lib/squash/0.8/plugins/zlib/libsquash0.8-plugin-zlib.a
+        /usr/local/lib/squash/0.8/plugins/bzip2/libsquash0.8-plugin-bzip2.a
+        /usr/local/lib/squash/0.8/plugins/lzma/libsquash0.8-plugin-lzma.a
         -Wl,--no-whole-archive
         ${LZ4_LIBRARIES}
         ${ZSTD_LIBRARIES}

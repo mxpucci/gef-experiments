@@ -137,12 +137,12 @@ jobs:
             echo ""
             echo "Libraries found:"
             ls -la /usr/local/lib/libsquash* 2>/dev/null || true
-            if [ -f "/usr/local/lib/libsquash0.8.a" ] && [ -f "/usr/local/lib/libsquash0.8-plugin-lz4.a" ]; then
+            if [ -f "/usr/local/lib/libsquash0.8.a" ] && [ -f "/usr/local/lib/squash/0.8/plugins/lz4/libsquash0.8-plugin-lz4.a" ]; then
               echo "Static libraries found."
               echo "SQUASH_INSTALLED=true" >> $GITHUB_OUTPUT
             else
               echo "Static libraries NOT found (checked core and lz4 plugin)."
-              ls -la /usr/local/lib/libsquash*
+              ls -laR /usr/local/lib/squash/ || true
               echo "SQUASH_INSTALLED=false" >> $GITHUB_OUTPUT
               exit 1
             fi
