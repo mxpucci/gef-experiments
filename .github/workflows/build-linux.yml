@@ -125,10 +125,10 @@ jobs:
             -DBUILD_SHARED_LIBS=ON
           
           make -j$(nproc)
-          sudo make install
+          make install
           
           # Update library cache
-          sudo ldconfig
+          ldconfig
           
           # Verify installation
           echo "=== Checking Squash installation ==="
