@@ -13,6 +13,14 @@ OUTPUT_DIR="benchmark_results"
 if [ -f "./build/LosslessBenchmarkFull" ]; then
     BENCH_EXE="./build/LosslessBenchmarkFull"
     echo "Using: LosslessBenchmarkFull (with Squash support)"
+    
+    # Setup library path for bundled libraries
+    # Assuming 'build/lib' contains the libraries relative to the script location
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [ -d "$SCRIPT_DIR/build/lib" ]; then
+        echo "Adding bundled libraries to LD_LIBRARY_PATH: $SCRIPT_DIR/build/lib"
+        export LD_LIBRARY_PATH="$SCRIPT_DIR/build/lib:$LD_LIBRARY_PATH"
+    fi
 elif [ -f "./build/LosslessBenchmark" ]; then
     BENCH_EXE="./build/LosslessBenchmark"
     echo "Using: LosslessBenchmark (Minimal)"
