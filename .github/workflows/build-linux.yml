@@ -216,8 +216,10 @@ jobs:
         with:
           name: neats-linux-benchmarks
           path: |
+            run_benchmarks.sh
             build/LosslessBenchmark
             build/LosslessBenchmarkFull
+            build/lib
           if-no-files-found: warn
 
   # Guaranteed minimal build without Squash
