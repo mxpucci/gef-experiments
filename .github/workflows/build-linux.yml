@@ -29,7 +29,18 @@ jobs:
           # Install GCC 13
           add-apt-repository -y ppa:ubuntu-toolchain-r/test
           apt-get update
-          apt-get install -y build-essential pkg-config libglib2.0-dev gcc-13 g++-13
+          apt-get install -y \
+            build-essential \
+            pkg-config \
+            libglib2.0-dev \
+            gcc-13 g++-13 \
+            liblz4-dev \
+            libzstd-dev \
+            libbz2-dev \
+            zlib1g-dev \
+            libsnappy-dev \
+            liblzma-dev \
+            libbrotli-dev
 
       - uses: actions/checkout@v4
 
