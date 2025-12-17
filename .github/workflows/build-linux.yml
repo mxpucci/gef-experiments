@@ -14,8 +14,8 @@ jobs:
     container: ubuntu:20.04
     env:
       DEBIAN_FRONTEND: noninteractive
-      CC: gcc-11
-      CXX: g++-11
+      CC: gcc-13
+      CXX: g++-13
     steps:
       - name: Install system dependencies
         run: |
@@ -26,10 +26,10 @@ jobs:
           pip3 install cmake
           ln -sf /usr/local/bin/cmake /usr/bin/cmake
           
-          # Install GCC 11
+          # Install GCC 13
           add-apt-repository -y ppa:ubuntu-toolchain-r/test
           apt-get update
-          apt-get install -y build-essential pkg-config libglib2.0-dev gcc-11 g++-11
+          apt-get install -y build-essential pkg-config libglib2.0-dev gcc-13 g++-13
 
       - uses: actions/checkout@v4
 
