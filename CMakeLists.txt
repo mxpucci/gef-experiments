@@ -23,6 +23,11 @@ else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native -mtune=native ${COMMON_OPT_FLAGS} -mfpmath=sse -Wall -D_FILE_OFFSET_BITS=64 -m64")
 endif()
 
+# Statically link standard libraries for Linux portability
+if(UNIX AND NOT APPLE)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
+endif()
+
 # Link-time optimization for Release builds (significant performance improvement)
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     include(CheckIPOSupported)
