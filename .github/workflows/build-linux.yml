@@ -65,27 +65,14 @@ jobs:
           # Plugins we need for the benchmark - use system libraries instead
           # lz4, zstd, brotli, snappy, lzma/xz, zlib, bzip2 - all use system libs
           
-          # Force static build for Squash and its plugins by patching CMakeLists.txt and *.cmake
-          # (Squash 0.8 defaults to SHARED/MODULE. We must patch macros too.)
-          find . \( -name "CMakeLists.txt" -o -name "*.cmake" \) -exec sed -i 's/\bSHARED\b/STATIC/g' {} +
-          find . \( -name "CMakeLists.txt" -o -name "*.cmake" \) -exec sed -i 's/\bMODULE\b/STATIC/g' {} +
-          
-          # Debug: check if patch applied to a plugin
-          echo "=== Debug: Checking lz4 CMakeLists.txt after patch ==="
-          cat plugins/lz4/CMakeLists.txt || true
-          echo "======================================================"
-
           mkdir -p builddir && cd builddir
           
           # Configure with CMake - DISABLE ALL bundled plugins, use only system libraries
-          # Pass -fPIC via env vars to ensure it applies to static libs too
-          export CFLAGS="-fPIC"
-          export CXXFLAGS="-fPIC"
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=/usr/local \
             -DBUILD_TESTING=OFF \
-            -DBUILD_SHARED_LIBS=OFF \
+            -DBUILD_SHARED_LIBS=ON \
             -DFORCE_EXTERNAL_LZ4=ON \
             -DFORCE_EXTERNAL_ZSTD=ON \
             -DFORCE_EXTERNAL_ZLIB=ON \
@@ -137,12 +124,11 @@ jobs:
             echo ""
             echo "Libraries found:"
             ls -la /usr/local/lib/libsquash* 2>/dev/null || true
-            if [ -f "/usr/local/lib/libsquash0.8.a" ] && [ -f "/usr/local/lib/squash/0.8/plugins/lz4/libsquash0.8-plugin-lz4.a" ]; then
-              echo "Static libraries found."
+            if [ -f "/usr/local/lib/libsquash0.8.so" ]; then
+              echo "Shared library found."
               echo "SQUASH_INSTALLED=true" >> $GITHUB_OUTPUT
             else
-              echo "Static libraries NOT found (checked core and lz4 plugin)."
-              ls -laR /usr/local/lib/squash/ || true
+              echo "Shared library NOT found."
               echo "SQUASH_INSTALLED=false" >> $GITHUB_OUTPUT
               exit 1
             fi
@@ -188,6 +174,19 @@ jobs:
           ls -lh build/LosslessBenchmarkFull 2>/dev/null || echo "(LosslessBenchmarkFull not built)"
           echo ""
           
+          # Bundle shared libraries for portable artifact
+          if [ -f "build/LosslessBenchmarkFull" ]; then
+             mkdir -p build/lib
+             echo "Copying Squash libraries to build/lib/..."
+             cp -v /usr/local/lib/libsquash* build/lib/
+             # Also copy plugins if they are in subdirs (Squash 0.8 layout)
+             # But shared build typically puts them in /usr/local/lib/squash/0.8/plugins/ or /usr/local/lib directly?
+             # Let's check finding them
+             find /usr/local/lib -name "libsquash*.so*" -exec cp -v {} build/lib/ \;
+             
+             echo "Artifact prepared with bundled libs."
+          fi
+
           echo "=== Compressors Available ==="
           echo "Local compressors (always available):"
           echo "  ✓ neats"

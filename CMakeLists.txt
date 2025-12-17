@@ -66,22 +66,23 @@ if(EXISTS "/usr/local/include/squash-0.8")
             benchmark/NeaTS/algorithms.hpp)
     target_compile_definitions(LosslessBenchmarkFull PRIVATE USE_SQUASH)
     
-    # Link squash statically + all its dependencies + static plugins
-    # We use -Wl,--whole-archive for plugins to ensure self-registration constructors are included
+    # Link squash dynamically but use RPATH to make it portable
     target_link_libraries(LosslessBenchmarkFull 
         sdsl 
         sux
-        /usr/local/lib/libsquash0.8.a
-        -Wl,--whole-archive
-        /usr/local/lib/squash/0.8/plugins/lz4/libsquash0.8-plugin-lz4.a
-        /usr/local/lib/squash/0.8/plugins/zstd/libsquash0.8-plugin-zstd.a
-        /usr/local/lib/squash/0.8/plugins/snappy/libsquash0.8-plugin-snappy.a
-        /usr/local/lib/squash/0.8/plugins/brotli/libsquash0.8-plugin-brotli.a
-        /usr/local/lib/squash/0.8/plugins/zlib/libsquash0.8-plugin-zlib.a
-        /usr/local/lib/squash/0.8/plugins/bzip2/libsquash0.8-plugin-bzip2.a
-        /usr/local/lib/squash/0.8/plugins/lzma/libsquash0.8-plugin-lzma.a
-        -Wl,--no-whole-archive
+        squash0.8
         ${LZ4_LIBRARIES}
+        ${ZSTD_LIBRARIES}
+        ${SNAPPY_LIBRARIES}
+        ${BROTLI_LIBRARIES}
+        ZLIB::ZLIB
+        BZip2::BZip2
+        LibLZMA::LibLZMA
+        dl
+    )
+    
+    # Set RPATH to look for libraries in ./lib relative to the executable
+    target_link_options(LosslessBenchmarkFull PRIVATE "-Wl,-rpath,\$ORIGIN/lib")
         ${ZSTD_LIBRARIES}
         ${SNAPPY_LIBRARIES}
         ${BROTLI_LIBRARIES}
