@@ -83,12 +83,4 @@ if(EXISTS "/usr/local/include/squash-0.8")
     
     # Set RPATH to look for libraries in ./lib relative to the executable
     target_link_options(LosslessBenchmarkFull PRIVATE "-Wl,-rpath,\$ORIGIN/lib")
-        ${ZSTD_LIBRARIES}
-        ${SNAPPY_LIBRARIES}
-        ${BROTLI_LIBRARIES}
-        ZLIB::ZLIB
-        BZip2::BZip2
-        LibLZMA::LibLZMA
-        dl
-    )
 endif()
