@@ -13,122 +13,129 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Create Build Script
+        run: |
+          cat <<'EOF' > build_script.sh
+          #!/bin/sh
+          set -e
+          
+          echo "=== Installing Dependencies ==="
+          apk add --no-cache \
+            build-base cmake git linux-headers pkgconf \
+            lz4-dev lz4-static \
+            zstd-dev zstd-static \
+            brotli-dev brotli-static \
+            snappy-dev snappy-static \
+            xz-dev xz-static \
+            zlib-dev zlib-static \
+            bzip2-dev bzip2-static
+
+          echo "=== Generatng snappy.pc ==="
+          mkdir -p /usr/local/lib/pkgconfig
+          cat > /usr/local/lib/pkgconfig/snappy.pc <<PC
+          prefix=/usr
+          exec_prefix=\${prefix}
+          libdir=\${exec_prefix}/lib
+          includedir=\${prefix}/include
+
+          Name: snappy
+          Description: Fast compressor/decompressor
+          Version: 1.1.9
+          Libs: -L\${libdir} -lsnappy
+          Cflags: -I\${includedir}
+          PC
+
+          export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+
+          echo "=== Building Squash (Static) ==="
+          rm -rf /tmp/squash
+          git clone --depth 1 https://github.com/quixdb/squash.git /tmp/squash
+          cd /tmp/squash
+          
+          git submodule update --init squash/hedley || true
+          git submodule update --init squash/tinycthread || true
+          
+          sed -i 's/^[[:space:]]*add_subdirectory (utils)/# add_subdirectory (utils)/' CMakeLists.txt
+          sed -i 's/^[[:space:]]*add_subdirectory (tests)/# add_subdirectory (tests)/' CMakeLists.txt
+          
+          mkdir -p builddir && cd builddir
+          
+          cmake .. \
+            -DCMAKE_C_FLAGS='-D_GNU_SOURCE -D_DEFAULT_SOURCE -U_FORTIFY_SOURCE' \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr/local \
+            -DBUILD_TESTING=OFF \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+            -DFORCE_EXTERNAL_LZ4=ON \
+            -DFORCE_EXTERNAL_ZSTD=ON \
+            -DFORCE_EXTERNAL_ZLIB=ON \
+            -DFORCE_EXTERNAL_SNAPPY=ON \
+            -DFORCE_EXTERNAL_BROTLI=ON \
+            -DFORCE_EXTERNAL_LZMA=ON \
+            -DFORCE_EXTERNAL_BZIP2=ON \
+            -DENABLE_BRIEFLZ=OFF \
+            -DENABLE_BSC=OFF \
+            -DENABLE_COPY=OFF \
+            -DENABLE_CRUSH=OFF \
+            -DENABLE_CSC=OFF \
+            -DENABLE_DENSITY=OFF \
+            -DENABLE_DOBOZ=OFF \
+            -DENABLE_FARI=OFF \
+            -DENABLE_FASTLZ=OFF \
+            -DENABLE_GIPFELI=OFF \
+            -DENABLE_HEATSHRINK=OFF \
+            -DENABLE_LIBDEFLATE=OFF \
+            -DENABLE_LZF=OFF \
+            -DENABLE_LZFSE=OFF \
+            -DENABLE_LZG=OFF \
+            -DENABLE_LZHAM=OFF \
+            -DENABLE_LZJB=OFF \
+            -DENABLE_LZO=OFF \
+            -DENABLE_MINIZ=OFF \
+            -DENABLE_MS_COMPRESS=OFF \
+            -DENABLE_NCOMPRESS=OFF \
+            -DENABLE_PITHY=OFF \
+            -DENABLE_QUICKLZ=OFF \
+            -DENABLE_WFLZ=OFF \
+            -DENABLE_YALZ77=OFF \
+            -DENABLE_ZLIB_NG=OFF \
+            -DENABLE_ZLING=OFF \
+            -DENABLE_ZPAQ=OFF
+
+          make -j$(nproc)
+          make install
+
+          echo "=== Building Benchmark ==="
+          cd /workspace
+          rm -rf build
+          mkdir -p build && cd build
+          
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_STANDARD=23 \
+            -DCMAKE_EXE_LINKER_FLAGS='-static' \
+            -DPKG_CONFIG_USE_CMAKE_PREFIX_PATH=ON
+
+          cmake --build . --target LosslessBenchmark -- -j$(nproc)
+          cmake --build . --target LosslessBenchmarkFull -- -j$(nproc)
+          
+          echo "=== Build Complete ==="
+          ls -lh LosslessBenchmark*
+          EOF
+          
+          chmod +x build_script.sh
+
       - name: Build inside Alpine container
         run: |
-          docker run --rm -v "$PWD":/workspace -w /workspace alpine:latest sh -c "
-            set -e
-            
-            # 1. Install build tools and static libraries
-            apk add --no-cache \
-              build-base cmake git linux-headers pkgconf \
-              lz4-dev lz4-static \
-              zstd-dev zstd-static \
-              brotli-dev brotli-static \
-              snappy-dev snappy-static \
-              xz-dev xz-static \
-              zlib-dev zlib-static \
-              bzip2-dev bzip2-static
-
-            # 2. FIXED: Manually generate snappy.pc
-            # Alpine's snappy-dev package misses this file, causing pkg_check_modules to fail.
-            mkdir -p /usr/local/lib/pkgconfig
-            cat > /usr/local/lib/pkgconfig/snappy.pc <<EOF
-            prefix=/usr
-            exec_prefix=\${prefix}
-            libdir=\${exec_prefix}/lib
-            includedir=\${prefix}/include
-
-            Name: snappy
-            Description: Fast compressor/decompressor
-            Version: 1.1.9
-            Libs: -L\${libdir} -lsnappy
-            Cflags: -I\${includedir}
-            EOF
-
-            # Ensure CMake finds our manual .pc file
-            export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:\$PKG_CONFIG_PATH
-
-            # 3. Build Squash Library (Static)
-            rm -rf /tmp/squash
-            git clone --depth 1 https://github.com/quixdb/squash.git /tmp/squash
-            cd /tmp/squash
-            
-            git submodule update --init squash/hedley || true
-            git submodule update --init squash/tinycthread || true
-            
-            # Disable utils/tests
-            sed -i 's/^[[:space:]]*add_subdirectory (utils)/# add_subdirectory (utils)/' CMakeLists.txt
-            sed -i 's/^[[:space:]]*add_subdirectory (tests)/# add_subdirectory (tests)/' CMakeLists.txt
-            
-            mkdir -p builddir && cd builddir
-            
-            # Previous Fix: C Flags for Alpine/Musl compatibility
-            cmake .. \\
-              -DCMAKE_C_FLAGS='-D_GNU_SOURCE -D_DEFAULT_SOURCE -U_FORTIFY_SOURCE' \\
-              -DCMAKE_BUILD_TYPE=Release \\
-              -DCMAKE_INSTALL_PREFIX=/usr/local \\
-              -DBUILD_TESTING=OFF \\
-              -DBUILD_SHARED_LIBS=OFF \\
-              -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \\
-              -DFORCE_EXTERNAL_LZ4=ON \\
-              -DFORCE_EXTERNAL_ZSTD=ON \\
-              -DFORCE_EXTERNAL_ZLIB=ON \\
-              -DFORCE_EXTERNAL_SNAPPY=ON \\
-              -DFORCE_EXTERNAL_BROTLI=ON \\
-              -DFORCE_EXTERNAL_LZMA=ON \\
-              -DFORCE_EXTERNAL_BZIP2=ON \\
-              -DENABLE_BRIEFLZ=OFF \\
-              -DENABLE_BSC=OFF \\
-              -DENABLE_COPY=OFF \\
-              -DENABLE_CRUSH=OFF \\
-              -DENABLE_CSC=OFF \\
-              -DENABLE_DENSITY=OFF \\
-              -DENABLE_DOBOZ=OFF \\
-              -DENABLE_FARI=OFF \\
-              -DENABLE_FASTLZ=OFF \\
-              -DENABLE_GIPFELI=OFF \\
-              -DENABLE_HEATSHRINK=OFF \\
-              -DENABLE_LIBDEFLATE=OFF \\
-              -DENABLE_LZF=OFF \\
-              -DENABLE_LZFSE=OFF \\
-              -DENABLE_LZG=OFF \\
-              -DENABLE_LZHAM=OFF \\
-              -DENABLE_LZJB=OFF \\
-              -DENABLE_LZO=OFF \\
-              -DENABLE_MINIZ=OFF \\
-              -DENABLE_MS_COMPRESS=OFF \\
-              -DENABLE_NCOMPRESS=OFF \\
-              -DENABLE_PITHY=OFF \\
-              -DENABLE_QUICKLZ=OFF \\
-              -DENABLE_WFLZ=OFF \\
-              -DENABLE_YALZ77=OFF \\
-              -DENABLE_ZLIB_NG=OFF \\
-              -DENABLE_ZLING=OFF \\
-              -DENABLE_ZPAQ=OFF
-
-            make -j\$(nproc)
-            make install
-            
-            cd /workspace
-
-            # 4. Build Benchmark
-            mkdir -p build && cd build
-            
-            # We explicitly tell CMake to prefer static libraries 
-            cmake .. \\
-              -DCMAKE_BUILD_TYPE=Release \\
-              -DCMAKE_CXX_STANDARD=23 \\
-              -DCMAKE_EXE_LINKER_FLAGS='-static' \\
-              -DPKG_CONFIG_USE_CMAKE_PREFIX_PATH=ON
-
-            cmake --build . --target LosslessBenchmark -- -j\$(nproc)
-            cmake --build . --target LosslessBenchmarkFull -- -j\$(nproc)
-          "
+          # Mount current dir to /workspace and run the script we just created
+          docker run --rm -v "$PWD":/workspace -w /workspace alpine:latest /workspace/build_script.sh
 
       - name: Verify executables on Host
         run: |
           ls -lh build/LosslessBenchmark
           ls -lh build/LosslessBenchmarkFull
+          file build/LosslessBenchmarkFull
           echo "Binaries are ready and statically linked."
 
       - name: Upload benchmark executables
