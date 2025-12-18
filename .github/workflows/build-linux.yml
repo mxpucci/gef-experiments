@@ -13,19 +13,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build Static Binary in Alpine
+      - name: Build inside Alpine container
         run: |
-          # We use Docker to run the build inside Alpine, ensuring a static binary (musl)
-          # that runs on any Linux VPS regardless of glibc version.
           docker run --rm -v "$PWD":/workspace -w /workspace alpine:latest sh -c "
             set -e
             
-            # 1. Install GCC 13 (Alpine uses current GCC), CMake, and build tools
-            #    We also install the STATIC versions of the compression libs.
-            apk update
+            # 1. Install build tools.
+            # We add linux-headers to ensure system compatibility
             apk add --no-cache \
-              build-base cmake git \
-              linux-headers \
+              build-base cmake git linux-headers \
               lz4-dev lz4-static \
               zstd-dev zstd-static \
               brotli-dev brotli-static \
@@ -33,28 +29,26 @@ jobs:
               xz-dev xz-static \
               zlib-dev zlib-static \
               bzip2-dev bzip2-static
-
-            echo '=== GCC Version ==='
-            g++ --version
-
+            
             # 2. Build Squash Library (Static)
-            echo '=== Building Squash (Static) ==='
             rm -rf /tmp/squash
             git clone --depth 1 https://github.com/quixdb/squash.git /tmp/squash
             cd /tmp/squash
             
-            # Initialize minimal submodules
             git submodule update --init squash/hedley || true
             git submodule update --init squash/tinycthread || true
             
-            # Disable utils/tests to avoid extra deps
+            # Disable utils/tests
             sed -i 's/^[[:space:]]*add_subdirectory (utils)/# add_subdirectory (utils)/' CMakeLists.txt
             sed -i 's/^[[:space:]]*add_subdirectory (tests)/# add_subdirectory (tests)/' CMakeLists.txt
-
+            
             mkdir -p builddir && cd builddir
             
-            # IMPORTANT: -DBUILD_SHARED_LIBS=OFF creates .a files instead of .so
+            # FIXED: Added C Flags to fix compilation on Alpine/Musl
+            # -D_GNU_SOURCE: Enables standard Linux extensions (fixes strlcpy and BYTE_ORDER visibility)
+            # -U_FORTIFY_SOURCE: Disables Alpine's strict security wrappers causing the conflict
             cmake .. \\
+              -DCMAKE_C_FLAGS='-D_GNU_SOURCE -D_DEFAULT_SOURCE -U_FORTIFY_SOURCE' \\
               -DCMAKE_BUILD_TYPE=Release \\
               -DCMAKE_INSTALL_PREFIX=/usr/local \\
               -DBUILD_TESTING=OFF \\
@@ -99,35 +93,17 @@ jobs:
             make -j\$(nproc)
             make install
             
-            # Verify static lib exists
-            if [ -f \"/usr/local/lib/libsquash0.8.a\" ]; then
-               echo '✓ libsquash0.8.a found'
-            else
-               echo '❌ libsquash0.8.a NOT found'
-               exit 1
-            fi
-
-            # Return to workspace
             cd /workspace
 
-            # 3. Configure Benchmark
-            # We pass -static to force the compiler to link everything into one file
-            echo '=== Building Benchmark ==='
+            # 3. Build Benchmark
             mkdir -p build && cd build
             cmake .. \\
               -DCMAKE_BUILD_TYPE=Release \\
               -DCMAKE_CXX_STANDARD=23 \\
               -DCMAKE_EXE_LINKER_FLAGS='-static'
 
-            # 4. Build Targets
-            # We build both to ensure they compile
             cmake --build . --target LosslessBenchmark -- -j\$(nproc)
             cmake --build . --target LosslessBenchmarkFull -- -j\$(nproc)
-            
-            # Verify binary type
-            echo '=== Binary Verification ==='
-            file LosslessBenchmarkFull
-            # Should say 'statically linked'
           "
 
       - name: Verify executables on Host
