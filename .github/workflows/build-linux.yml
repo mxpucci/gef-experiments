@@ -2,8 +2,8 @@ name: build-linux
 
 on:
   push:
-    branches: [ "**" ]
-    tags: [ "v*" ]
+    branches: ["**"]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -22,12 +22,13 @@ jobs:
       BUILD_TYPE: Release
       CC: gcc-12
       CXX: g++-12
-      # Where Squash will be installed (matches your CMake hardcoded /usr/local paths)
       SQUASH_PREFIX: /usr/local
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Install build deps
         run: |
@@ -44,8 +45,7 @@ jobs:
       - name: Cache ccache
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/ccache
+          path: ~/.cache/ccache
           key: ccache-${{ runner.os }}-${{ matrix.flavor }}-${{ github.ref }}-${{ github.sha }}
           restore-keys: |
             ccache-${{ runner.os }}-${{ matrix.flavor }}-${{ github.ref }}-
@@ -54,164 +54,19 @@ jobs:
       - name: Configure ccache
         run: |
           set -euxo pipefail
-          ccache --version
           ccache --set-config=cache_dir=$HOME/.cache/ccache
           ccache --set-config=max_size=500M
           ccache --zero-stats
 
-      # ---- Build & install Squash (shared + plugins) ----
-      # Squash is plugin-based; bundling shared libs + plugins is the most reliable way
-      # to run on a server without Squash installed.
-      - name: Build Squash (shared + plugins) and install
+      # --------------------------
+      # Build & install Squash
+      # --------------------------
+      - name: Fetch Squash (WITH submodules)
         run: |
           set -euxo pipefail
           rm -rf _deps
           mkdir -p _deps
-          git clone --depth 1 https://github.com/quixdb/squash.git _deps/squash
 
-          cmake -S _deps/squash -B _deps/squash/build-shared -G Ninja \
-            -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-            -DCMAKE_INSTALL_PREFIX=${SQUASH_PREFIX}
-          cmake --build _deps/squash/build-shared -j
-          sudo cmake --install _deps/squash/build-shared
-
-          # Sanity: headers + shared lib should exist
-          test -d ${SQUASH_PREFIX}/include/squash-0.8 || true
-          ls -la ${SQUASH_PREFIX}/lib | sed -n '1,120p' || true
-
-      # ---- Optional: also build a static libsquash0.8.a (best effort) ----
-      # This may help if your project forces static linking, but Squash plugins
-      # are still shared modules; the bundle step below is what makes it portable.
-      - name: Build Squash static archive (best effort)
-        run: |
-          set -euxo pipefail
-
-          # Try to locate the CMakeLists that builds squash0.8 as SHARED and flip it to STATIC.
-          # If not found, we just skip (the bundle will still work).
-          cmakefile="$(grep -RIlE 'add_library\\s*\\(\\s*squash0\\.8\\s+SHARED' _deps/squash || true)"
-          if [ -z "$cmakefile" ]; then
-            echo "WARN: couldn't find add_library(squash0.8 SHARED ...) to patch; skipping static build"
-            exit 0
-          fi
-
-          echo "Patching: $cmakefile"
-          sed -i -E 's/(add_library\\s*\\(\\s*squash0\\.8)\\s+SHARED/\\1 STATIC/' "$cmakefile"
-
-          cmake -S _deps/squash -B _deps/squash/build-static -G Ninja \
-            -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-            -DCMAKE_INSTALL_PREFIX=${SQUASH_PREFIX}
-          cmake --build _deps/squash/build-static -j
-
-          archive="$(find _deps/squash/build-static -name 'libsquash0.8.a' -print -quit || true)"
-          if [ -n "$archive" ]; then
-            sudo install -Dm644 "$archive" ${SQUASH_PREFIX}/lib/libsquash0.8.a
-            echo "Installed static archive: ${SQUASH_PREFIX}/lib/libsquash0.8.a"
-          else
-            echo "WARN: static archive not produced; continuing"
-          fi
-
-      # ---- (Optional) make your build portable across older x86 CPUs ----
-      - name: Patch project flags for portability (portable flavor only)
-        if: matrix.flavor == 'portable'
-        run: |
-          set -euxo pipefail
-          # Replace -march=native/-mtune=native with a broadly compatible baseline.
-          # x86-64-v2 is a good “works on almost everything modern-ish” target.
-          sed -i \
-            -e 's/-march=native -mtune=native/-march=x86-64-v2 -mtune=generic/g' \
-            CMakeLists.txt || true
-
-      - name: Configure project
-        run: |
-          set -euxo pipefail
-          cmake -S . -B build-${{ matrix.flavor }} -G Ninja \
-            -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-            -DCMAKE_C_COMPILER=${CC} \
-            -DCMAKE_CXX_COMPILER=${CXX} \
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-
-      - name: Build project
-        run: |
-          set -euxo pipefail
-          cmake --build build-${{ matrix.flavor }} -j
-
-      - name: Show actual compile flags (sanity)
-        run: |
-          set -euxo pipefail
-          python3 - << 'PY'
-          import json, pathlib
-          p = pathlib.Path("build-${{ matrix.flavor }}/compile_commands.json")
-          if not p.exists():
-            print("No compile_commands.json found")
-            raise SystemExit(0)
-          db = json.loads(p.read_text())
-          # Print the first command for a quick sanity check
-          print(db[0]["command"][:4000])
-          PY
-
-      # ---- Create a self-contained bundle: binary + ./lib (matches your $ORIGIN/lib rpath) ----
-      - name: Bundle runtime (binary + libs + Squash plugins)
-        run: |
-          set -euxo pipefail
-
-          # Your CMake creates LosslessBenchmarkFull only if Squash headers exist.
-          BIN="build-${{ matrix.flavor }}/LosslessBenchmarkFull"
-          if [ ! -f "$BIN" ]; then
-            echo "ERROR: $BIN not produced. Check whether Squash headers were detected at /usr/local/include/squash-0.8"
-            ls -la build-${{ matrix.flavor }} || true
-            exit 1
-          fi
-
-          OUT="bundle-${{ matrix.flavor }}"
-          rm -rf "$OUT"
-          mkdir -p "$OUT/lib"
-          cp -v "$BIN" "$OUT/LosslessBenchmarkFull"
-
-          echo "RPATH/RUNPATH:"
-          readelf -d "$OUT/LosslessBenchmarkFull" | egrep -i 'rpath|runpath' || true
-
-          # Copy shared library dependencies except core system loader/libc.
-          ldd "$OUT/LosslessBenchmarkFull" | awk '{print $3}' | grep -E '^/' | sort -u > /tmp/ldd_libs.txt || true
-          while read -r lib; do
-            base="$(basename "$lib")"
-            case "$base" in
-              ld-linux*|libc.so.*|libm.so.*|libpthread.so.*|librt.so.*|libdl.so.*)
-                # keep system-provided
-                continue
-                ;;
-            esac
-            cp -vL "$lib" "$OUT/lib/" || true
-          done < /tmp/ldd_libs.txt
-
-          # Copy Squash core shared lib (if present)
-          cp -vL /usr/local/lib/libsquash0.8.so* "$OUT/lib/" 2>/dev/null || true
-
-          # Copy Squash plugins (common install locations)
-          find /usr/local/lib -maxdepth 4 -type f -name "*.so*" -path "*/squash/*" -print -exec cp -vL {} "$OUT/lib/" \; || true
-
-          # Nice-to-have: show what we bundled
-          echo "Bundled files:"
-          (cd "$OUT" && find . -maxdepth 2 -type f -print)
-
-      - name: Smoke test bundle loads (runner)
-        run: |
-          set -euxo pipefail
-          # This checks the loader can resolve libs from $ORIGIN/lib without LD_LIBRARY_PATH.
-          ./bundle-${{ matrix.flavor }}/LosslessBenchmarkFull --help >/dev/null 2>&1 || true
-          echo "OK (binary executed; '--help' may be unsupported, but loader worked if no 'not found' errors)"
-
-      - name: Archive bundle
-        run: |
-          set -euxo pipefail
-          tar -czf NeaTS-linux-${{ matrix.flavor }}.tar.gz bundle-${{ matrix.flavor }}
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: NeaTS-linux-${{ matrix.flavor }}
-          path: NeaTS-linux-${{ matrix.flavor }}.tar.gz
-
-      - name: ccache stats
-        if: always()
-        run: |
-          ccache --show-stats
+          # IMPORTANT: recurse submodules, otherwise zlib-ng plugin breaks configure
+          git clone --depth 1 --recurse-submodules --shallow-submodules \
+            https://github.com/quixdb/squas
