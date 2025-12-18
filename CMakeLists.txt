@@ -53,39 +53,82 @@ add_executable(LosslessBenchmark benchmark/lossless_benchmark.cpp
 target_link_libraries(LosslessBenchmark sdsl sux)
 
 # Comprehensive lossless compressor benchmark (with squash - optional)
-# Requires squash library to be installed
-include_directories(/usr/local/include/squash-0.8)
-link_directories(/usr/local/lib)
-if(EXISTS "/usr/local/include/squash-0.8")
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(LZ4 REQUIRED liblz4)
-    pkg_check_modules(ZSTD REQUIRED libzstd)
-    pkg_check_modules(SNAPPY REQUIRED snappy)
-    pkg_check_modules(BROTLI REQUIRED libbrotlienc libbrotlidec libbrotlicommon)
-    find_package(ZLIB REQUIRED)
-    find_package(BZip2 REQUIRED)
-    find_package(LibLZMA REQUIRED)
+option(NEATS_WITH_SQUASH "Build LosslessBenchmarkFull with Squash" ON)
 
-    add_executable(LosslessBenchmarkFull benchmark/lossless_benchmark.cpp
+if(NEATS_WITH_SQUASH)
+    set(SQUASH_ROOT "/usr/local")
+    set(SQUASH_INCLUDE_DIR "${SQUASH_ROOT}/include/squash-0.8")
+
+    if(EXISTS "${SQUASH_INCLUDE_DIR}/squash/squash.h")
+        find_package(PkgConfig REQUIRED)
+
+        # If you ALSO want these codec deps to be static, set this ON and ensure .a exist:
+        # set(PKG_CONFIG_USE_STATIC_LIBS ON)
+
+        pkg_check_modules(LZ4    REQUIRED IMPORTED_TARGET liblz4)
+        pkg_check_modules(ZSTD   REQUIRED IMPORTED_TARGET libzstd)
+        pkg_check_modules(SNAPPY REQUIRED IMPORTED_TARGET snappy)
+        pkg_check_modules(BROTLI REQUIRED IMPORTED_TARGET libbrotlienc libbrotlidec libbrotlicommon)
+
+        find_package(ZLIB  REQUIRED)
+        find_package(BZip2 REQUIRED)
+        find_package(LibLZMA REQUIRED)
+
+        # ---- Force Squash static (.a) if available ----
+        set(_old_suffixes "${CMAKE_FIND_LIBRARY_SUFFIXES}")
+        set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+        find_library(SQUASH_STATIC_LIB NAMES squash0.8 PATHS "${SQUASH_ROOT}/lib" NO_DEFAULT_PATH)
+        set(CMAKE_FIND_LIBRARY_SUFFIXES "${_old_suffixes}")
+
+        if(SQUASH_STATIC_LIB)
+            add_library(Squash::squash0_8 STATIC IMPORTED GLOBAL)
+            set_target_properties(Squash::squash0_8 PROPERTIES
+                IMPORTED_LOCATION "${SQUASH_STATIC_LIB}"
+                INTERFACE_INCLUDE_DIRECTORIES "${SQUASH_INCLUDE_DIR}"
+            )
+            message(STATUS "Using static Squash: ${SQUASH_STATIC_LIB}")
+            set(SQUASH_TARGET Squash::squash0_8)
+        else()
+            # Fallback to shared if static is not present
+            find_library(SQUASH_SHARED_LIB NAMES squash0.8 PATHS "${SQUASH_ROOT}/lib" NO_DEFAULT_PATH)
+            if(NOT SQUASH_SHARED_LIB)
+                message(FATAL_ERROR "Squash headers found but no libsquash0.8 found in ${SQUASH_ROOT}/lib")
+            endif()
+
+            add_library(Squash::squash0_8 SHARED IMPORTED GLOBAL)
+            set_target_properties(Squash::squash0_8 PROPERTIES
+                IMPORTED_LOCATION "${SQUASH_SHARED_LIB}"
+                INTERFACE_INCLUDE_DIRECTORIES "${SQUASH_INCLUDE_DIR}"
+            )
+            message(WARNING "Static Squash not found; using shared: ${SQUASH_SHARED_LIB}")
+            set(SQUASH_TARGET Squash::squash0_8)
+        endif()
+
+        add_executable(LosslessBenchmarkFull
+            benchmark/lossless_benchmark.cpp
             benchmark/NeaTS/NeaTS.hpp
-            benchmark/NeaTS/algorithms.hpp)
-    target_compile_definitions(LosslessBenchmarkFull PRIVATE USE_SQUASH)
-    
-    # Link squash dynamically but use RPATH to make it portable
-    target_link_libraries(LosslessBenchmarkFull 
-        sdsl 
-        sux
-        squash0.8
-        ${LZ4_LIBRARIES}
-        ${ZSTD_LIBRARIES}
-        ${SNAPPY_LIBRARIES}
-        ${BROTLI_LIBRARIES}
-        ZLIB::ZLIB
-        BZip2::BZip2
-        LibLZMA::LibLZMA
-        dl
-    )
-    
-    # Set RPATH to look for libraries in ./lib relative to the executable
-    target_link_options(LosslessBenchmarkFull PRIVATE "-Wl,-rpath,\$ORIGIN/lib")
+            benchmark/NeaTS/algorithms.hpp
+        )
+        target_compile_definitions(LosslessBenchmarkFull PRIVATE USE_SQUASH)
+
+        target_link_libraries(LosslessBenchmarkFull
+            PRIVATE
+                sdsl
+                sux
+                ${SQUASH_TARGET}
+                PkgConfig::LZ4
+                PkgConfig::ZSTD
+                PkgConfig::SNAPPY
+                PkgConfig::BROTLI
+                ZLIB::ZLIB
+                BZip2::BZip2
+                LibLZMA::LibLZMA
+                dl
+        )
+
+        # If (and only if) you ended up on shared Squash, keep your RPATH trick:
+        if(NOT SQUASH_STATIC_LIB)
+            target_link_options(LosslessBenchmarkFull PRIVATE "-Wl,-rpath,\$ORIGIN/lib")
+        endif()
+    endif()
 endif()
