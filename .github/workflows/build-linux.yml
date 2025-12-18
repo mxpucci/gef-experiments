@@ -111,8 +111,8 @@ jobs:
           rm -rf build
           mkdir -p build && cd build
           
-          # FIXED: Explicitly point to static archives (.a) for system libraries.
-          # This prevents CMake from finding the .so files and failing the static link check.
+          # FIXED: Used correct singular variable names (BZIP2_LIBRARY) to ensure
+          # imported targets are populated correctly.
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_STANDARD=23 \
@@ -120,7 +120,7 @@ jobs:
             -DPKG_CONFIG_USE_CMAKE_PREFIX_PATH=ON \
             -DLIBLZMA_LIBRARY=/usr/lib/liblzma.a \
             -DLIBLZMA_INCLUDE_DIR=/usr/include \
-            -DBZIP2_LIBRARIES=/usr/lib/libbz2.a \
+            -DBZIP2_LIBRARY=/usr/lib/libbz2.a \
             -DBZIP2_INCLUDE_DIR=/usr/include \
             -DZLIB_LIBRARY=/usr/lib/libz.a \
             -DZLIB_INCLUDE_DIR=/usr/include
