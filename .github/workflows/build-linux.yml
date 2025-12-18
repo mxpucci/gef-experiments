@@ -55,8 +55,14 @@ jobs:
           git submodule update --init squash/hedley || true
           git submodule update --init squash/tinycthread || true
           
+          # Disabling Utils/Tests
           sed -i 's/^[[:space:]]*add_subdirectory (utils)/# add_subdirectory (utils)/' CMakeLists.txt
           sed -i 's/^[[:space:]]*add_subdirectory (tests)/# add_subdirectory (tests)/' CMakeLists.txt
+          
+          # FIXED: Patch Squash CMakeLists to force STATIC build
+          # The project hardcodes 'add_library (... SHARED ...)', so we replace it.
+          echo "Patching Squash to force STATIC library..."
+          sed -i 's/SHARED/STATIC/g' CMakeLists.txt
           
           mkdir -p builddir && cd builddir
           
@@ -105,14 +111,22 @@ jobs:
 
           make -j$(nproc)
           make install
+          
+          # Verify we actually got a static library
+          if [ -f "/usr/local/lib/libsquash0.8.a" ]; then
+             echo "SUCCESS: libsquash0.8.a found."
+          else
+             echo "ERROR: libsquash0.8.a NOT found. Listing /usr/local/lib:"
+             ls -la /usr/local/lib
+             exit 1
+          fi
 
           echo "=== Building Benchmark ==="
           cd /workspace
           rm -rf build
           mkdir -p build && cd build
           
-          # FIXED: Used correct singular variable names (BZIP2_LIBRARY) to ensure
-          # imported targets are populated correctly.
+          # We force variables to point to the .a files
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_STANDARD=23 \
