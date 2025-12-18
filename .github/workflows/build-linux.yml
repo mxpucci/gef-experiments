@@ -55,14 +55,18 @@ jobs:
           git submodule update --init squash/hedley || true
           git submodule update --init squash/tinycthread || true
           
-          # Disabling Utils/Tests
+          # 1. Disable Utilities and Tests
           sed -i 's/^[[:space:]]*add_subdirectory (utils)/# add_subdirectory (utils)/' CMakeLists.txt
           sed -i 's/^[[:space:]]*add_subdirectory (tests)/# add_subdirectory (tests)/' CMakeLists.txt
           
-          # FIXED: Patch Squash CMakeLists to force STATIC build
-          # The project hardcodes 'add_library (... SHARED ...)', so we replace it.
-          echo "Patching Squash to force STATIC library..."
+          # 2. Disable Plugins (Plugins are dynamic .so files; they cannot be used by a static binary on Alpine/musl easily)
+          # This prevents the build from generating .so files that confuse the linker.
+          sed -i 's/^[[:space:]]*add_subdirectory (plugins)/# add_subdirectory (plugins)/' CMakeLists.txt
+
+          # 3. FORCE STATIC: Replace 'SHARED' with 'STATIC' in the main CMakeLists.txt
+          # This forces libsquash0.8.a to be generated instead of libsquash0.8.so
           sed -i 's/SHARED/STATIC/g' CMakeLists.txt
+          sed -i 's/shared/STATIC/g' CMakeLists.txt
           
           mkdir -p builddir && cd builddir
           
@@ -73,13 +77,6 @@ jobs:
             -DBUILD_TESTING=OFF \
             -DBUILD_SHARED_LIBS=OFF \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
-            -DFORCE_EXTERNAL_LZ4=ON \
-            -DFORCE_EXTERNAL_ZSTD=ON \
-            -DFORCE_EXTERNAL_ZLIB=ON \
-            -DFORCE_EXTERNAL_SNAPPY=ON \
-            -DFORCE_EXTERNAL_BROTLI=ON \
-            -DFORCE_EXTERNAL_LZMA=ON \
-            -DFORCE_EXTERNAL_BZIP2=ON \
             -DENABLE_BRIEFLZ=OFF \
             -DENABLE_BSC=OFF \
             -DENABLE_COPY=OFF \
@@ -112,7 +109,7 @@ jobs:
           make -j$(nproc)
           make install
           
-          # Verify we actually got a static library
+          # Verify static library
           if [ -f "/usr/local/lib/libsquash0.8.a" ]; then
              echo "SUCCESS: libsquash0.8.a found."
           else
@@ -126,11 +123,12 @@ jobs:
           rm -rf build
           mkdir -p build && cd build
           
-          # We force variables to point to the .a files
+          # We use -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" to strictly forbid shared libraries.
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_STANDARD=23 \
             -DCMAKE_EXE_LINKER_FLAGS='-static' \
+            -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
             -DPKG_CONFIG_USE_CMAKE_PREFIX_PATH=ON \
             -DLIBLZMA_LIBRARY=/usr/lib/liblzma.a \
             -DLIBLZMA_INCLUDE_DIR=/usr/include \
