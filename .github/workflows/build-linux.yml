@@ -18,10 +18,9 @@ jobs:
           docker run --rm -v "$PWD":/workspace -w /workspace alpine:latest sh -c "
             set -e
             
-            # 1. Install build tools.
-            # We add linux-headers to ensure system compatibility
+            # 1. Install build tools and static libraries
             apk add --no-cache \
-              build-base cmake git linux-headers \
+              build-base cmake git linux-headers pkgconf \
               lz4-dev lz4-static \
               zstd-dev zstd-static \
               brotli-dev brotli-static \
@@ -29,8 +28,27 @@ jobs:
               xz-dev xz-static \
               zlib-dev zlib-static \
               bzip2-dev bzip2-static
-            
-            # 2. Build Squash Library (Static)
+
+            # 2. FIXED: Manually generate snappy.pc
+            # Alpine's snappy-dev package misses this file, causing pkg_check_modules to fail.
+            mkdir -p /usr/local/lib/pkgconfig
+            cat > /usr/local/lib/pkgconfig/snappy.pc <<EOF
+            prefix=/usr
+            exec_prefix=\${prefix}
+            libdir=\${exec_prefix}/lib
+            includedir=\${prefix}/include
+
+            Name: snappy
+            Description: Fast compressor/decompressor
+            Version: 1.1.9
+            Libs: -L\${libdir} -lsnappy
+            Cflags: -I\${includedir}
+            EOF
+
+            # Ensure CMake finds our manual .pc file
+            export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:\$PKG_CONFIG_PATH
+
+            # 3. Build Squash Library (Static)
             rm -rf /tmp/squash
             git clone --depth 1 https://github.com/quixdb/squash.git /tmp/squash
             cd /tmp/squash
@@ -44,9 +62,7 @@ jobs:
             
             mkdir -p builddir && cd builddir
             
-            # FIXED: Added C Flags to fix compilation on Alpine/Musl
-            # -D_GNU_SOURCE: Enables standard Linux extensions (fixes strlcpy and BYTE_ORDER visibility)
-            # -U_FORTIFY_SOURCE: Disables Alpine's strict security wrappers causing the conflict
+            # Previous Fix: C Flags for Alpine/Musl compatibility
             cmake .. \\
               -DCMAKE_C_FLAGS='-D_GNU_SOURCE -D_DEFAULT_SOURCE -U_FORTIFY_SOURCE' \\
               -DCMAKE_BUILD_TYPE=Release \\
@@ -95,12 +111,15 @@ jobs:
             
             cd /workspace
 
-            # 3. Build Benchmark
+            # 4. Build Benchmark
             mkdir -p build && cd build
+            
+            # We explicitly tell CMake to prefer static libraries 
             cmake .. \\
               -DCMAKE_BUILD_TYPE=Release \\
               -DCMAKE_CXX_STANDARD=23 \\
-              -DCMAKE_EXE_LINKER_FLAGS='-static'
+              -DCMAKE_EXE_LINKER_FLAGS='-static' \\
+              -DPKG_CONFIG_USE_CMAKE_PREFIX_PATH=ON
 
             cmake --build . --target LosslessBenchmark -- -j\$(nproc)
             cmake --build . --target LosslessBenchmarkFull -- -j\$(nproc)
