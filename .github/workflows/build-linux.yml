@@ -30,7 +30,8 @@ jobs:
             zlib-dev zlib-static \
             bzip2-dev bzip2-static
 
-          echo "=== Generatng snappy.pc ==="
+          echo "=== Generating snappy.pc ==="
+          # Alpine snappy-dev is missing pkg-config file
           mkdir -p /usr/local/lib/pkgconfig
           cat > /usr/local/lib/pkgconfig/snappy.pc <<PC
           prefix=/usr
@@ -111,9 +112,15 @@ jobs:
           rm -rf build
           mkdir -p build && cd build
           
+          # FIXED: 
+          # 1. -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" forces CMake to ignore .so files
+          #    and find the static .a libs (fixes LZMA/BZip2 detection errors).
+          # 2. -DBZIP2_USE_STATIC_LIBS=ON specifically helps the FindBZip2 module.
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_STANDARD=23 \
+            -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
+            -DBZIP2_USE_STATIC_LIBS=ON \
             -DCMAKE_EXE_LINKER_FLAGS='-static' \
             -DPKG_CONFIG_USE_CMAKE_PREFIX_PATH=ON
 
@@ -128,7 +135,6 @@ jobs:
 
       - name: Build inside Alpine container
         run: |
-          # Mount current dir to /workspace and run the script we just created
           docker run --rm -v "$PWD":/workspace -w /workspace alpine:latest /workspace/build_script.sh
 
       - name: Verify executables on Host
