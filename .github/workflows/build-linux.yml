@@ -31,7 +31,6 @@ jobs:
             bzip2-dev bzip2-static
 
           echo "=== Generating snappy.pc ==="
-          # Alpine snappy-dev is missing pkg-config file
           mkdir -p /usr/local/lib/pkgconfig
           cat > /usr/local/lib/pkgconfig/snappy.pc <<PC
           prefix=/usr
@@ -112,17 +111,19 @@ jobs:
           rm -rf build
           mkdir -p build && cd build
           
-          # FIXED: 
-          # 1. -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" forces CMake to ignore .so files
-          #    and find the static .a libs (fixes LZMA/BZip2 detection errors).
-          # 2. -DBZIP2_USE_STATIC_LIBS=ON specifically helps the FindBZip2 module.
+          # FIXED: Explicitly point to static archives (.a) for system libraries.
+          # This prevents CMake from finding the .so files and failing the static link check.
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_STANDARD=23 \
-            -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
-            -DBZIP2_USE_STATIC_LIBS=ON \
             -DCMAKE_EXE_LINKER_FLAGS='-static' \
-            -DPKG_CONFIG_USE_CMAKE_PREFIX_PATH=ON
+            -DPKG_CONFIG_USE_CMAKE_PREFIX_PATH=ON \
+            -DLIBLZMA_LIBRARY=/usr/lib/liblzma.a \
+            -DLIBLZMA_INCLUDE_DIR=/usr/include \
+            -DBZIP2_LIBRARIES=/usr/lib/libbz2.a \
+            -DBZIP2_INCLUDE_DIR=/usr/include \
+            -DZLIB_LIBRARY=/usr/lib/libz.a \
+            -DZLIB_INCLUDE_DIR=/usr/include
 
           cmake --build . --target LosslessBenchmark -- -j$(nproc)
           cmake --build . --target LosslessBenchmarkFull -- -j$(nproc)
