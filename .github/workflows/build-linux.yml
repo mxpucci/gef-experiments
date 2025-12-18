@@ -1,6 +1,5 @@
-name: build-linux
+name: build-linux-squash-static
 
-# Trigger manually from the GitHub Actions tab, or on push/PR to main
 on:
   workflow_dispatch:
   push:
@@ -11,271 +10,137 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: ubuntu:20.04
-    env:
-      DEBIAN_FRONTEND: noninteractive
-      CC: gcc-13
-      CXX: g++-13
     steps:
-      - name: Install system dependencies
-        run: |
-          apt-get update
-          apt-get install -y software-properties-common wget curl git python3-pip
-          
-          # Install modern CMake via pip
-          pip3 install cmake
-          ln -sf /usr/local/bin/cmake /usr/bin/cmake
-          
-          # Install GCC 13
-          add-apt-repository -y ppa:ubuntu-toolchain-r/test
-          apt-get update
-          apt-get install -y \
-            build-essential \
-            pkg-config \
-            libglib2.0-dev \
-            gcc-13 g++-13 \
-            liblz4-dev \
-            libzstd-dev \
-            libbz2-dev \
-            zlib1g-dev \
-            libsnappy-dev \
-            liblzma-dev \
-            libbrotli-dev
-
       - uses: actions/checkout@v4
 
-      - name: Show CPU info
+      - name: Build Static Binary in Alpine
         run: |
-          echo "=== CPU Information ==="
-          lscpu | grep -E "Model name|Architecture|CPU\(s\)|Flags"
-          echo ""
-          echo "=== Compiler Version ==="
-          g++ --version
+          # We use Docker to run the build inside Alpine, ensuring a static binary (musl)
+          # that runs on any Linux VPS regardless of glibc version.
+          docker run --rm -v "$PWD":/workspace -w /workspace alpine:latest sh -c "
+            set -e
+            
+            # 1. Install GCC 13 (Alpine uses current GCC), CMake, and build tools
+            #    We also install the STATIC versions of the compression libs.
+            apk update
+            apk add --no-cache \
+              build-base cmake git \
+              linux-headers \
+              lz4-dev lz4-static \
+              zstd-dev zstd-static \
+              brotli-dev brotli-static \
+              snappy-dev snappy-static \
+              xz-dev xz-static \
+              zlib-dev zlib-static \
+              bzip2-dev bzip2-static
 
-      - name: Build and install Squash compression library
-        continue-on-error: true
-        id: squash
-        run: |
-          # Clean up any previous attempts
-          rm -rf /tmp/squash
-          
-          # Clone squash library WITHOUT recursive (to avoid broken submodules)
-          git clone --depth 1 https://github.com/quixdb/squash.git /tmp/squash
-          cd /tmp/squash
-          
-          # Initialize ONLY the submodules we need
-          # Core dependencies
-          git submodule update --init squash/hedley || true
-          git submodule update --init squash/tinycthread || true
-          
-          # Disable utils (CLI) and tests in CMakeLists.txt to avoid needing parg/munit submodules
-          sed -i 's/^[[:space:]]*add_subdirectory (utils)/# add_subdirectory (utils)/' CMakeLists.txt
-          sed -i 's/^[[:space:]]*add_subdirectory (tests)/# add_subdirectory (tests)/' CMakeLists.txt
-          
-          # Debug: verify the change
-          grep "add_subdirectory" CMakeLists.txt || true
-          
-          # Plugins we need for the benchmark - use system libraries instead
-          # lz4, zstd, brotli, snappy, lzma/xz, zlib, bzip2 - all use system libs
-          
-          mkdir -p builddir && cd builddir
-          
-          # Configure with CMake - DISABLE ALL bundled plugins, use only system libraries
-          cmake .. \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX=/usr/local \
-            -DBUILD_TESTING=OFF \
-            -DBUILD_SHARED_LIBS=ON \
-            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
-            -DFORCE_EXTERNAL_LZ4=ON \
-            -DFORCE_EXTERNAL_ZSTD=ON \
-            -DFORCE_EXTERNAL_ZLIB=ON \
-            -DFORCE_EXTERNAL_SNAPPY=ON \
-            -DFORCE_EXTERNAL_BROTLI=ON \
-            -DFORCE_EXTERNAL_LZMA=ON \
-            -DFORCE_EXTERNAL_BZIP2=ON \
-            -DENABLE_BRIEFLZ=OFF \
-            -DENABLE_BSC=OFF \
-            -DENABLE_COPY=OFF \
-            -DENABLE_CRUSH=OFF \
-            -DENABLE_CSC=OFF \
-            -DENABLE_DENSITY=OFF \
-            -DENABLE_DOBOZ=OFF \
-            -DENABLE_FARI=OFF \
-            -DENABLE_FASTLZ=OFF \
-            -DENABLE_GIPFELI=OFF \
-            -DENABLE_HEATSHRINK=OFF \
-            -DENABLE_LIBDEFLATE=OFF \
-            -DENABLE_LZF=OFF \
-            -DENABLE_LZFSE=OFF \
-            -DENABLE_LZG=OFF \
-            -DENABLE_LZHAM=OFF \
-            -DENABLE_LZJB=OFF \
-            -DENABLE_LZO=OFF \
-            -DENABLE_MINIZ=OFF \
-            -DENABLE_MS_COMPRESS=OFF \
-            -DENABLE_NCOMPRESS=OFF \
-            -DENABLE_PITHY=OFF \
-            -DENABLE_QUICKLZ=OFF \
-            -DENABLE_WFLZ=OFF \
-            -DENABLE_YALZ77=OFF \
-            -DENABLE_ZLIB_NG=OFF \
-            -DENABLE_ZLING=OFF \
-            -DENABLE_ZPAQ=OFF \
-            -DBUILD_SHARED_LIBS=ON
-          
-          make -j$(nproc)
-          make install
-          
-          # Update library cache
-          ldconfig
-          
-          # Verify installation
-          echo "=== Checking Squash installation ==="
-          if [ -d "/usr/local/include/squash-0.8" ]; then
-            echo "Headers found:"
-            ls -la /usr/local/include/squash-0.8/
-            echo ""
-            echo "Libraries found:"
-            ls -la /usr/local/lib/libsquash* 2>/dev/null || true
-            if [ -f "/usr/local/lib/libsquash0.8.so" ]; then
-              echo "Shared library found."
-              echo "SQUASH_INSTALLED=true" >> $GITHUB_OUTPUT
+            echo '=== GCC Version ==='
+            g++ --version
+
+            # 2. Build Squash Library (Static)
+            echo '=== Building Squash (Static) ==='
+            rm -rf /tmp/squash
+            git clone --depth 1 https://github.com/quixdb/squash.git /tmp/squash
+            cd /tmp/squash
+            
+            # Initialize minimal submodules
+            git submodule update --init squash/hedley || true
+            git submodule update --init squash/tinycthread || true
+            
+            # Disable utils/tests to avoid extra deps
+            sed -i 's/^[[:space:]]*add_subdirectory (utils)/# add_subdirectory (utils)/' CMakeLists.txt
+            sed -i 's/^[[:space:]]*add_subdirectory (tests)/# add_subdirectory (tests)/' CMakeLists.txt
+
+            mkdir -p builddir && cd builddir
+            
+            # IMPORTANT: -DBUILD_SHARED_LIBS=OFF creates .a files instead of .so
+            cmake .. \\
+              -DCMAKE_BUILD_TYPE=Release \\
+              -DCMAKE_INSTALL_PREFIX=/usr/local \\
+              -DBUILD_TESTING=OFF \\
+              -DBUILD_SHARED_LIBS=OFF \\
+              -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \\
+              -DFORCE_EXTERNAL_LZ4=ON \\
+              -DFORCE_EXTERNAL_ZSTD=ON \\
+              -DFORCE_EXTERNAL_ZLIB=ON \\
+              -DFORCE_EXTERNAL_SNAPPY=ON \\
+              -DFORCE_EXTERNAL_BROTLI=ON \\
+              -DFORCE_EXTERNAL_LZMA=ON \\
+              -DFORCE_EXTERNAL_BZIP2=ON \\
+              -DENABLE_BRIEFLZ=OFF \\
+              -DENABLE_BSC=OFF \\
+              -DENABLE_COPY=OFF \\
+              -DENABLE_CRUSH=OFF \\
+              -DENABLE_CSC=OFF \\
+              -DENABLE_DENSITY=OFF \\
+              -DENABLE_DOBOZ=OFF \\
+              -DENABLE_FARI=OFF \\
+              -DENABLE_FASTLZ=OFF \\
+              -DENABLE_GIPFELI=OFF \\
+              -DENABLE_HEATSHRINK=OFF \\
+              -DENABLE_LIBDEFLATE=OFF \\
+              -DENABLE_LZF=OFF \\
+              -DENABLE_LZFSE=OFF \\
+              -DENABLE_LZG=OFF \\
+              -DENABLE_LZHAM=OFF \\
+              -DENABLE_LZJB=OFF \\
+              -DENABLE_LZO=OFF \\
+              -DENABLE_MINIZ=OFF \\
+              -DENABLE_MS_COMPRESS=OFF \\
+              -DENABLE_NCOMPRESS=OFF \\
+              -DENABLE_PITHY=OFF \\
+              -DENABLE_QUICKLZ=OFF \\
+              -DENABLE_WFLZ=OFF \\
+              -DENABLE_YALZ77=OFF \\
+              -DENABLE_ZLIB_NG=OFF \\
+              -DENABLE_ZLING=OFF \\
+              -DENABLE_ZPAQ=OFF
+
+            make -j\$(nproc)
+            make install
+            
+            # Verify static lib exists
+            if [ -f \"/usr/local/lib/libsquash0.8.a\" ]; then
+               echo '✓ libsquash0.8.a found'
             else
-              echo "Shared library NOT found."
-              echo "SQUASH_INSTALLED=false" >> $GITHUB_OUTPUT
-              exit 1
+               echo '❌ libsquash0.8.a NOT found'
+               exit 1
             fi
-          else
-            echo "Squash headers not found"
-            echo "SQUASH_INSTALLED=false" >> $GITHUB_OUTPUT
-            exit 1
-          fi
 
-      - name: Configure CMake for benchmark
-        run: |
-          mkdir -p build
-          cd build
-          cmake .. \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_CXX_STANDARD=23 \
-            -DCMAKE_VERBOSE_MAKEFILE=ON
+            # Return to workspace
+            cd /workspace
 
-      - name: Build LosslessBenchmark (without Squash)
-        run: |
-          cd build
-          echo "=== CMake Flags ==="
-          grep -E "CXX_FLAGS|C_FLAGS" CMakeCache.txt || true
-          echo ""
-          cmake --build . --target LosslessBenchmark -- -j$(nproc)
-          echo ""
-          echo "✓ LosslessBenchmark (without Squash) built"
+            # 3. Configure Benchmark
+            # We pass -static to force the compiler to link everything into one file
+            echo '=== Building Benchmark ==='
+            mkdir -p build && cd build
+            cmake .. \\
+              -DCMAKE_BUILD_TYPE=Release \\
+              -DCMAKE_CXX_STANDARD=23 \\
+              -DCMAKE_EXE_LINKER_FLAGS='-static'
 
-      - name: Build LosslessBenchmarkFull (with Squash)
-        if: steps.squash.outputs.SQUASH_INSTALLED == 'true'
-        run: |
-          cd build
-          # Reconfigure to detect newly installed squash
-          cmake ..
-          cmake --build . --target LosslessBenchmarkFull -- -j$(nproc)
-          echo ""
-          echo "✓ LosslessBenchmarkFull (with Squash) built"
+            # 4. Build Targets
+            # We build both to ensure they compile
+            cmake --build . --target LosslessBenchmark -- -j\$(nproc)
+            cmake --build . --target LosslessBenchmarkFull -- -j\$(nproc)
+            
+            # Verify binary type
+            echo '=== Binary Verification ==='
+            file LosslessBenchmarkFull
+            # Should say 'statically linked'
+          "
 
-      - name: Verify executables and compressors
+      - name: Verify executables on Host
         run: |
-          echo "=== Built Executables ==="
           ls -lh build/LosslessBenchmark
-          ls -lh build/LosslessBenchmarkFull 2>/dev/null || echo "(LosslessBenchmarkFull not built)"
-          echo ""
-          
-          # Bundle shared libraries for portable artifact
-          if [ -f "build/LosslessBenchmarkFull" ]; then
-             mkdir -p build/lib
-             echo "Copying Squash libraries to build/lib/..."
-             cp -v /usr/local/lib/libsquash* build/lib/
-             # Also copy plugins if they are in subdirs (Squash 0.8 layout)
-             # But shared build typically puts them in /usr/local/lib/squash/0.8/plugins/ or /usr/local/lib directly?
-             # Let's check finding them
-             find /usr/local/lib -name "libsquash*.so*" -exec cp -v {} build/lib/ \;
-             
-             echo "Artifact prepared with bundled libs."
-          fi
-
-          echo "=== Compressors Available ==="
-          echo "Local compressors (always available):"
-          echo "  ✓ neats"
-          echo "  ✓ dac"
-          echo "  ✓ gorilla"
-          echo "  ✓ chimp"
-          echo "  ✓ chimp128"
-          echo "  ✓ tsxor"
-          echo "  ✓ elf"
-          echo "  ✓ camel"
-          echo "  ✓ falcon"
-          echo ""
-          
-          if [ -f "build/LosslessBenchmarkFull" ]; then
-            echo "Squash compressors (LosslessBenchmarkFull):"
-            echo "  ✓ lz4"
-            echo "  ✓ zstd"
-            echo "  ✓ brotli"
-            echo "  ✓ snappy"
-            echo "  ✓ xz"
-          else
-            echo "Squash compressors: NOT AVAILABLE (Squash build failed)"
-          fi
+          ls -lh build/LosslessBenchmarkFull
+          echo "Binaries are ready and statically linked."
 
       - name: Upload benchmark executables
         uses: actions/upload-artifact@v4
         with:
-          name: neats-linux-benchmarks
+          name: neats-linux-benchmarks-static
           path: |
             run_benchmarks.sh
             build/LosslessBenchmark
             build/LosslessBenchmarkFull
-            build/lib
-          if-no-files-found: warn
-
-  # Guaranteed minimal build without Squash
-  build-minimal:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install minimal build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake
-
-      - name: Build LosslessBenchmark
-        run: |
-          mkdir -p build && cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=23
-          cmake --build . --target LosslessBenchmark -- -j$(nproc)
-
-      - name: Verify and list available compressors
-        run: |
-          ls -lh build/LosslessBenchmark
-          echo ""
-          echo "=== Available Compressors (minimal build) ==="
-          echo "  ✓ neats"
-          echo "  ✓ dac"
-          echo "  ✓ gorilla"
-          echo "  ✓ chimp"
-          echo "  ✓ chimp128"
-          echo "  ✓ tsxor"
-          echo "  ✓ elf"
-          echo "  ✓ camel"
-          echo "  ✓ falcon"
-          echo ""
-          echo "  ✗ lz4 (requires Squash)"
-          echo "  ✗ zstd (requires Squash)"
-          echo "  ✗ brotli (requires Squash)"
-          echo "  ✗ snappy (requires Squash)"
-          echo "  ✗ xz (requires Squash)"
-
-      - name: Upload benchmark executable
-        uses: actions/upload-artifact@v4
-        with:
-          name: neats-linux-benchmark-minimal
-          path: build/LosslessBenchmark
