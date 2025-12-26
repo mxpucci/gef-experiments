@@ -23,19 +23,22 @@ jobs:
           #!/bin/bash
           set -euxo pipefail
 
-          # --- CONFIGURATION ---
-          export PATH=/opt/rh/devtoolset-10/root/usr/bin:$PATH
-          export CC=/opt/rh/devtoolset-10/root/usr/bin/gcc
-          export CXX=/opt/rh/devtoolset-10/root/usr/bin/g++
+          # --- CONFIGURATION (UPDATED TO GCC 11) ---
+          # We upgrade to GCC 11 for <experimental/simd> support
+          export PATH=/opt/rh/devtoolset-11/root/usr/bin:$PATH
+          export CC=/opt/rh/devtoolset-11/root/usr/bin/gcc
+          export CXX=/opt/rh/devtoolset-11/root/usr/bin/g++
           export SQUASH_PREFIX=/usr/local
           export TARGET_ARCH="-march=skylake-avx512 -mtune=skylake-avx512"
 
           # --- INSTALL DEPS ---
-          # 1. devtoolset-10-libstdc++-devel: FIXES 'experimental/simd: No such file'
-          # 2. brotli-devel: Fixes Squash plugin requirement
-          # 3. ragel: Fixes Squash build requirement
+          # 1. centos-release-scl: Enables access to devtoolset-11
+          # 2. devtoolset-11-*: Installs GCC 11 and its C++ headers (fixes <experimental/simd>)
+          # 3. ragel, brotli-devel, etc: Build dependencies
+          yum install -y centos-release-scl
+          
           yum install -y cmake3 ninja-build libtool \
-            devtoolset-10-libstdc++-devel devtoolset-10-gcc-c++ \
+            devtoolset-11-gcc-c++ devtoolset-11-libstdc++-devel \
             zlib-devel bzip2-devel xz-devel lz4-devel libzstd-devel snappy-devel \
             brotli-devel ragel \
             glib2-devel wget which
@@ -43,7 +46,6 @@ jobs:
           ln -sf /usr/bin/cmake3 /usr/bin/cmake
 
           # --- FIX: MANUALLY CREATE SNAPPY.PC ---
-          # CentOS 7 snappy-devel is broken/incomplete. Fix pkg-config manually.
           cat << 'PC' > /usr/lib64/pkgconfig/snappy.pc
           prefix=/usr
           exec_prefix=/usr
@@ -59,17 +61,18 @@ jobs:
           export PKG_CONFIG_PATH=/usr/lib64/pkgconfig:${PKG_CONFIG_PATH:-}
 
           # --- DOWNLOAD & BUILD SQUASH 0.7.0 ---
-          # Using tarball avoids git submodule hell
           wget https://github.com/quixdb/squash/releases/download/v0.7.0/squash-0.7.0.tar.bz2
           tar -xjf squash-0.7.0.tar.bz2
           
           cd squash-0.7.0
           
           # Configure Squash
-          # -w disables warnings to keep logs clean
+          # We use -w to disable warnings from old C code
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=${SQUASH_PREFIX} \
+            -DCMAKE_C_COMPILER=${CC} \
+            -DCMAKE_CXX_COMPILER=${CXX} \
             -DCMAKE_C_FLAGS="${TARGET_ARCH} -w" \
             -DCMAKE_CXX_FLAGS="${TARGET_ARCH} -w" \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5
@@ -84,8 +87,11 @@ jobs:
           cd /workspace
 
           # --- BUILD YOUR PROJECT ---
+          # Note: We pass the specific GCC 11 compilers
           cmake -S . -B build-skylake -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER=${CC} \
+            -DCMAKE_CXX_COMPILER=${CXX} \
             -DARCH_FLAGS="${TARGET_ARCH}" \
             -DNEATS_WITH_SQUASH=ON
 
@@ -117,7 +123,7 @@ jobs:
             cp -vL "$lib" "$OUT/lib/" || true
           done < /tmp/libs.txt
 
-          # Copy Squash plugins (handle both lib and lib64 cases)
+          # Copy Squash plugins (Check both locations)
           if [ -d "/usr/local/lib64/squash" ]; then
               cp -r /usr/local/lib64/squash/* "$OUT/lib/squash/" || true
           else
