@@ -48,13 +48,18 @@ class DecompressorCamel {
             int_value = storedIntVal + diff;
         } else {
             int sign = in.get(1);
-            int sizeFlag = in.get(1);
-            int diff;
-            if (sizeFlag == 0) {
-                diff = in.get(3);
+            int sizeSel = in.get(2); // must match CompressorCamel extended selector
+            uint64_t diff_u = 0;
+            if (sizeSel == 0) {
+                diff_u = in.get(3);
+            } else if (sizeSel == 1) {
+                diff_u = in.get(16);
+            } else if (sizeSel == 2) {
+                diff_u = in.get(32);
             } else {
-                diff = in.get(16);
+                diff_u = in.get(64);
             }
+            int64_t diff = static_cast<int64_t>(diff_u);
             if (sign == 0) {
                 diff = -diff;
             }

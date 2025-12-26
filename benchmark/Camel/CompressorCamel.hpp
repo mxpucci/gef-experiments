@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <cmath>
 #include <vector>
+#include <limits>
 #include "../lib/BitStream.hpp"
 
 template<typename T = double>
@@ -45,7 +46,10 @@ class CompressorCamel {
         value = std::abs(value);
         double epsilon = 0.0000001;
         
-        while (std::abs(value * factor - std::round(value * factor)) > epsilon) {
+        // Camel ultimately clamps to DECIMAL_MAX_COUNT, so avoid an unbounded loop
+        // on values that do not have a short terminating decimal representation.
+        while (decimal_count < DECIMAL_MAX_COUNT &&
+               std::abs(value * factor - std::round(value * factor)) > epsilon) {
             factor *= 10.0;
             decimal_count++;
         }
@@ -157,16 +161,18 @@ class CompressorCamel {
     
     // Compress integer part
     size_t compressIntegerValue(int64_t int_value, int intSignal) {
-        int diff = static_cast<int>(int_value - storedVal);
+        int64_t diff = int_value - storedVal;
         
         // Write sign bit to distinguish -0 and +0
         out.append(intSignal, 1);
-        size += 2;
+        size += 1;
         
         if (diff >= -1 && diff <= 1) {
             out.append(diff + 1, 2); // Map -1 to 0, 0 to 1, 1 to 2
+            size += 2;
         } else {
             out.append(3, 2); // 11
+            size += 2;
             if (diff < 0) {
                 out.push_back(false);
                 diff = -diff;
@@ -174,15 +180,28 @@ class CompressorCamel {
                 out.push_back(true);
             }
             size += 1;
-            
+
+            // Extended size selector (2 bits):
+            // 00: 3 bits (2..7)
+            // 01: 16 bits
+            // 10: 32 bits
+            // 11: 64 bits
             if (diff >= 2 && diff < 8) {
-                out.append(0, 1);
-                out.append(diff, 3);
-                size += 4;
+                out.append(0, 2);
+                out.append(static_cast<uint64_t>(diff), 3);
+                size += 5;
+            } else if (diff <= 0xFFFF) {
+                out.append(1, 2);
+                out.append(static_cast<uint64_t>(diff), 16);
+                size += 18;
+            } else if (diff <= 0xFFFFFFFFULL) {
+                out.append(2, 2);
+                out.append(static_cast<uint64_t>(diff), 32);
+                size += 34;
             } else {
-                out.append(1, 1);
-                out.append(diff, 16);
-                size += 17;
+                out.append(3, 2);
+                out.append(static_cast<uint64_t>(diff), 64);
+                size += 66;
             }
         }
         
