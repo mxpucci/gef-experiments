@@ -17,14 +17,19 @@ jobs:
         with:
           submodules: recursive
 
-      # 2. Checkout Squash (THIS WAS MISSING)
+      # 2. Checkout Squash (Robust Method)
       - name: Checkout Squash
-        uses: actions/checkout@v4
-        with:
-          repository: quixdb/squash
-          path: _deps/squash
-          submodules: recursive
-          fetch-depth: 1
+        run: |
+          # Clone without submodules first
+          git clone https://github.com/quixdb/squash.git _deps/squash
+          cd _deps/squash
+          
+          # Initialize submodules, but skip the broken ones if they fail
+          git submodule init
+          
+          # Try to update all submodules, but continue if FastARI fails
+          # This '|| true' ensures the build doesn't crash just because one plugin is missing
+          git submodule update --recursive || echo "Warning: Some submodules failed to clone (likely FastARI), continuing..."
 
       # 3. Create the Build Script
       - name: Create Build Script
