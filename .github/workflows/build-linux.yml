@@ -119,6 +119,10 @@ jobs:
           cmake --build build-skylake -j
 
           # --- BUNDLE ---
+      - name: Bundle runtime
+        run: |
+          set -euxo pipefail
+
           BIN="build-skylake/LosslessBenchmarkFull"
           OUT="NeaTS-CentOS7-Skylake"
           
@@ -127,10 +131,11 @@ jobs:
           
           cp -v "$BIN" "$OUT/LosslessBenchmarkFull"
           
-          # Fix RPATH to look in ./lib
+          # Fix RPATH to look in $ORIGIN/lib
           patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFull"
 
-          # Copy dependencies from Conda Environment
+          # 1. COPY BINARY DEPENDENCIES (e.g., liblz4.so, libstdc++.so)
+          # We copy from the Micromamba environment explicitly
           ldd "$OUT/LosslessBenchmarkFull" | awk '{print $3}' | grep -E '^/' | sort -u > /tmp/libs.txt || true
           while read -r lib; do
             base="$(basename "$lib")"
@@ -138,27 +143,53 @@ jobs:
               ld-linux*|libc.so.*|libm.so.*|libpthread.so.*|librt.so.*|libdl.so.*)
                 continue ;;
             esac
-            cp -vL "$lib" "$OUT/lib/" || true
+            # Force copy from the build environment path to ensure we get the newer versions
+            if [ -f "/opt/conda/envs/build-env/lib/$base" ]; then
+                cp -vL "/opt/conda/envs/build-env/lib/$base" "$OUT/lib/"
+            else
+                cp -vL "$lib" "$OUT/lib/" || true
+            fi
           done < /tmp/libs.txt
 
-          # Copy Squash plugins (Check both lib locations)
+          # 2. COPY SQUASH PLUGINS
+          # We check both lib and lib64 to be safe
           if [ -d "/usr/local/lib/squash" ]; then
              cp -r /usr/local/lib/squash/* "$OUT/lib/squash/" || true
           fi
           if [ -d "/usr/local/lib64/squash" ]; then
              cp -r /usr/local/lib64/squash/* "$OUT/lib/squash/" || true
           fi
+
+          # 3. GENERATE ROBUST RUN SCRIPT
+          cat << 'EOF' > "$OUT/run.sh"
+          #!/bin/bash
           
-          # Wrapper Script
-          cat << 'WRAPPER' > "$OUT/run.sh"
-          #!/bin/sh
+          # Get absolute path to the bundle directory
           HERE="$(dirname "$(readlink -f "$0")")"
-          export SQUASH_PATH="$HERE/lib/squash"
+          
+          # 1. Set library path so plugins can find liblz4.so, libzstd.so, etc.
           export LD_LIBRARY_PATH="$HERE/lib:$LD_LIBRARY_PATH"
+          
+          # 2. Auto-detect the Squash Plugins directory
+          # Squash 0.7 usually nests plugins deep, e.g., lib/squash/0.7/plugins
+          # We find the folder named 'plugins' and point SQUASH_PLUGINS_PATH to it.
+          PLUGIN_DIR=$(find "$HERE/lib/squash" -type d -name "plugins" | head -n 1)
+          
+          if [ -n "$PLUGIN_DIR" ]; then
+              export SQUASH_PLUGINS_PATH="$PLUGIN_DIR"
+              # Also set the generic path just in case
+              export SQUASH_PATH="$(dirname "$PLUGIN_DIR")"
+          else
+              echo "WARNING: Could not find Squash 'plugins' directory in $HERE/lib/squash"
+          fi
+          
+          # 3. Run the benchmark
           exec "$HERE/LosslessBenchmarkFull" "$@"
-          WRAPPER
+          EOF
+          
           chmod +x "$OUT/run.sh"
           
+          # Fix ownership for artifact upload
           chown -R $(id -u):$(id -g) "$OUT"
           EOF
           
