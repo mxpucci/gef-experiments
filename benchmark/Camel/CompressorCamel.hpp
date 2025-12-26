@@ -39,6 +39,20 @@ class CompressorCamel {
     
     BitStream out{};
     
+    static inline int64_t doubleToBits(double d) {
+        return *reinterpret_cast<int64_t*>(&d);
+    }
+
+    static inline double bitsToDouble(int64_t b) {
+        return *reinterpret_cast<double*>(&b);
+    }
+
+    inline bool fitsInInt64(double d) const {
+        if (!std::isfinite(d)) return false;
+        return d >= static_cast<double>(std::numeric_limits<int64_t>::min()) &&
+               d <= static_cast<double>(std::numeric_limits<int64_t>::max());
+    }
+
     // Calculate decimal count and decimal value
     void cal_decimal_count(double value, int& decimal_count, int64_t& decimal_value) {
         double factor = 1;
@@ -70,7 +84,9 @@ class CompressorCamel {
     // Write first value
     size_t writeFirst(int64_t value) {
         first = false;
-        storedVal = static_cast<int64_t>(static_cast<T>(*reinterpret_cast<double*>(&value)));
+        // storedVal tracks integer part of last *finite* value; avoid UB on NaN/Inf/out-of-range.
+        double d = bitsToDouble(value);
+        storedVal = fitsInInt64(d) ? static_cast<int64_t>(d) : 0;
         out.append(value, 64);
         size += 64;
         return size;
@@ -211,7 +227,21 @@ class CompressorCamel {
     
     // Compress a value (after first)
     size_t compressValue(double value) {
-        int intSignal = value < 0 ? 0 : 1;
+        // Escape hatch for NaN/Inf or values that don't fit the integer-part model:
+        // write a 1-bit flag + raw 64-bit double bits (lossless).
+        if (!std::isfinite(value) || !fitsInInt64(value)) {
+            out.push_back(true);
+            out.append(static_cast<uint64_t>(doubleToBits(value)), 64);
+            size += 65;
+            // Do not update storedVal based on a non-finite value.
+            return size;
+        }
+
+        // Normal Camel path: 0 flag then integer+decimal encoding.
+        out.push_back(false);
+        size += 1;
+
+        int intSignal = std::signbit(value) ? 0 : 1;
         size = compressIntegerValue(static_cast<int64_t>(value), intSignal);
         
         int decimal_count;

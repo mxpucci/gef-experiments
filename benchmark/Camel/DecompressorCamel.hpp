@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <cmath>
+#include <limits>
 #include "../lib/BitStream.hpp"
 
 template<typename T = double>
@@ -27,6 +28,12 @@ class DecompressorCamel {
     
     static double Long_longBitsToDouble(int64_t bits) {
         return *reinterpret_cast<double*>(&bits);
+    }
+
+    static bool fitsInInt64(double d) {
+        if (!std::isfinite(d)) return false;
+        return d >= static_cast<double>(std::numeric_limits<int64_t>::min()) &&
+               d <= static_cast<double>(std::numeric_limits<int64_t>::max());
     }
     
     T readFirst() {
@@ -153,6 +160,17 @@ class DecompressorCamel {
     }
     
     T nextValue() {
+        // Per-value raw escape flag (must match CompressorCamel::compressValue)
+        int rawFlag = in.get(1);
+        if (rawFlag == 1) {
+            int64_t bits = in.get(64);
+            double d = Long_longBitsToDouble(bits);
+            // Only update integer predictor state when it is safe/finite.
+            if (fitsInInt64(d)) {
+                storedIntVal = static_cast<int64_t>(d);
+            }
+            return static_cast<T>(d);
+        }
         int intSignal;
         int64_t int_value = decompressIntegerValue(intSignal);
         return static_cast<T>(decompressDecimalValue(int_value, intSignal));
