@@ -45,6 +45,7 @@ public:
     }
     
     bool isEndOfStream() const { return endOfStream; }
+    void clearEndOfStream() { endOfStream = false; }
     
 private:
     void next() {
@@ -152,7 +153,17 @@ public:
     bool hasNext() {
         if (!endOfStream) {
             T val = nextValue();
-            if (std::isnan(val) || xorDecompressor.isEndOfStream()) {
+            if (std::isnan(val)) {
+                if (i < n) {
+                    xorDecompressor.clearEndOfStream();
+                    storedValue = val;
+                    ++i;
+                    return true;
+                }
+                endOfStream = true;
+                return false;
+            }
+            if (xorDecompressor.isEndOfStream()) {
                 endOfStream = true;
                 return false;
             }

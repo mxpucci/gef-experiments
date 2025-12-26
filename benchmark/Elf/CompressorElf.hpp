@@ -125,10 +125,15 @@ public:
         }
         
         double temp = v * get10iP(i);
+        if (std::isinf(temp)) return 17;
         int64_t tempLong = static_cast<int64_t>(temp);
         while (tempLong != temp) {
             i++;
-            temp = v * get10iP(i);
+            if (i > 308) return 17; // Prevent infinite loop/overflow
+            double scale = get10iP(i);
+            if (std::isinf(scale)) return 17;
+            
+            temp = v * scale;
             tempLong = static_cast<int64_t>(temp);
         }
         
@@ -213,10 +218,15 @@ public:
     size_t writeFirst(int64_t value) {
         first = false;
         storedVal = value;
-        int trailingZeros = __builtin_ctzll(value);
+        int trailingZeros = 64;
+        if (value != 0) {
+            trailingZeros = __builtin_ctzll(value);
+        }
         out.append(trailingZeros, 7);
         if (trailingZeros < 64) {
-            out.append(static_cast<uint64_t>(storedVal) >> (trailingZeros + 1), 63 - trailingZeros);
+            if (63 - trailingZeros > 0) {
+                out.append(static_cast<uint64_t>(storedVal) >> (trailingZeros + 1), 63 - trailingZeros);
+            }
             size += 70 - trailingZeros;
             return 70 - trailingZeros;
         } else {
@@ -259,14 +269,18 @@ public:
                     // case 10
                     int header = (((0x2 << 3) | leadingRepresentation[storedLeadingZeros]) << 4) | (centerBits & 0xf);
                     out.append(header, 9);
-                    out.append(static_cast<uint64_t>(xorVal) >> (storedTrailingZeros + 1), centerBits - 1);
+                    if (centerBits > 1) {
+                        out.append(static_cast<uint64_t>(xorVal) >> (storedTrailingZeros + 1), centerBits - 1);
+                    }
                     size += 8 + centerBits;
                     thisSize += 8 + centerBits;
                 } else {
                     // case 11
                     int header = (((0x3 << 3) | leadingRepresentation[storedLeadingZeros]) << 6) | (centerBits & 0x3f);
                     out.append(header, 11);
-                    out.append(static_cast<uint64_t>(xorVal) >> (storedTrailingZeros + 1), centerBits - 1);
+                    if (centerBits > 1) {
+                        out.append(static_cast<uint64_t>(xorVal) >> (storedTrailingZeros + 1), centerBits - 1);
+                    }
                     size += 10 + centerBits;
                     thisSize += 10 + centerBits;
                 }
