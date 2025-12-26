@@ -28,27 +28,25 @@ jobs:
           export CC=/opt/rh/devtoolset-10/root/usr/bin/gcc
           export CXX=/opt/rh/devtoolset-10/root/usr/bin/g++
           export SQUASH_PREFIX=/usr/local
-          # Apply Skylake optimizations to the library
           export TARGET_ARCH="-march=skylake-avx512 -mtune=skylake-avx512"
 
           # --- INSTALL DEPS ---
-          # We still need development headers for system libraries
+          # Added 'ragel' here to fix the missing executable error
           yum install -y cmake3 ninja-build libtool \
             zlib-devel bzip2-devel xz-devel lz4-devel libzstd-devel snappy-devel \
-            brotli-devel \
+            brotli-devel ragel \
             glib2-devel wget which
 
           ln -sf /usr/bin/cmake3 /usr/bin/cmake
 
           # --- DOWNLOAD & BUILD SQUASH 0.7.0 ---
-          # We use the official release tarball to avoid git submodule errors.
           wget https://github.com/quixdb/squash/releases/download/v0.7.0/squash-0.7.0.tar.bz2
           tar -xjf squash-0.7.0.tar.bz2
           
           cd squash-0.7.0
           
           # Configure CMake
-          # Note: We disable -Werror to ensure old 2015 code compiles on modern GCC 10
+          # Added -DCMAKE_POLICY_VERSION_MINIMUM=3.5 to fix deprecation warnings
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=${SQUASH_PREFIX} \
@@ -59,11 +57,9 @@ jobs:
           cmake --build build -j
           make -C build install || cmake --install build
           
-          # Register new libs
           echo "${SQUASH_PREFIX}/lib" > /etc/ld.so.conf.d/squash.conf
           ldconfig
           
-          # Go back to workspace
           cd /workspace
 
           # --- BUILD YOUR PROJECT ---
@@ -100,15 +96,13 @@ jobs:
             cp -vL "$lib" "$OUT/lib/" || true
           done < /tmp/libs.txt
 
-          # Copy Squash plugins (0.7.0 puts them in lib/squash/0.7.0/ or similar)
-          # We copy loosely to catch whatever structure it creates
+          # Copy Squash plugins
           cp -r /usr/local/lib/squash/* "$OUT/lib/squash/" || true
           
           # Wrapper Script
           cat << 'WRAPPER' > "$OUT/run.sh"
           #!/bin/sh
           HERE="$(dirname "$(readlink -f "$0")")"
-          # 0.7.0 might use a versioned directory, so we point broadly
           export SQUASH_PATH="$HERE/lib/squash"
           export LD_LIBRARY_PATH="$HERE/lib:$LD_LIBRARY_PATH"
           exec "$HERE/LosslessBenchmarkFull" "$@"
@@ -121,6 +115,7 @@ jobs:
           chmod +x build_internal.sh
 
       # 2. Run Build in Docker (CentOS 7)
+      # This step ensures we are using the environment with glibc 2.17 and yum installed packages
       - name: Run Build in Docker (CentOS 7)
         run: |
           docker run --rm \
