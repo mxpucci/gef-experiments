@@ -20,16 +20,28 @@ struct BitStream {
         data = std::move(b);
         m_size = m;
         closed = true;
-        curr_bucket = &data.front();
-        m_used_slots = 64;
+        if (!data.empty()) {
+            curr_bucket = &data.front();
+            m_used_slots = (m_size < 64) ? m_size : 64;
+        } else {
+            curr_bucket = nullptr;
+            m_used_slots = 0;
+        }
     }
 
     BitStream(const BitStream &b) {
         data = b.data;
         m_size = b.m_size;
         closed = b.closed;
-        curr_bucket = &data.front();
-        m_used_slots = 64;
+        if (!data.empty()) {
+            curr_bucket = &data.front();
+            // Preserve correct read window size for closed streams; for open streams
+            // the reader state is irrelevant (reads assert(closed)).
+            m_used_slots = (closed && m_size < 64) ? m_size : 64;
+        } else {
+            curr_bucket = nullptr;
+            m_used_slots = 0;
+        }
     }
 
     void append(uint64_t bits, uint64_t len) {
@@ -81,8 +93,13 @@ struct BitStream {
         if (len == m_used_slots) {
             t_bits = *curr_bucket;
             data.pop_front();
-            curr_bucket = &data.front();
-            m_used_slots = m_size < 64 ? m_size : 64;
+            if (!data.empty()) {
+                curr_bucket = &data.front();
+                m_used_slots = m_size < 64 ? m_size : 64;
+            } else {
+                curr_bucket = nullptr;
+                m_used_slots = 0;
+            }
         } else if (len < m_used_slots) {
             t_bits = *curr_bucket >> (m_used_slots - len);
             auto mask = UINT64_MAX << (m_used_slots - len);
@@ -91,6 +108,13 @@ struct BitStream {
         } else {
             t_bits = *curr_bucket;
             data.pop_front();
+            if (data.empty()) {
+                // Stream ended exactly at bucket boundary; avoid dereferencing.
+                m_size -= len;
+                curr_bucket = nullptr;
+                m_used_slots = 0;
+                return t_bits;
+            }
             curr_bucket = &data.front();
             t_bits <<= len - m_used_slots;
             t_bits ^= (*curr_bucket >> (64 - len + m_used_slots));
