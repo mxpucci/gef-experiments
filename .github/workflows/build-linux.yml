@@ -17,7 +17,7 @@ jobs:
         with:
           submodules: recursive
 
-      # 2. Checkout Squash (Robust & Cleaned)
+      # 2. Checkout Squash & Patch Build Files
       - name: Checkout Squash
         run: |
           # Clone Squash
@@ -25,24 +25,22 @@ jobs:
           cd _deps/squash
           git submodule init
           
-          # Try to update submodules, but ignore errors (like FastARI 404)
-          git submodule update --recursive || echo "Submodule update had failures, cleaning up below..."
+          # Attempt update, but proceed on failure (FastARI/404)
+          git submodule update --recursive || echo "Submodule failures detected, patching CMakeLists below..."
 
-          # --- CRITICAL FIX ---
-          # We manually remove the plugins that are known to be broken/dead/empty.
-          # This prevents CMake from crashing when it enters these directories.
+          # --- FIX: Remove broken plugins from CMakeLists.txt ---
+          # We use 'sed' to delete lines containing the names of broken plugins.
+          # This stops CMake from trying to add_subdirectory() for folders that don't exist.
           
-          # 1. Remove FastARI (Repo deleted/404)
-          rm -rf plugins/fari
+          sed -i '/add_subdirectory(fari)/d' plugins/CMakeLists.txt
+          sed -i '/add_subdirectory(brieflz)/d' plugins/CMakeLists.txt
+          sed -i '/add_subdirectory(zlib-ng)/d' plugins/CMakeLists.txt
           
-          # 2. Remove BriefLZ (Often fails or is empty)
-          rm -rf plugins/brieflz
+          # Now it is safe to remove the directories
+          rm -rf plugins/fari plugins/brieflz plugins/zlib-ng
           
-          # 3. Remove zlib-ng (Submodule often fails, and we have system zlib anyway)
-          rm -rf plugins/zlib-ng
-
-          # Note: We keep 'plugins/brotli' because we will install brotli-devel.
-          # Squash will detect the system library and use it, ignoring the empty submodule.
+          # Note: We keep 'brotli' because we installed 'brotli-devel' in the container.
+          # Squash will find the system library and won't need the empty submodule.
 
       # 3. Create the Build Script
       - name: Create Build Script
@@ -58,11 +56,10 @@ jobs:
           export SQUASH_PREFIX=/usr/local
           export TARGET_ARCH="-march=skylake-avx512 -mtune=skylake-avx512"
 
-          # Fix Git ownership warning inside Docker
           git config --global --add safe.directory /workspace
 
           # --- INSTALL DEPS ---
-          # Added 'brotli-devel' so your project finds PkgConfig::BROTLI
+          # brotli-devel added for Squash to use system lib
           yum install -y cmake3 ninja-build libtool \
             zlib-devel bzip2-devel xz-devel lz4-devel libzstd-devel snappy-devel \
             brotli-devel \
@@ -71,7 +68,6 @@ jobs:
           ln -sf /usr/bin/cmake3 /usr/bin/cmake
 
           # --- BUILD SQUASH ---
-          # -DCMAKE_POLICY_VERSION_MINIMUM=3.5 fixes the policy error
           cmake -S _deps/squash -B _deps/squash/build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=${SQUASH_PREFIX} \
@@ -131,7 +127,6 @@ jobs:
           WRAPPER
           chmod +x "$OUT/run.sh"
           
-          # Fix ownership so artifact upload works
           chown -R $(id -u):$(id -g) "$OUT"
           EOF
           
