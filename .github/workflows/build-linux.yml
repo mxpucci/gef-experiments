@@ -23,88 +23,47 @@ jobs:
           #!/bin/bash
           set -euxo pipefail
 
-          # --- FIX 1: BASE REPOS (Force Vault) ---
-          # We force specific version 7.9.2009 to ensure Vault paths match
-          rm -f /etc/yum.repos.d/CentOS-Base.repo
-          cat << 'REPO' > /etc/yum.repos.d/CentOS-Base.repo
+          # --- FIX REPOS (Just to get bzip2) ---
+          rm -f /etc/yum.repos.d/*.repo
+          cat << 'REPO' > /etc/yum.repos.d/CentOS-Vault.repo
           [base]
           name=CentOS-7 - Base
           baseurl=http://vault.centos.org/7.9.2009/os/x86_64/
-          gpgcheck=1
-          gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
-
+          gpgcheck=0
+          
           [updates]
           name=CentOS-7 - Updates
           baseurl=http://vault.centos.org/7.9.2009/updates/x86_64/
-          gpgcheck=1
-          gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
-
-          [extras]
-          name=CentOS-7 - Extras
-          baseurl=http://vault.centos.org/7.9.2009/extras/x86_64/
-          gpgcheck=1
-          gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+          gpgcheck=0
           REPO
-
-          # Install the release package (this puts broken files back in /etc/yum.repos.d/)
-          yum install -y centos-release-scl epel-release
-
-          # --- FIX 2: NUKE AND REPLACE SCL REPOS ---
-          # Delete the broken files installed by centos-release-scl
-          rm -f /etc/yum.repos.d/CentOS-SCLo-scl.repo /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
-
-          # Write a clean file pointing to the Vault
-          cat << 'SCL' > /etc/yum.repos.d/CentOS-SCLo-Vault.repo
-          [centos-sclo-rh]
-          name=CentOS-7 - SCLo rh
-          baseurl=http://vault.centos.org/7.9.2009/sclo/x86_64/rh/
-          gpgcheck=1
-          enabled=1
-          gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-SIG-SCLo
-
-          [centos-sclo-sclo]
-          name=CentOS-7 - SCLo sclo
-          baseurl=http://vault.centos.org/7.9.2009/sclo/x86_64/sclo/
-          gpgcheck=1
-          enabled=1
-          gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-SIG-SCLo
-          SCL
           
-          # Fix EPEL while we are at it
-          sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/epel.repo
-          sed -i 's/#baseurl/baseurl/g' /etc/yum.repos.d/epel.repo
-          sed -i 's/download.fedoraproject.org\/pub/archives.fedoraproject.org\/pub\/archive/g' /etc/yum.repos.d/epel.repo
+          yum install -y bzip2 wget
 
-          # --- CONFIGURATION (GCC 11) ---
-          export PATH=/opt/rh/devtoolset-11/root/usr/bin:$PATH
-          export CC=/opt/rh/devtoolset-11/root/usr/bin/gcc
-          export CXX=/opt/rh/devtoolset-11/root/usr/bin/g++
+          # --- INSTALL MICROMAMBA & GCC 13 ---
+          # We use Micromamba to fetch a modern compiler (GCC 13) that runs on old Linux.
+          # This gives us <stdfloat> support while keeping glibc 2.17 compatibility.
+          
+          wget -qO- https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C /usr/local/bin --strip-components=1 bin/micromamba
+          
+          export MAMBA_ROOT_PREFIX=/opt/conda
+          micromamba create -y -n build-env -c conda-forge \
+            gcc_linux-64=13 gxx_linux-64=13 \
+            cmake ninja pkg-config make \
+            ragel patchelf \
+            brotli zlib lz4-c zstd snappy xz bzip2 \
+            liblzma-devel
+
+          # Activate the environment
+          eval "$(micromamba shell hook -s bash)"
+          micromamba activate build-env
+
+          # --- ENVIRONMENT SETUP ---
+          # Conda compiler variables (CC, CXX) are set automatically by activation
           export SQUASH_PREFIX=/usr/local
           export TARGET_ARCH="-march=skylake-avx512 -mtune=skylake-avx512"
-
-          # --- INSTALL DEPS (Finally) ---
-          yum install -y cmake3 ninja-build libtool \
-            devtoolset-11-gcc-c++ devtoolset-11-libstdc++-devel \
-            zlib-devel bzip2-devel xz-devel lz4-devel libzstd-devel snappy-devel \
-            brotli-devel ragel \
-            glib2-devel wget which
-
-          ln -sf /usr/bin/cmake3 /usr/bin/cmake
-
-          # --- FIX: MANUALLY CREATE SNAPPY.PC ---
-          cat << 'PC' > /usr/lib64/pkgconfig/snappy.pc
-          prefix=/usr
-          exec_prefix=/usr
-          libdir=/usr/lib64
-          includedir=/usr/include
-
-          Name: snappy
-          Description: Snappy compression library
-          Version: 1.1.0
-          Libs: -L${libdir} -lsnappy
-          Cflags: -I${includedir}
-          PC
-          export PKG_CONFIG_PATH=/usr/lib64/pkgconfig:${PKG_CONFIG_PATH:-}
+          
+          # Verify compiler version
+          $CXX --version
 
           # --- DOWNLOAD & BUILD SQUASH 0.7.0 ---
           wget https://github.com/quixdb/squash/releases/download/v0.7.0/squash-0.7.0.tar.bz2
@@ -113,11 +72,10 @@ jobs:
           cd squash-0.7.0
           
           # Configure Squash
+          # Note: We link headers to /usr/local so your project finds them easily
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=${SQUASH_PREFIX} \
-            -DCMAKE_C_COMPILER=${CC} \
-            -DCMAKE_CXX_COMPILER=${CXX} \
             -DCMAKE_C_FLAGS="${TARGET_ARCH} -w" \
             -DCMAKE_CXX_FLAGS="${TARGET_ARCH} -w" \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5
@@ -125,17 +83,15 @@ jobs:
           cmake --build build -j
           make -C build install || cmake --install build
           
-          # Register libs
-          echo "${SQUASH_PREFIX}/lib" > /etc/ld.so.conf.d/squash.conf
-          ldconfig
+          # Copy Squash shared libs to conda lib path so they can be bundled later
+          cp -v ${SQUASH_PREFIX}/lib/libsquash* /opt/conda/lib/ || true
           
           cd /workspace
 
           # --- BUILD YOUR PROJECT ---
+          # GCC 13 supports <stdfloat> natively
           cmake -S . -B build-skylake -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_C_COMPILER=${CC} \
-            -DCMAKE_CXX_COMPILER=${CXX} \
             -DARCH_FLAGS="${TARGET_ARCH}" \
             -DNEATS_WITH_SQUASH=ON
 
@@ -150,28 +106,29 @@ jobs:
           
           cp -v "$BIN" "$OUT/LosslessBenchmarkFull"
           
-          # Install patchelf
-          yum install -y patchelf || true
-          if command -v patchelf; then
-             patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFull"
-          fi
+          # Fix RPATH
+          patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFull"
 
           # Copy dependencies
+          # This will now pull shared libs from /opt/conda/lib (GCC 13 runtimes, brotli, etc.)
           ldd "$OUT/LosslessBenchmarkFull" | awk '{print $3}' | grep -E '^/' | sort -u > /tmp/libs.txt || true
           while read -r lib; do
             base="$(basename "$lib")"
+            # We copy everything except low-level OS libs
             case "$base" in
-              ld-linux*|libc.so.*|libm.so.*|libpthread.so.*|librt.so.*|libdl.so.*|libstdc++*|libgcc_s*)
+              ld-linux*|libc.so.*|libm.so.*|libpthread.so.*|librt.so.*|libdl.so.*)
                 continue ;;
             esac
             cp -vL "$lib" "$OUT/lib/" || true
           done < /tmp/libs.txt
 
-          # Copy Squash plugins (Robust check)
+          # Copy Squash plugins
+          # With 0.7 tarball, they might be in lib or lib64. We check both.
+          if [ -d "/usr/local/lib/squash" ]; then
+             cp -r /usr/local/lib/squash/* "$OUT/lib/squash/" || true
+          fi
           if [ -d "/usr/local/lib64/squash" ]; then
-              cp -r /usr/local/lib64/squash/* "$OUT/lib/squash/" || true
-          else
-              cp -r /usr/local/lib/squash/* "$OUT/lib/squash/" || true
+             cp -r /usr/local/lib64/squash/* "$OUT/lib/squash/" || true
           fi
           
           # Wrapper Script
@@ -189,7 +146,7 @@ jobs:
           
           chmod +x build_internal.sh
 
-      # 2. Run Build in Docker (CentOS 7)
+      # 2. Run Build in Docker
       - name: Run Build in Docker (CentOS 7)
         run: |
           docker run --rm \
