@@ -11,14 +11,22 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      # 1. Checkout on the Host (Ubuntu 22/24) - Works perfectly
+      # 1. Checkout Your Repo
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      # 2. Create the Build Script
-      # We write the build commands to a script file so we can run them inside Docker easily.
+      # 2. Checkout Squash (THIS WAS MISSING)
+      - name: Checkout Squash
+        uses: actions/checkout@v4
+        with:
+          repository: quixdb/squash
+          path: _deps/squash
+          submodules: recursive
+          fetch-depth: 1
+
+      # 3. Create the Build Script
       - name: Create Build Script
         run: |
           cat << 'EOF' > build_internal.sh
@@ -26,7 +34,6 @@ jobs:
           set -euxo pipefail
 
           # --- CONFIGURATION ---
-          # Use GCC 10 from devtoolset
           export PATH=/opt/rh/devtoolset-10/root/usr/bin:$PATH
           export CC=/opt/rh/devtoolset-10/root/usr/bin/gcc
           export CXX=/opt/rh/devtoolset-10/root/usr/bin/g++
@@ -41,7 +48,7 @@ jobs:
           ln -sf /usr/bin/cmake3 /usr/bin/cmake
 
           # --- BUILD SQUASH ---
-          # We build inside _deps/squash
+          # Now this directory exists!
           cmake -S _deps/squash -B _deps/squash/build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=${SQUASH_PREFIX} \
@@ -100,13 +107,13 @@ jobs:
           WRAPPER
           chmod +x "$OUT/run.sh"
           
-          # Fix permissions so the host user can own the files
+          # Fix permissions
           chown -R $(id -u):$(id -g) "$OUT"
           EOF
           
           chmod +x build_internal.sh
 
-      # 3. Run the Build Inside the Container
+      # 4. Run Build in Docker
       - name: Run Build in Docker (CentOS 7)
         run: |
           docker run --rm \
@@ -115,7 +122,7 @@ jobs:
             quay.io/pypa/manylinux2014_x86_64:latest \
             /bin/bash /workspace/build_internal.sh
 
-      # 4. Upload Artifact (back on Host)
+      # 5. Upload Artifact
       - name: Upload Bundle
         uses: actions/upload-artifact@v4
         with:

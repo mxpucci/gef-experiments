@@ -68,7 +68,15 @@ option(NEATS_WITH_SQUASH "Build LosslessBenchmarkFull with Squash" ON)
 
 if(NEATS_WITH_SQUASH)
     set(SQUASH_ROOT "/usr/local")
-    set(SQUASH_INCLUDE_DIR "${SQUASH_ROOT}/include/squash-0.8")
+    find_path(SQUASH_INCLUDE_DIR 
+        NAMES squash/squash.h 
+        PATHS "${SQUASH_ROOT}/include"
+        PATH_SUFFIXES squash-0.9 squash-0.8 squash-0.7 squash
+        NO_DEFAULT_PATH
+    )
+    if(NOT SQUASH_INCLUDE_DIR)
+        message(FATAL_ERROR "Could not find Squash headers in ${SQUASH_ROOT}/include")
+    endif()
 
     if(EXISTS "${SQUASH_INCLUDE_DIR}/squash/squash.h")
         find_package(PkgConfig REQUIRED)
