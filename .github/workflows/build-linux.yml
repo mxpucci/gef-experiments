@@ -21,9 +21,10 @@ jobs:
         run: |
           cat << 'EOF' > build_internal.sh
           #!/bin/bash
-          set -euxo pipefail
+          set -eo pipefail 
+          # Note: We removed '-u' (nounset) because conda scripts trigger it incorrectly.
 
-          # --- FIX REPOS (Just to get bzip2) ---
+          # --- FIX REPOS (Minimal fix just to get bzip2) ---
           rm -f /etc/yum.repos.d/*.repo
           cat << 'REPO' > /etc/yum.repos.d/CentOS-Vault.repo
           [base]
@@ -40,9 +41,7 @@ jobs:
           yum install -y bzip2 wget
 
           # --- INSTALL MICROMAMBA & GCC 13 ---
-          # We use Micromamba to fetch a modern compiler (GCC 13) that runs on old Linux.
-          # This gives us <stdfloat> support while keeping glibc 2.17 compatibility.
-          
+          # We use Micromamba to get GCC 13 (supports <stdfloat>) on CentOS 7
           wget -qO- https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C /usr/local/bin --strip-components=1 bin/micromamba
           
           export MAMBA_ROOT_PREFIX=/opt/conda
@@ -53,16 +52,19 @@ jobs:
             brotli zlib lz4-c zstd snappy xz bzip2 \
             liblzma-devel
 
-          # Activate the environment
+          # --- ACTIVATE ENVIRONMENT ---
+          # We must ensure 'set -u' is OFF here because activate scripts have unbound variables
+          set +u
           eval "$(micromamba shell hook -s bash)"
           micromamba activate build-env
+          set -u
 
           # --- ENVIRONMENT SETUP ---
-          # Conda compiler variables (CC, CXX) are set automatically by activation
+          # squash 0.7 tarball hardcodes installation to /usr/local
           export SQUASH_PREFIX=/usr/local
           export TARGET_ARCH="-march=skylake-avx512 -mtune=skylake-avx512"
           
-          # Verify compiler version
+          echo "Compiler Version Check:"
           $CXX --version
 
           # --- DOWNLOAD & BUILD SQUASH 0.7.0 ---
@@ -72,7 +74,8 @@ jobs:
           cd squash-0.7.0
           
           # Configure Squash
-          # Note: We link headers to /usr/local so your project finds them easily
+          # We install headers to /usr/local so your project finds them easily
+          # We ignore warnings (-w) because 2015 code triggers many in GCC 13
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=${SQUASH_PREFIX} \
@@ -83,13 +86,12 @@ jobs:
           cmake --build build -j
           make -C build install || cmake --install build
           
-          # Copy Squash shared libs to conda lib path so they can be bundled later
-          cp -v ${SQUASH_PREFIX}/lib/libsquash* /opt/conda/lib/ || true
+          # Manually copy libs to the conda environment lib path so they are found during link
+          cp -v ${SQUASH_PREFIX}/lib/libsquash* /opt/conda/envs/build-env/lib/ || true
           
           cd /workspace
 
           # --- BUILD YOUR PROJECT ---
-          # GCC 13 supports <stdfloat> natively
           cmake -S . -B build-skylake -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DARCH_FLAGS="${TARGET_ARCH}" \
@@ -106,15 +108,15 @@ jobs:
           
           cp -v "$BIN" "$OUT/LosslessBenchmarkFull"
           
-          # Fix RPATH
+          # Fix RPATH to look in ./lib
           patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFull"
 
           # Copy dependencies
-          # This will now pull shared libs from /opt/conda/lib (GCC 13 runtimes, brotli, etc.)
+          # This pulls libraries from the Conda environment (GCC 13 runtime, newer glibc features handled safely)
           ldd "$OUT/LosslessBenchmarkFull" | awk '{print $3}' | grep -E '^/' | sort -u > /tmp/libs.txt || true
           while read -r lib; do
             base="$(basename "$lib")"
-            # We copy everything except low-level OS libs
+            # Exclude low-level system libraries that should come from the target OS
             case "$base" in
               ld-linux*|libc.so.*|libm.so.*|libpthread.so.*|librt.so.*|libdl.so.*)
                 continue ;;
@@ -122,8 +124,8 @@ jobs:
             cp -vL "$lib" "$OUT/lib/" || true
           done < /tmp/libs.txt
 
-          # Copy Squash plugins
-          # With 0.7 tarball, they might be in lib or lib64. We check both.
+          # Copy Squash plugins (From /usr/local where we installed them)
+          # Check both lib and lib64 locations
           if [ -d "/usr/local/lib/squash" ]; then
              cp -r /usr/local/lib/squash/* "$OUT/lib/squash/" || true
           fi
