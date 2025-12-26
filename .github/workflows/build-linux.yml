@@ -17,14 +17,32 @@ jobs:
         with:
           submodules: recursive
 
-      # 2. Checkout Squash (Robust Method - Skips Broken Submodules)
+      # 2. Checkout Squash (Robust & Cleaned)
       - name: Checkout Squash
         run: |
+          # Clone Squash
           git clone https://github.com/quixdb/squash.git _deps/squash
           cd _deps/squash
           git submodule init
-          # Ignore failure for broken submodules like FastARI
-          git submodule update --recursive || echo "Warning: Some submodules failed, continuing..."
+          
+          # Try to update submodules, but ignore errors (like FastARI 404)
+          git submodule update --recursive || echo "Submodule update had failures, cleaning up below..."
+
+          # --- CRITICAL FIX ---
+          # We manually remove the plugins that are known to be broken/dead/empty.
+          # This prevents CMake from crashing when it enters these directories.
+          
+          # 1. Remove FastARI (Repo deleted/404)
+          rm -rf plugins/fari
+          
+          # 2. Remove BriefLZ (Often fails or is empty)
+          rm -rf plugins/brieflz
+          
+          # 3. Remove zlib-ng (Submodule often fails, and we have system zlib anyway)
+          rm -rf plugins/zlib-ng
+
+          # Note: We keep 'plugins/brotli' because we will install brotli-devel.
+          # Squash will detect the system library and use it, ignoring the empty submodule.
 
       # 3. Create the Build Script
       - name: Create Build Script
@@ -40,15 +58,20 @@ jobs:
           export SQUASH_PREFIX=/usr/local
           export TARGET_ARCH="-march=skylake-avx512 -mtune=skylake-avx512"
 
+          # Fix Git ownership warning inside Docker
+          git config --global --add safe.directory /workspace
+
           # --- INSTALL DEPS ---
+          # Added 'brotli-devel' so your project finds PkgConfig::BROTLI
           yum install -y cmake3 ninja-build libtool \
             zlib-devel bzip2-devel xz-devel lz4-devel libzstd-devel snappy-devel \
+            brotli-devel \
             glib2-devel wget which
 
           ln -sf /usr/bin/cmake3 /usr/bin/cmake
 
           # --- BUILD SQUASH ---
-          # Added -DCMAKE_POLICY_VERSION_MINIMUM=3.5 to fix the error
+          # -DCMAKE_POLICY_VERSION_MINIMUM=3.5 fixes the policy error
           cmake -S _deps/squash -B _deps/squash/build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=${SQUASH_PREFIX} \
@@ -108,6 +131,7 @@ jobs:
           WRAPPER
           chmod +x "$OUT/run.sh"
           
+          # Fix ownership so artifact upload works
           chown -R $(id -u):$(id -g) "$OUT"
           EOF
           
