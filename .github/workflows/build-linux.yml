@@ -23,29 +23,34 @@ jobs:
           #!/bin/bash
           set -euxo pipefail
 
-          # --- FIX 1: BASE REPOS ---
-          # Fix the default repos so we can install the SCL release package
-          sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/*.repo
-          sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/*.repo
-          sed -i 's/enabled=1/enabled=0/g' /etc/yum/pluginconf.d/fastestmirror.conf || true
-
-          # --- INSTALL SCL RELEASE ---
-          # This installs new repo files that are ALSO broken (pointing to dead mirrors)
-          yum install -y centos-release-scl
-
-          # --- FIX 2: SCL REPOS ---
-          # Fix the newly installed SCL repo files to point to vault
-          sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-SCLo*.repo
-          sed -i 's|baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-SCLo*.repo
-          
-          # --- CONFIGURATION (GCC 11) ---
+          # --- CONFIGURATION ---
           export PATH=/opt/rh/devtoolset-11/root/usr/bin:$PATH
           export CC=/opt/rh/devtoolset-11/root/usr/bin/gcc
           export CXX=/opt/rh/devtoolset-11/root/usr/bin/g++
           export SQUASH_PREFIX=/usr/local
           export TARGET_ARCH="-march=skylake-avx512 -mtune=skylake-avx512"
 
-          # --- INSTALL DEPS ---
+          # --- FIX 1: PREPARE BASE REPOS ---
+          # Switch base CentOS repos to Vault so we can install 'centos-release-scl'
+          sed -i 's/^mirrorlist/#mirrorlist/g' /etc/yum.repos.d/*.repo
+          sed -i 's/^#baseurl/baseurl/g' /etc/yum.repos.d/*.repo
+          sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/*.repo
+          
+          # Disable fastestmirror to prevent timeouts on dead mirrors
+          sed -i 's/enabled=1/enabled=0/g' /etc/yum/pluginconf.d/fastestmirror.conf || true
+
+          # --- INSTALL SCL RELEASE ---
+          # This installs new repo files that are BROKEN by default
+          yum install -y centos-release-scl
+
+          # --- FIX 2: REPAIR ALL REPOS (INCLUDING SCL) ---
+          # Now that SCL repos exist, we must point THEM to vault.centos.org too.
+          # We simply re-run the fix on ALL .repo files.
+          sed -i 's/^mirrorlist/#mirrorlist/g' /etc/yum.repos.d/*.repo
+          sed -i 's/^#baseurl/baseurl/g' /etc/yum.repos.d/*.repo
+          sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/*.repo
+
+          # --- INSTALL TOOLCHAIN & DEPS ---
           yum install -y cmake3 ninja-build libtool \
             devtoolset-11-gcc-c++ devtoolset-11-libstdc++-devel \
             zlib-devel bzip2-devel xz-devel lz4-devel libzstd-devel snappy-devel \
@@ -75,8 +80,7 @@ jobs:
           
           cd squash-0.7.0
           
-          # Configure Squash (using GCC 11)
-          # -w disables warnings to keep logs clean
+          # Configure Squash (Using GCC 11)
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=${SQUASH_PREFIX} \
@@ -131,7 +135,7 @@ jobs:
             cp -vL "$lib" "$OUT/lib/" || true
           done < /tmp/libs.txt
 
-          # Copy Squash plugins (checking lib64 first)
+          # Copy Squash plugins (Robust check for lib vs lib64)
           if [ -d "/usr/local/lib64/squash" ]; then
               cp -r /usr/local/lib64/squash/* "$OUT/lib/squash/" || true
           else
