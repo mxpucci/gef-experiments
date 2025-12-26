@@ -23,7 +23,7 @@ jobs:
           #!/bin/bash
           set -eo pipefail 
 
-          # --- CLEANUP (Ensures CMake regenerates with correct paths) ---
+          # --- CLEANUP ---
           rm -rf squash-0.7.0 build-skylake NeaTS-CentOS7-Skylake
 
           # --- FIX REPOS ---
@@ -94,7 +94,7 @@ jobs:
           cmake --build build -j
           make -C build install || cmake --install build
           
-          # Copy libs to conda env so bundle picks them up easily
+          # Copy libs to conda env so bundle picks them up
           cp -v ${SQUASH_PREFIX}/lib/libsquash* $ENV_PATH/lib/ || true
           cd /workspace
 
@@ -105,34 +105,40 @@ jobs:
             -DNEATS_WITH_SQUASH=ON
           cmake --build build-skylake -j
 
-          # --- BUNDLE (THE FIX IS HERE) ---
+          # --- BUNDLE (CRITICAL FIXES HERE) ---
           BIN="build-skylake/LosslessBenchmarkFull"
           OUT="NeaTS-CentOS7-Skylake"
           
           if [ ! -f "$BIN" ]; then echo "Binary not found!"; exit 1; fi
           
           rm -rf "$OUT"
-          mkdir -p "$OUT/lib/squash"
+          mkdir -p "$OUT/lib"
           cp -v "$BIN" "$OUT/LosslessBenchmarkFull"
           patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFull"
 
-          # 1. Copy Squash Plugins FIRST
-          # This ensures the plugin .so files are present for the dependency check
-          if [ -d "/usr/local/lib/squash" ]; then
-             cp -r /usr/local/lib/squash/* "$OUT/lib/squash/" || true
+          # 1. FLATTEN SQUASH PLUGINS
+          # We copy plugins to a simple 'lib/plugins' folder to avoid path confusion
+          mkdir -p "$OUT/lib/plugins"
+          
+          SRC_PLUGIN_DIR=$(find /usr/local/lib/squash -type d -name "plugins" | head -n 1)
+          if [ -z "$SRC_PLUGIN_DIR" ]; then
+             SRC_PLUGIN_DIR=$(find /usr/local/lib64/squash -type d -name "plugins" | head -n 1)
           fi
-          if [ -d "/usr/local/lib64/squash" ]; then
-             cp -r /usr/local/lib64/squash/* "$OUT/lib/squash/" || true
+          
+          if [ -d "$SRC_PLUGIN_DIR" ]; then
+             echo "Copying plugins from $SRC_PLUGIN_DIR..."
+             cp -r "$SRC_PLUGIN_DIR"/* "$OUT/lib/plugins/"
+          else
+             echo "WARNING: No plugins found to copy!"
           fi
 
-          # 2. Deep Dependency Resolution
-          # Find dependencies for the Main Binary AND all Squash Plugins
-          echo "Scanning dependencies..."
-          find "$OUT" -type f \( -name "LosslessBenchmarkFull" -o -name "*.so" \) > binaries_to_check.txt
+          # 2. RESOLVE DEPENDENCIES (Recursive)
+          echo "Resolving dependencies..."
+          # Find dependencies for the binary AND all the plugin .so files we just copied
+          find "$OUT" -type f \( -name "LosslessBenchmarkFull" -o -name "*.so" \) > binaries.txt
           
-          cat binaries_to_check.txt | xargs ldd | awk '{print $3}' | grep -E '^/' | sort -u > libs_to_copy.txt
+          cat binaries.txt | xargs ldd | awk '{print $3}' | grep -E '^/' | sort -u > libs_to_copy.txt
           
-          echo "Copying libraries..."
           while read -r lib; do
             base="$(basename "$lib")"
             case "$base" in
@@ -142,25 +148,21 @@ jobs:
             cp -vL "$lib" "$OUT/lib/" || true
           done < libs_to_copy.txt
 
-          # 3. Create Robust Run Script
+          # 3. FIX SYMLINKS (The Fix for Brotli)
+          # We run ldconfig to create symlinks like libbrotlienc.so.1 -> libbrotlienc.so.1.0.9
+          echo "Generating library symlinks..."
+          /sbin/ldconfig -n "$OUT/lib"
+
+          # 4. CREATE RUN SCRIPT
           cat << 'WRAPPER' > "$OUT/run.sh"
           #!/bin/bash
           HERE="$(dirname "$(readlink -f "$0")")"
           
-          # Add local libs to path so plugins can find their dependencies (e.g. libbrotlienc.so)
+          # Point Squash explicitly to our flattened plugins folder
+          export SQUASH_PLUGINS_PATH="$HERE/lib/plugins"
+          
+          # Add lib to path so plugins can find dependencies (libbrotlienc.so.1)
           export LD_LIBRARY_PATH="$HERE/lib:$LD_LIBRARY_PATH"
-          
-          # Auto-locate the plugins directory (usually lib/squash/0.7/plugins)
-          # We look for the folder named 'plugins' inside our structure
-          PLUGIN_ROOT=$(find "$HERE/lib/squash" -type d -name "plugins" | head -n 1)
-          
-          if [ -n "$PLUGIN_ROOT" ]; then
-             export SQUASH_PLUGINS_PATH="$PLUGIN_ROOT"
-             # Also set base path
-             export SQUASH_PATH="$(dirname "$PLUGIN_ROOT")"
-          else
-             echo "Warning: Could not auto-detect Squash plugins directory."
-          fi
           
           exec "$HERE/LosslessBenchmarkFull" "$@"
           WRAPPER
