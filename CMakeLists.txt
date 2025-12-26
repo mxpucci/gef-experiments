@@ -68,61 +68,48 @@ option(NEATS_WITH_SQUASH "Build LosslessBenchmarkFull with Squash" ON)
 
 if(NEATS_WITH_SQUASH)
     set(SQUASH_ROOT "/usr/local")
+
+    # 1. Find Headers (look for squash-0.7 folder)
     find_path(SQUASH_INCLUDE_DIR 
         NAMES squash/squash.h 
         PATHS "${SQUASH_ROOT}/include"
-        PATH_SUFFIXES squash-0.9 squash-0.8 squash-0.7 squash
+        PATH_SUFFIXES squash-0.8 squash-0.7 squash
         NO_DEFAULT_PATH
     )
-    if(NOT SQUASH_INCLUDE_DIR)
-        message(FATAL_ERROR "Could not find Squash headers in ${SQUASH_ROOT}/include")
-    endif()
 
-    if(EXISTS "${SQUASH_INCLUDE_DIR}/squash/squash.h")
+    if(SQUASH_INCLUDE_DIR)
+        message(STATUS "Found Squash headers: ${SQUASH_INCLUDE_DIR}")
+        
+        # ... (PkgConfig checks remain the same) ...
         find_package(PkgConfig REQUIRED)
-
-        # If you ALSO want these codec deps to be static, set this ON and ensure .a exist:
-        # set(PKG_CONFIG_USE_STATIC_LIBS ON)
-
         pkg_check_modules(LZ4    REQUIRED IMPORTED_TARGET liblz4)
         pkg_check_modules(ZSTD   REQUIRED IMPORTED_TARGET libzstd)
         pkg_check_modules(SNAPPY REQUIRED IMPORTED_TARGET snappy)
         pkg_check_modules(BROTLI REQUIRED IMPORTED_TARGET libbrotlienc libbrotlidec libbrotlicommon)
-
         find_package(ZLIB  REQUIRED)
         find_package(BZip2 REQUIRED)
         find_package(LibLZMA REQUIRED)
 
-        # ---- Force Squash static (.a) if available ----
-        set(_old_suffixes "${CMAKE_FIND_LIBRARY_SUFFIXES}")
-        set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-        find_library(SQUASH_STATIC_LIB NAMES squash0.8 PATHS "${SQUASH_ROOT}/lib" NO_DEFAULT_PATH)
-        set(CMAKE_FIND_LIBRARY_SUFFIXES "${_old_suffixes}")
+        # 2. Find Library (Look for 0.7 or 0.8, in lib OR lib64)
+        # We search specifically for the library name 'squash0.7' which 0.7.0 produces
+        find_library(SQUASH_SHARED_LIB 
+            NAMES squash0.8 squash0.7 squash
+            PATHS "${SQUASH_ROOT}"
+            PATH_SUFFIXES lib lib64
+            NO_DEFAULT_PATH
+        )
 
-        if(SQUASH_STATIC_LIB)
-            add_library(Squash::squash0_8 STATIC IMPORTED GLOBAL)
-            set_target_properties(Squash::squash0_8 PROPERTIES
-                IMPORTED_LOCATION "${SQUASH_STATIC_LIB}"
-                INTERFACE_INCLUDE_DIRECTORIES "${SQUASH_INCLUDE_DIR}"
-            )
-            message(STATUS "Using static Squash: ${SQUASH_STATIC_LIB}")
-            set(SQUASH_TARGET Squash::squash0_8)
-        else()
-            # Fallback to shared if static is not present
-            find_library(SQUASH_SHARED_LIB NAMES squash0.8 PATHS "${SQUASH_ROOT}/lib" NO_DEFAULT_PATH)
-            if(NOT SQUASH_SHARED_LIB)
-                message(FATAL_ERROR "Squash headers found but no libsquash0.8 found in ${SQUASH_ROOT}/lib")
-            endif()
-
-            add_library(Squash::squash0_8 SHARED IMPORTED GLOBAL)
-            set_target_properties(Squash::squash0_8 PROPERTIES
-                IMPORTED_LOCATION "${SQUASH_SHARED_LIB}"
-                INTERFACE_INCLUDE_DIRECTORIES "${SQUASH_INCLUDE_DIR}"
-            )
-            message(WARNING "Static Squash not found; using shared: ${SQUASH_SHARED_LIB}")
-            set(SQUASH_TARGET Squash::squash0_8)
+        if(NOT SQUASH_SHARED_LIB)
+            message(FATAL_ERROR "Squash headers found but libsquash not found in ${SQUASH_ROOT}/lib or lib64")
         endif()
 
+        # Import the found library
+        add_library(Squash::Lib SHARED IMPORTED GLOBAL)
+        set_target_properties(Squash::Lib PROPERTIES
+            IMPORTED_LOCATION "${SQUASH_SHARED_LIB}"
+            INTERFACE_INCLUDE_DIRECTORIES "${SQUASH_INCLUDE_DIR}"
+        )
+        
         add_executable(LosslessBenchmarkFull
             benchmark/lossless_benchmark.cpp
             benchmark/NeaTS/NeaTS.hpp
@@ -134,7 +121,7 @@ if(NEATS_WITH_SQUASH)
             PRIVATE
                 sdsl
                 sux
-                ${SQUASH_TARGET}
+                Squash::Lib
                 PkgConfig::LZ4
                 PkgConfig::ZSTD
                 PkgConfig::SNAPPY
@@ -144,10 +131,8 @@ if(NEATS_WITH_SQUASH)
                 LibLZMA::LibLZMA
                 dl
         )
-
-        # If (and only if) you ended up on shared Squash, keep your RPATH trick:
-        if(NOT SQUASH_STATIC_LIB)
-            target_link_options(LosslessBenchmarkFull PRIVATE "-Wl,-rpath,\$ORIGIN/lib")
-        endif()
+        # Add RPATH so it looks in ./lib relative to binary
+        target_link_options(LosslessBenchmarkFull PRIVATE "-Wl,-rpath,\$ORIGIN/lib")
+        
     endif()
 endif()

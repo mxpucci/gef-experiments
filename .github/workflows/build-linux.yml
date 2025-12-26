@@ -116,8 +116,13 @@ jobs:
             cp -vL "$lib" "$OUT/lib/" || true
           done < /tmp/libs.txt
 
-          # Copy Squash plugins
-          cp -r /usr/local/lib/squash/* "$OUT/lib/squash/" || true
+          # FIXED: Copy Squash plugins from lib64
+          if [ -d "/usr/local/lib64/squash" ]; then
+              cp -r /usr/local/lib64/squash/* "$OUT/lib/squash/" || true
+          else
+              # Fallback just in case
+              cp -r /usr/local/lib/squash/* "$OUT/lib/squash/" || true
+          fi
           
           # Wrapper Script
           cat << 'WRAPPER' > "$OUT/run.sh"
