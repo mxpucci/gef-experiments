@@ -31,18 +31,19 @@ jobs:
           export TARGET_ARCH="-march=skylake-avx512 -mtune=skylake-avx512"
 
           # --- INSTALL DEPS ---
-          # ragel added for Squash
-          # brotli-devel added for your project
+          # 1. devtoolset-10-libstdc++-devel: FIXES 'experimental/simd: No such file'
+          # 2. brotli-devel: Fixes Squash plugin requirement
+          # 3. ragel: Fixes Squash build requirement
           yum install -y cmake3 ninja-build libtool \
+            devtoolset-10-libstdc++-devel devtoolset-10-gcc-c++ \
             zlib-devel bzip2-devel xz-devel lz4-devel libzstd-devel snappy-devel \
             brotli-devel ragel \
             glib2-devel wget which
 
           ln -sf /usr/bin/cmake3 /usr/bin/cmake
 
-          # --- CRITICAL FIX: MANUALLY CREATE SNAPPY.PC ---
-          # CentOS 7's snappy-devel is missing this file, so we make it ourselves.
-          # This allows pkg_check_modules(SNAPPY) to work.
+          # --- FIX: MANUALLY CREATE SNAPPY.PC ---
+          # CentOS 7 snappy-devel is broken/incomplete. Fix pkg-config manually.
           cat << 'PC' > /usr/lib64/pkgconfig/snappy.pc
           prefix=/usr
           exec_prefix=/usr
@@ -55,17 +56,17 @@ jobs:
           Libs: -L${libdir} -lsnappy
           Cflags: -I${includedir}
           PC
-          
-          # Ensure pkg-config finds it
           export PKG_CONFIG_PATH=/usr/lib64/pkgconfig:${PKG_CONFIG_PATH:-}
 
           # --- DOWNLOAD & BUILD SQUASH 0.7.0 ---
+          # Using tarball avoids git submodule hell
           wget https://github.com/quixdb/squash/releases/download/v0.7.0/squash-0.7.0.tar.bz2
           tar -xjf squash-0.7.0.tar.bz2
           
           cd squash-0.7.0
           
           # Configure Squash
+          # -w disables warnings to keep logs clean
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=${SQUASH_PREFIX} \
@@ -76,7 +77,7 @@ jobs:
           cmake --build build -j
           make -C build install || cmake --install build
           
-          # Register new libs
+          # Register libs
           echo "${SQUASH_PREFIX}/lib" > /etc/ld.so.conf.d/squash.conf
           ldconfig
           
@@ -116,11 +117,10 @@ jobs:
             cp -vL "$lib" "$OUT/lib/" || true
           done < /tmp/libs.txt
 
-          # FIXED: Copy Squash plugins from lib64
+          # Copy Squash plugins (handle both lib and lib64 cases)
           if [ -d "/usr/local/lib64/squash" ]; then
               cp -r /usr/local/lib64/squash/* "$OUT/lib/squash/" || true
           else
-              # Fallback just in case
               cp -r /usr/local/lib/squash/* "$OUT/lib/squash/" || true
           fi
           
