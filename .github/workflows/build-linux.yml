@@ -17,19 +17,14 @@ jobs:
         with:
           submodules: recursive
 
-      # 2. Checkout Squash (Robust Method)
+      # 2. Checkout Squash (Robust Method - Skips Broken Submodules)
       - name: Checkout Squash
         run: |
-          # Clone without submodules first
           git clone https://github.com/quixdb/squash.git _deps/squash
           cd _deps/squash
-          
-          # Initialize submodules, but skip the broken ones if they fail
           git submodule init
-          
-          # Try to update all submodules, but continue if FastARI fails
-          # This '|| true' ensures the build doesn't crash just because one plugin is missing
-          git submodule update --recursive || echo "Warning: Some submodules failed to clone (likely FastARI), continuing..."
+          # Ignore failure for broken submodules like FastARI
+          git submodule update --recursive || echo "Warning: Some submodules failed, continuing..."
 
       # 3. Create the Build Script
       - name: Create Build Script
@@ -53,12 +48,13 @@ jobs:
           ln -sf /usr/bin/cmake3 /usr/bin/cmake
 
           # --- BUILD SQUASH ---
-          # Now this directory exists!
+          # Added -DCMAKE_POLICY_VERSION_MINIMUM=3.5 to fix the error
           cmake -S _deps/squash -B _deps/squash/build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=${SQUASH_PREFIX} \
             -DCMAKE_C_FLAGS="${TARGET_ARCH}" \
-            -DCMAKE_CXX_FLAGS="${TARGET_ARCH}"
+            -DCMAKE_CXX_FLAGS="${TARGET_ARCH}" \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5
             
           cmake --build _deps/squash/build -j
           make -C _deps/squash/build install || cmake --install _deps/squash/build
@@ -112,7 +108,6 @@ jobs:
           WRAPPER
           chmod +x "$OUT/run.sh"
           
-          # Fix permissions
           chown -R $(id -u):$(id -g) "$OUT"
           EOF
           
