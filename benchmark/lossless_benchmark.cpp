@@ -706,28 +706,9 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     result.compressor = compressor_name;
     result.dataset = filename;
     
-    // Squash requires explicit initialization in some builds; safe to call once.
-    static bool squash_inited = false;
-    if (!squash_inited) {
-        squash_init();
-        squash_inited = true;
-    }
-
     SquashCodec *codec = squash_get_codec(compressor_name.c_str());
     if (codec == nullptr) {
         std::cerr << "Unable to find squash codec: " << compressor_name << std::endl;
-        std::cerr << "Available squash codecs: ";
-        struct CodecListState { bool first; std::ostream* os; };
-        CodecListState st{true, &std::cerr};
-        squash_foreach_codec(+[](SquashCodec *c, void *user_data) {
-            auto *st = static_cast<CodecListState*>(user_data);
-            if (!st->first) {
-                *(st->os) << ",";
-            }
-            st->first = false;
-            *(st->os) << squash_codec_get_name(c);
-        }, &st);
-        std::cerr << std::endl;
         return result;
     }
     

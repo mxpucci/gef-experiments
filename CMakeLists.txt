@@ -67,12 +67,7 @@ target_link_libraries(LosslessBenchmark sdsl sux)
 option(NEATS_WITH_SQUASH "Build LosslessBenchmarkFull with Squash" ON)
 
 if(NEATS_WITH_SQUASH)
-    # Prefer Homebrew prefix on macOS; fall back to /usr/local elsewhere.
-    if(APPLE)
-        set(SQUASH_ROOT "/opt/homebrew" CACHE PATH "Squash install prefix")
-    else()
-        set(SQUASH_ROOT "/usr/local" CACHE PATH "Squash install prefix")
-    endif()
+    set(SQUASH_ROOT "/usr/local")
 
     # 1. Find Headers (look for squash-0.7 folder)
     find_path(SQUASH_INCLUDE_DIR 
@@ -82,67 +77,62 @@ if(NEATS_WITH_SQUASH)
         NO_DEFAULT_PATH
     )
 
-    if(NOT SQUASH_INCLUDE_DIR)
-        message(STATUS "Squash headers not found under ${SQUASH_ROOT}/include. Skipping LosslessBenchmarkFull. (Set -DSQUASH_ROOT=<prefix> to enable)")
-    else()
+    if(SQUASH_INCLUDE_DIR)
         message(STATUS "Found Squash headers: ${SQUASH_INCLUDE_DIR}")
         
-    # ... (PkgConfig checks remain the same) ...
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(LZ4    REQUIRED IMPORTED_TARGET liblz4)
-    pkg_check_modules(ZSTD   REQUIRED IMPORTED_TARGET libzstd)
-    pkg_check_modules(SNAPPY REQUIRED IMPORTED_TARGET snappy)
-    pkg_check_modules(BROTLI REQUIRED IMPORTED_TARGET libbrotlienc libbrotlidec libbrotlicommon)
-    find_package(ZLIB  REQUIRED)
-    find_package(BZip2 REQUIRED)
-    find_package(LibLZMA REQUIRED)
+        # ... (PkgConfig checks remain the same) ...
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(LZ4    REQUIRED IMPORTED_TARGET liblz4)
+        pkg_check_modules(ZSTD   REQUIRED IMPORTED_TARGET libzstd)
+        pkg_check_modules(SNAPPY REQUIRED IMPORTED_TARGET snappy)
+        pkg_check_modules(BROTLI REQUIRED IMPORTED_TARGET libbrotlienc libbrotlidec libbrotlicommon)
+        find_package(ZLIB  REQUIRED)
+        find_package(BZip2 REQUIRED)
+        find_package(LibLZMA REQUIRED)
 
-    # 2. Find Library (Look for 0.7 or 0.8, in lib OR lib64)
-    find_library(SQUASH_SHARED_LIB 
-        NAMES squash0.8 squash0.7 squash
-        PATHS "${SQUASH_ROOT}"
-        PATH_SUFFIXES lib lib64
-        NO_DEFAULT_PATH
-    )
+        # 2. Find Library (Look for 0.7 or 0.8, in lib OR lib64)
+        # We search specifically for the library name 'squash0.7' which 0.7.0 produces
+        find_library(SQUASH_SHARED_LIB 
+            NAMES squash0.8 squash0.7 squash
+            PATHS "${SQUASH_ROOT}"
+            PATH_SUFFIXES lib lib64
+            NO_DEFAULT_PATH
+        )
 
         if(NOT SQUASH_SHARED_LIB)
-            message(STATUS "Squash headers found but libsquash not found under ${SQUASH_ROOT}/lib or ${SQUASH_ROOT}/lib64. Skipping LosslessBenchmarkFull. (Set -DSQUASH_ROOT=<prefix> to enable)")
-        else()
-
-    # Import the found library
-    add_library(Squash::Lib SHARED IMPORTED GLOBAL)
-    set_target_properties(Squash::Lib PROPERTIES
-        IMPORTED_LOCATION "${SQUASH_SHARED_LIB}"
-        INTERFACE_INCLUDE_DIRECTORIES "${SQUASH_INCLUDE_DIR}"
-    )
-        
-            add_executable(LosslessBenchmarkFull
-                benchmark/lossless_benchmark.cpp
-                benchmark/NeaTS/NeaTS.hpp
-                benchmark/NeaTS/algorithms.hpp
-            )
-            target_compile_definitions(LosslessBenchmarkFull PRIVATE USE_SQUASH)
-
-            target_link_libraries(LosslessBenchmarkFull
-                PRIVATE
-                    sdsl
-                    sux
-                    Squash::Lib
-                    PkgConfig::LZ4
-                    PkgConfig::ZSTD
-                    PkgConfig::SNAPPY
-                    PkgConfig::BROTLI
-                    ZLIB::ZLIB
-                    BZip2::BZip2
-                    LibLZMA::LibLZMA
-                    dl
-            )
-            # Add RPATH so it looks in ./lib relative to binary (Linux); macOS uses @executable_path.
-            if(APPLE)
-                target_link_options(LosslessBenchmarkFull PRIVATE "-Wl,-rpath,@executable_path/lib")
-            else()
-                target_link_options(LosslessBenchmarkFull PRIVATE "-Wl,-rpath,\$ORIGIN/lib")
-            endif()
+            message(FATAL_ERROR "Squash headers found but libsquash not found in ${SQUASH_ROOT}/lib or lib64")
         endif()
+
+        # Import the found library
+        add_library(Squash::Lib SHARED IMPORTED GLOBAL)
+        set_target_properties(Squash::Lib PROPERTIES
+            IMPORTED_LOCATION "${SQUASH_SHARED_LIB}"
+            INTERFACE_INCLUDE_DIRECTORIES "${SQUASH_INCLUDE_DIR}"
+        )
+        
+        add_executable(LosslessBenchmarkFull
+            benchmark/lossless_benchmark.cpp
+            benchmark/NeaTS/NeaTS.hpp
+            benchmark/NeaTS/algorithms.hpp
+        )
+        target_compile_definitions(LosslessBenchmarkFull PRIVATE USE_SQUASH)
+
+        target_link_libraries(LosslessBenchmarkFull
+            PRIVATE
+                sdsl
+                sux
+                Squash::Lib
+                PkgConfig::LZ4
+                PkgConfig::ZSTD
+                PkgConfig::SNAPPY
+                PkgConfig::BROTLI
+                ZLIB::ZLIB
+                BZip2::BZip2
+                LibLZMA::LibLZMA
+                dl
+        )
+        # Add RPATH so it looks in ./lib relative to binary
+        target_link_options(LosslessBenchmarkFull PRIVATE "-Wl,-rpath,\$ORIGIN/lib")
+        
     endif()
 endif()
