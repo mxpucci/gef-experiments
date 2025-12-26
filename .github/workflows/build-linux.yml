@@ -23,7 +23,7 @@ jobs:
           #!/bin/bash
           set -eo pipefail 
 
-          # --- FIX REPOS (Minimal fix just to get bzip2) ---
+          # --- FIX REPOS (Minimal fix just to get bzip2/wget) ---
           rm -f /etc/yum.repos.d/*.repo
           cat << 'REPO' > /etc/yum.repos.d/CentOS-Vault.repo
           [base]
@@ -56,14 +56,29 @@ jobs:
           micromamba activate build-env
           set -u
 
-          # --- CONFIGURE COMPILER PATHS (CRITICAL FIX) ---
-          # We must manually point the compiler to the Conda include/lib folders
-          # so it can find headers like 'snappy-c.h' and 'stdfloat'
+          # --- CONFIGURE COMPILER PATHS ---
           ENV_PATH="/opt/conda/envs/build-env"
           
           export CFLAGS="-I$ENV_PATH/include $CFLAGS"
           export CXXFLAGS="-I$ENV_PATH/include $CXXFLAGS"
           export LDFLAGS="-L$ENV_PATH/lib -Wl,-rpath,$ENV_PATH/lib $LDFLAGS"
+          
+          # --- CRITICAL FIX: MANUALLY CREATE SNAPPY.PC ---
+          # Conda's snappy package often misses this file, causing FindPkgConfig to fail.
+          mkdir -p $ENV_PATH/lib/pkgconfig
+          cat << PC > $ENV_PATH/lib/pkgconfig/snappy.pc
+          prefix=$ENV_PATH
+          exec_prefix=\${prefix}
+          libdir=\${prefix}/lib
+          includedir=\${prefix}/include
+
+          Name: snappy
+          Description: Snappy compression library
+          Version: 1.1.10
+          Libs: -L\${libdir} -lsnappy
+          Cflags: -I\${includedir}
+          PC
+          
           export PKG_CONFIG_PATH="$ENV_PATH/lib/pkgconfig:$PKG_CONFIG_PATH"
 
           # --- ENVIRONMENT SETUP ---
@@ -90,7 +105,7 @@ jobs:
           cmake --build build -j
           make -C build install || cmake --install build
           
-          # Manually copy libs to the conda environment lib path so they are found during link
+          # Copy libs to conda env so bundle picks them up
           cp -v ${SQUASH_PREFIX}/lib/libsquash* $ENV_PATH/lib/ || true
           
           cd /workspace
@@ -115,12 +130,10 @@ jobs:
           # Fix RPATH to look in ./lib
           patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFull"
 
-          # Copy dependencies
-          # We explicitly copy from the Conda environment path to catch all deps
+          # Copy dependencies from Conda Environment
           ldd "$OUT/LosslessBenchmarkFull" | awk '{print $3}' | grep -E '^/' | sort -u > /tmp/libs.txt || true
           while read -r lib; do
             base="$(basename "$lib")"
-            # Exclude low-level system libraries
             case "$base" in
               ld-linux*|libc.so.*|libm.so.*|libpthread.so.*|librt.so.*|libdl.so.*)
                 continue ;;
@@ -128,7 +141,7 @@ jobs:
             cp -vL "$lib" "$OUT/lib/" || true
           done < /tmp/libs.txt
 
-          # Copy Squash plugins (From /usr/local where we installed them)
+          # Copy Squash plugins (Check both lib locations)
           if [ -d "/usr/local/lib/squash" ]; then
              cp -r /usr/local/lib/squash/* "$OUT/lib/squash/" || true
           fi
