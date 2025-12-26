@@ -23,29 +23,25 @@ jobs:
           #!/bin/bash
           set -eo pipefail 
 
-          # --- CLEANUP (CRITICAL) ---
-          # Remove previous build artifacts to force CMake to pick up new flags
+          # --- CLEANUP (Ensures CMake regenerates with correct paths) ---
           rm -rf squash-0.7.0 build-skylake NeaTS-CentOS7-Skylake
 
-          # --- FIX REPOS (Minimal fix just to get bzip2/wget) ---
+          # --- FIX REPOS ---
           rm -f /etc/yum.repos.d/*.repo
           cat << 'REPO' > /etc/yum.repos.d/CentOS-Vault.repo
           [base]
           name=CentOS-7 - Base
           baseurl=http://vault.centos.org/7.9.2009/os/x86_64/
           gpgcheck=0
-          
           [updates]
           name=CentOS-7 - Updates
           baseurl=http://vault.centos.org/7.9.2009/updates/x86_64/
           gpgcheck=0
           REPO
-          
           yum install -y bzip2 wget
 
           # --- INSTALL MICROMAMBA & GCC 13 ---
           wget -qO- https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C /usr/local/bin --strip-components=1 bin/micromamba
-          
           export MAMBA_ROOT_PREFIX=/opt/conda
           micromamba create -y -n build-env -c conda-forge \
             gcc_linux-64=13 gxx_linux-64=13 \
@@ -58,92 +54,85 @@ jobs:
           set +u
           eval "$(micromamba shell hook -s bash)"
           micromamba activate build-env
-          set -u # Re-enable strict error checking
+          set -u
 
           # --- CONFIGURE COMPILER PATHS ---
-          # We explicitly add the conda include path to CFLAGS so Squash finds snappy-c.h
           ENV_PATH="/opt/conda/envs/build-env"
-          
           export CFLAGS="-I$ENV_PATH/include $CFLAGS"
           export CXXFLAGS="-I$ENV_PATH/include $CXXFLAGS"
           export LDFLAGS="-L$ENV_PATH/lib -Wl,-rpath,$ENV_PATH/lib $LDFLAGS"
+          export PKG_CONFIG_PATH="$ENV_PATH/lib/pkgconfig:$PKG_CONFIG_PATH"
           
-          # --- MANUALLY CREATE SNAPPY.PC ---
-          # Conda's snappy package is missing this file, breaking pkg_check_modules
+          # Fix missing snappy.pc
           mkdir -p $ENV_PATH/lib/pkgconfig
           cat << PC > $ENV_PATH/lib/pkgconfig/snappy.pc
           prefix=$ENV_PATH
           exec_prefix=\${prefix}
           libdir=\${prefix}/lib
           includedir=\${prefix}/include
-
           Name: snappy
-          Description: Snappy compression library
+          Description: Snappy
           Version: 1.1.10
           Libs: -L\${libdir} -lsnappy
           Cflags: -I\${includedir}
           PC
-          
-          export PKG_CONFIG_PATH="$ENV_PATH/lib/pkgconfig:$PKG_CONFIG_PATH"
 
-          # --- ENVIRONMENT SETUP ---
+          # --- BUILD SQUASH 0.7.0 ---
           export SQUASH_PREFIX=/usr/local
           export TARGET_ARCH="-march=skylake-avx512 -mtune=skylake-avx512"
           
-          echo "Compiler Version Check:"
-          $CXX --version
-
-          # --- DOWNLOAD & BUILD SQUASH 0.7.0 ---
           wget https://github.com/quixdb/squash/releases/download/v0.7.0/squash-0.7.0.tar.bz2
           tar -xjf squash-0.7.0.tar.bz2
-          
           cd squash-0.7.0
           
-          # Configure Squash
-          # We pass CFLAGS explicitly to ensure the -I paths are used
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=${SQUASH_PREFIX} \
             -DCMAKE_C_FLAGS="${TARGET_ARCH} ${CFLAGS} -w" \
             -DCMAKE_CXX_FLAGS="${TARGET_ARCH} ${CXXFLAGS} -w" \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5
-            
           cmake --build build -j
           make -C build install || cmake --install build
           
-          # Copy libs to conda env so bundle picks them up
+          # Copy libs to conda env so bundle picks them up easily
           cp -v ${SQUASH_PREFIX}/lib/libsquash* $ENV_PATH/lib/ || true
-          
           cd /workspace
 
-          # --- BUILD YOUR PROJECT ---
+          # --- BUILD PROJECT ---
           cmake -S . -B build-skylake -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DARCH_FLAGS="${TARGET_ARCH}" \
             -DNEATS_WITH_SQUASH=ON
-
           cmake --build build-skylake -j
 
-          # --- BUNDLE ---
+          # --- BUNDLE (THE FIX IS HERE) ---
           BIN="build-skylake/LosslessBenchmarkFull"
           OUT="NeaTS-CentOS7-Skylake"
           
-          # Verify build succeeded
-          if [ ! -f "$BIN" ]; then
-              echo "Error: Binary $BIN not found! Compilation failed."
-              exit 1
-          fi
+          if [ ! -f "$BIN" ]; then echo "Binary not found!"; exit 1; fi
           
           rm -rf "$OUT"
           mkdir -p "$OUT/lib/squash"
-          
           cp -v "$BIN" "$OUT/LosslessBenchmarkFull"
-          
-          # Fix RPATH to look in ./lib
           patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFull"
 
-          # Copy dependencies from Conda Environment
-          ldd "$OUT/LosslessBenchmarkFull" | awk '{print $3}' | grep -E '^/' | sort -u > /tmp/libs.txt || true
+          # 1. Copy Squash Plugins FIRST
+          # This ensures the plugin .so files are present for the dependency check
+          if [ -d "/usr/local/lib/squash" ]; then
+             cp -r /usr/local/lib/squash/* "$OUT/lib/squash/" || true
+          fi
+          if [ -d "/usr/local/lib64/squash" ]; then
+             cp -r /usr/local/lib64/squash/* "$OUT/lib/squash/" || true
+          fi
+
+          # 2. Deep Dependency Resolution
+          # Find dependencies for the Main Binary AND all Squash Plugins
+          echo "Scanning dependencies..."
+          find "$OUT" -type f \( -name "LosslessBenchmarkFull" -o -name "*.so" \) > binaries_to_check.txt
+          
+          cat binaries_to_check.txt | xargs ldd | awk '{print $3}' | grep -E '^/' | sort -u > libs_to_copy.txt
+          
+          echo "Copying libraries..."
           while read -r lib; do
             base="$(basename "$lib")"
             case "$base" in
@@ -151,26 +140,32 @@ jobs:
                 continue ;;
             esac
             cp -vL "$lib" "$OUT/lib/" || true
-          done < /tmp/libs.txt
+          done < libs_to_copy.txt
 
-          # Copy Squash plugins (Check both lib locations)
-          if [ -d "/usr/local/lib/squash" ]; then
-             cp -r /usr/local/lib/squash/* "$OUT/lib/squash/" || true
-          fi
-          if [ -d "/usr/local/lib64/squash" ]; then
-             cp -r /usr/local/lib64/squash/* "$OUT/lib/squash/" || true
+          # 3. Create Robust Run Script
+          cat << 'WRAPPER' > "$OUT/run.sh"
+          #!/bin/bash
+          HERE="$(dirname "$(readlink -f "$0")")"
+          
+          # Add local libs to path so plugins can find their dependencies (e.g. libbrotlienc.so)
+          export LD_LIBRARY_PATH="$HERE/lib:$LD_LIBRARY_PATH"
+          
+          # Auto-locate the plugins directory (usually lib/squash/0.7/plugins)
+          # We look for the folder named 'plugins' inside our structure
+          PLUGIN_ROOT=$(find "$HERE/lib/squash" -type d -name "plugins" | head -n 1)
+          
+          if [ -n "$PLUGIN_ROOT" ]; then
+             export SQUASH_PLUGINS_PATH="$PLUGIN_ROOT"
+             # Also set base path
+             export SQUASH_PATH="$(dirname "$PLUGIN_ROOT")"
+          else
+             echo "Warning: Could not auto-detect Squash plugins directory."
           fi
           
-          # Wrapper Script
-          cat << 'WRAPPER' > "$OUT/run.sh"
-          #!/bin/sh
-          HERE="$(dirname "$(readlink -f "$0")")"
-          export SQUASH_PATH="$HERE/lib/squash"
-          export LD_LIBRARY_PATH="$HERE/lib:$LD_LIBRARY_PATH"
           exec "$HERE/LosslessBenchmarkFull" "$@"
           WRAPPER
-          chmod +x "$OUT/run.sh"
           
+          chmod +x "$OUT/run.sh"
           chown -R $(id -u):$(id -g) "$OUT"
           EOF
           
