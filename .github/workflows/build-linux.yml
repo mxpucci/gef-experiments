@@ -9,105 +9,75 @@ on:
 jobs:
   build-centos7-skylake:
     runs-on: ubuntu-latest
-    # 1. THE OS MATCH: Run inside CentOS 7 (glibc 2.17)
-    container:
-      image: quay.io/pypa/manylinux2014_x86_64:latest
-
-    env:
-      BUILD_TYPE: Release
-      # 2. THE COMPILER: Use GCC 10 (provided by image) for C++23 support
-      CC: /opt/rh/devtoolset-10/root/usr/bin/gcc
-      CXX: /opt/rh/devtoolset-10/root/usr/bin/g++
-      SQUASH_PREFIX: /usr/local
-      # 3. THE HARDWARE MATCH: Target Intel Xeon Gold 6140 (Skylake-Server)
-      TARGET_ARCH: "-march=skylake-avx512 -mtune=skylake-avx512"
-
+    
     steps:
+      # 1. Checkout on the Host (Ubuntu 22/24) - Works perfectly
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Install Dependencies (Yum)
+      # 2. Create the Build Script
+      # We write the build commands to a script file so we can run them inside Docker easily.
+      - name: Create Build Script
         run: |
-          # Install build tools and libraries via yum (CentOS package manager)
+          cat << 'EOF' > build_internal.sh
+          #!/bin/bash
+          set -euxo pipefail
+
+          # --- CONFIGURATION ---
+          # Use GCC 10 from devtoolset
+          export PATH=/opt/rh/devtoolset-10/root/usr/bin:$PATH
+          export CC=/opt/rh/devtoolset-10/root/usr/bin/gcc
+          export CXX=/opt/rh/devtoolset-10/root/usr/bin/g++
+          export SQUASH_PREFIX=/usr/local
+          export TARGET_ARCH="-march=skylake-avx512 -mtune=skylake-avx512"
+
+          # --- INSTALL DEPS ---
           yum install -y cmake3 ninja-build libtool \
             zlib-devel bzip2-devel xz-devel lz4-devel libzstd-devel snappy-devel \
-            glib2-devel wget
+            glib2-devel wget which
 
-          # Make 'cmake' command point to cmake3
           ln -sf /usr/bin/cmake3 /usr/bin/cmake
 
-      - name: Configure ccache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ccache
-          key: ccache-centos7-${{ github.sha }}
-          restore-keys: ccache-centos7-
-
-      # --- Build Squash ---
-      - name: Checkout Squash
-        uses: actions/checkout@v4
-        with:
-          repository: quixdb/squash
-          path: _deps/squash
-          submodules: recursive
-          fetch-depth: 1
-
-      - name: Build & Install Squash
-        run: |
-          set -euxo pipefail
-          
-          # Build Squash with the same compiler settings
+          # --- BUILD SQUASH ---
+          # We build inside _deps/squash
           cmake -S _deps/squash -B _deps/squash/build -G Ninja \
-            -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+            -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=${SQUASH_PREFIX} \
-            -DCMAKE_C_COMPILER=${CC} -DCMAKE_CXX_COMPILER=${CXX} \
             -DCMAKE_C_FLAGS="${TARGET_ARCH}" \
             -DCMAKE_CXX_FLAGS="${TARGET_ARCH}"
             
           cmake --build _deps/squash/build -j
           make -C _deps/squash/build install || cmake --install _deps/squash/build
           
-          # Configure dynamic linker
           echo "${SQUASH_PREFIX}/lib" > /etc/ld.so.conf.d/squash.conf
           ldconfig
 
-      # --- Build Your Project ---
-      - name: Configure Project (Targeting Skylake)
-        run: |
-          set -euxo pipefail
-          
-          # We inject ARCH_FLAGS to override local defaults
+          # --- BUILD PROJECT ---
           cmake -S . -B build-skylake -G Ninja \
-            -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-            -DCMAKE_C_COMPILER=${CC} \
-            -DCMAKE_CXX_COMPILER=${CXX} \
+            -DCMAKE_BUILD_TYPE=Release \
             -DARCH_FLAGS="${TARGET_ARCH}" \
             -DNEATS_WITH_SQUASH=ON
 
-      - name: Build Project
-        run: cmake --build build-skylake -j
+          cmake --build build-skylake -j
 
-      # --- Bundle ---
-      - name: Create Runtime Bundle
-        run: |
-          set -euxo pipefail
+          # --- BUNDLE ---
           BIN="build-skylake/LosslessBenchmarkFull"
-          OUT="GefExperiments-CentOS7-Skylake"
+          OUT="NeaTS-CentOS7-Skylake"
           
           rm -rf "$OUT"
           mkdir -p "$OUT/lib/squash"
           
           cp -v "$BIN" "$OUT/LosslessBenchmarkFull"
           
-          # Install patchelf to fix RPATH
-          yum install -y patchelf || echo "patchelf install failed"
+          # Install patchelf
+          yum install -y patchelf || true
           if command -v patchelf; then
              patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFull"
           fi
 
-          # Copy dependencies (Excluding system libs which we know are safe on CentOS 7)
+          # Copy dependencies
           ldd "$OUT/LosslessBenchmarkFull" | awk '{print $3}' | grep -E '^/' | sort -u > /tmp/libs.txt || true
           while read -r lib; do
             base="$(basename "$lib")"
@@ -118,22 +88,37 @@ jobs:
             cp -vL "$lib" "$OUT/lib/" || true
           done < /tmp/libs.txt
 
-          # Squash Plugins
           cp -r /usr/local/lib/squash/* "$OUT/lib/squash/" || true
           
           # Wrapper Script
-          cat << 'EOF' > "$OUT/run.sh"
+          cat << 'WRAPPER' > "$OUT/run.sh"
           #!/bin/sh
           HERE="$(dirname "$(readlink -f "$0")")"
           export SQUASH_PATH="$HERE/lib/squash"
           export LD_LIBRARY_PATH="$HERE/lib:$LD_LIBRARY_PATH"
           exec "$HERE/LosslessBenchmarkFull" "$@"
-          EOF
+          WRAPPER
           chmod +x "$OUT/run.sh"
+          
+          # Fix permissions so the host user can own the files
+          chown -R $(id -u):$(id -g) "$OUT"
+          EOF
+          
+          chmod +x build_internal.sh
 
+      # 3. Run the Build Inside the Container
+      - name: Run Build in Docker (CentOS 7)
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            quay.io/pypa/manylinux2014_x86_64:latest \
+            /bin/bash /workspace/build_internal.sh
+
+      # 4. Upload Artifact (back on Host)
       - name: Upload Bundle
         uses: actions/upload-artifact@v4
         with:
-          name: GefExperiments-CentOS7-Skylake
-          path: GefExperiments-CentOS7-Skylake
+          name: NeaTS-CentOS7-Skylake
+          path: NeaTS-CentOS7-Skylake
           compression-level: 9
