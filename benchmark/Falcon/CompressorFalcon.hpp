@@ -215,7 +215,11 @@ private:
         
         while (std::abs(temp - trac) >= deltaBound * td && digits < 16 - sp - 1) {
             digits++;
-            td = pow10_table[digits];
+            if (digits < 17) {
+                td = pow10_table[digits];
+            } else {
+                td = std::pow(10.0, digits);
+            }
             temp = value * td;
             if (std::isinf(temp)) { // Check for overflow
                 digits = 16 - sp; // Force fallback
@@ -237,6 +241,10 @@ private:
         maxDecimalPlaces = 0;
         
         for (const T& val : block) {
+            if (val == 0) {
+                maxSp = std::max(maxSp, 0); // Treat 0 as having sp 0
+                continue;
+            }
             double log10v = std::log10(std::abs(val));
             int sp = static_cast<int>(std::floor(log10v));
             maxSp = std::max(maxSp, sp);
