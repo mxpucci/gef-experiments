@@ -22,7 +22,6 @@ jobs:
           cat << 'EOF' > build_internal.sh
           #!/bin/bash
           set -eo pipefail 
-          # Note: We removed '-u' (nounset) because conda scripts trigger it incorrectly.
 
           # --- FIX REPOS (Minimal fix just to get bzip2) ---
           rm -f /etc/yum.repos.d/*.repo
@@ -41,7 +40,6 @@ jobs:
           yum install -y bzip2 wget
 
           # --- INSTALL MICROMAMBA & GCC 13 ---
-          # We use Micromamba to get GCC 13 (supports <stdfloat>) on CentOS 7
           wget -qO- https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C /usr/local/bin --strip-components=1 bin/micromamba
           
           export MAMBA_ROOT_PREFIX=/opt/conda
@@ -53,14 +51,22 @@ jobs:
             liblzma-devel
 
           # --- ACTIVATE ENVIRONMENT ---
-          # We must ensure 'set -u' is OFF here because activate scripts have unbound variables
           set +u
           eval "$(micromamba shell hook -s bash)"
           micromamba activate build-env
           set -u
 
+          # --- CONFIGURE COMPILER PATHS (CRITICAL FIX) ---
+          # We must manually point the compiler to the Conda include/lib folders
+          # so it can find headers like 'snappy-c.h' and 'stdfloat'
+          ENV_PATH="/opt/conda/envs/build-env"
+          
+          export CFLAGS="-I$ENV_PATH/include $CFLAGS"
+          export CXXFLAGS="-I$ENV_PATH/include $CXXFLAGS"
+          export LDFLAGS="-L$ENV_PATH/lib -Wl,-rpath,$ENV_PATH/lib $LDFLAGS"
+          export PKG_CONFIG_PATH="$ENV_PATH/lib/pkgconfig:$PKG_CONFIG_PATH"
+
           # --- ENVIRONMENT SETUP ---
-          # squash 0.7 tarball hardcodes installation to /usr/local
           export SQUASH_PREFIX=/usr/local
           export TARGET_ARCH="-march=skylake-avx512 -mtune=skylake-avx512"
           
@@ -74,20 +80,18 @@ jobs:
           cd squash-0.7.0
           
           # Configure Squash
-          # We install headers to /usr/local so your project finds them easily
-          # We ignore warnings (-w) because 2015 code triggers many in GCC 13
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=${SQUASH_PREFIX} \
-            -DCMAKE_C_FLAGS="${TARGET_ARCH} -w" \
-            -DCMAKE_CXX_FLAGS="${TARGET_ARCH} -w" \
+            -DCMAKE_C_FLAGS="${TARGET_ARCH} ${CFLAGS} -w" \
+            -DCMAKE_CXX_FLAGS="${TARGET_ARCH} ${CXXFLAGS} -w" \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5
             
           cmake --build build -j
           make -C build install || cmake --install build
           
           # Manually copy libs to the conda environment lib path so they are found during link
-          cp -v ${SQUASH_PREFIX}/lib/libsquash* /opt/conda/envs/build-env/lib/ || true
+          cp -v ${SQUASH_PREFIX}/lib/libsquash* $ENV_PATH/lib/ || true
           
           cd /workspace
 
@@ -112,11 +116,11 @@ jobs:
           patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFull"
 
           # Copy dependencies
-          # This pulls libraries from the Conda environment (GCC 13 runtime, newer glibc features handled safely)
+          # We explicitly copy from the Conda environment path to catch all deps
           ldd "$OUT/LosslessBenchmarkFull" | awk '{print $3}' | grep -E '^/' | sort -u > /tmp/libs.txt || true
           while read -r lib; do
             base="$(basename "$lib")"
-            # Exclude low-level system libraries that should come from the target OS
+            # Exclude low-level system libraries
             case "$base" in
               ld-linux*|libc.so.*|libm.so.*|libpthread.so.*|librt.so.*|libdl.so.*)
                 continue ;;
@@ -125,7 +129,6 @@ jobs:
           done < /tmp/libs.txt
 
           # Copy Squash plugins (From /usr/local where we installed them)
-          # Check both lib and lib64 locations
           if [ -d "/usr/local/lib/squash" ]; then
              cp -r /usr/local/lib/squash/* "$OUT/lib/squash/" || true
           fi
