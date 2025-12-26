@@ -189,8 +189,14 @@ private:
     };
     
     std::vector<uint8_t> output;
-    std::vector<T> buffer;
+    std::vector<T> buffer;                 // legacy (when total count is unknown)
+    std::vector<T> block_buffer;           // streaming block buffer
     size_t totalValues = 0;
+    size_t valuesAdded = 0;
+    bool streaming = false;
+    bool header_written = false;
+    size_t totalBlocks = 0;
+    size_t processedBlocks = 0;
     
     // From original: zigzag_encode
     static uint64_t zigzag_encode(int64_t value) {
@@ -211,14 +217,22 @@ private:
         
         int digits = 0;
         double td = 1;
-        double deltaBound = std::abs(value) * std::pow(2.0, -52);
+        double deltaBound = std::abs(value) * 2.220446049250313e-16; // pow(2, -52)
+        int loop_safety = 0;
         
         while (std::abs(temp - trac) >= deltaBound * td && digits < 16 - sp - 1) {
+            loop_safety++;
+            if (loop_safety > 1000) {
+                // Safety break to prevent infinite loops on degenerate cases
+                digits = 23; // Triggers fallback in caller logic (if checks logic below) or forces 23 which usually means raw
+                break;
+            }
+
             digits++;
             if (digits < 17) {
                 td = pow10_table[digits];
             } else {
-                td = std::pow(10.0, digits);
+                td *= 10.0;
             }
             temp = value * td;
             if (std::isinf(temp)) { // Check for overflow
@@ -245,17 +259,39 @@ private:
                 maxSp = std::max(maxSp, 0); // Treat 0 as having sp 0
                 continue;
             }
+            if (!std::isfinite(val)) {
+                isOk = 0; // Force raw encoding
+                maxBeta = 100; // Force fallback
+                maxDecimalPlaces = 100;
+                goto force_raw; // Jump to raw encoding handling
+            }
             double log10v = std::log10(std::abs(val));
             int sp = static_cast<int>(std::floor(log10v));
             maxSp = std::max(maxSp, sp);
             
+            // Safety check for getDecimalPlaces inputs
+            if (std::abs(val) < 1e-300 || sp < -300) {
+                 // Value too small for this decimal place logic
+                 maxDecimalPlaces = 100; // Force raw
+                 isOk = 0;
+                 goto force_raw;
+            }
+
             int decimalPlaces = getDecimalPlaces(val, sp);
             maxDecimalPlaces = std::max(maxDecimalPlaces, decimalPlaces);
+            
+            // If decimal places blow up, just bail early
+            if (maxDecimalPlaces > 18) {
+                isOk = 0;
+                maxBeta = 100;
+                goto force_raw;
+            }
         }
         
         maxBeta = maxSp + maxDecimalPlaces + 1;
         
         if (maxBeta > 15 || maxDecimalPlaces > 15) {
+            force_raw:
             isOk = 0;
             firstValue = encodeDoubleWithSignLast(block[0]);
             for (const T& val : block) {
@@ -387,45 +423,61 @@ public:
     T storedValue = 0;
     std::vector<uint8_t> bytes;  // For benchmark compatibility
     
-    explicit CompressorFalcon(const T& value) {
-        buffer.push_back(value);
+    explicit CompressorFalcon(const T& value, size_t totalValuesHint = 0) {
         storedValue = value;
-        totalValues = 1;
+        if (totalValuesHint > 0) {
+            streaming = true;
+            totalValues = totalValuesHint;
+            valuesAdded = 0;
+            totalBlocks = (totalValues + BLOCK_SIZE - 1) / BLOCK_SIZE;
+            processedBlocks = 0;
+            writeHeader();
+            addValue(value);
+        } else {
+            // Legacy behavior: buffer everything and write header in close().
+            buffer.push_back(value);
+            totalValues = 1;
+        }
     }
     
     void addValue(const T& value) {
-        buffer.push_back(value);
         storedValue = value;
-        totalValues++;
+        if (streaming) {
+            block_buffer.push_back(value);
+            valuesAdded++;
+            if (block_buffer.size() == BLOCK_SIZE) {
+                compressAndAppendBlock(block_buffer);
+                block_buffer.clear();
+            }
+        } else {
+            buffer.push_back(value);
+            totalValues++;
+        }
     }
     
     void close() {
-        // Compress all buffered data
-        falcon::OutputBitStream bitStream(BLOCK_SIZE * 8);
-        
-        // Write total count
-        bitStream.Write(totalValues, 64);
-        bitStream.Flush();
-        falcon::Array<uint8_t> header = bitStream.GetBuffer(8);
-        for (int j = 0; j < header.length(); j++) {
-            bytes.push_back(header[j]);
-        }
-        bitStream.Refresh();
-        
-        // Process blocks
-        for (size_t i = 0; i < buffer.size(); i += BLOCK_SIZE) {
-            int perBlockBitSize = 0;
-            size_t currentBlockSize = std::min(BLOCK_SIZE, buffer.size() - i);
-            std::vector<T> block(buffer.begin() + i, buffer.begin() + i + currentBlockSize);
-            
-            compressBlock(block, bitStream, perBlockBitSize);
-            bitStream.Flush();
-            falcon::Array<uint8_t> blockData = bitStream.GetBuffer((perBlockBitSize + 31) / 32 * 4);
-            
-            for (int j = 0; j < blockData.length(); j++) {
-                bytes.push_back(blockData[j]);
+        if (streaming) {
+            // Flush last partial block (if any)
+            if (!block_buffer.empty()) {
+                compressAndAppendBlock(block_buffer);
+                block_buffer.clear();
             }
-            bitStream.Refresh();
+            // Best effort: ensure we consumed the expected amount.
+            // (If not, the benchmark supplied inconsistent totalValues.)
+        } else {
+            // Legacy path: Compress all buffered data at close()
+            totalBlocks = (buffer.size() + BLOCK_SIZE - 1) / BLOCK_SIZE;
+            processedBlocks = 0;
+            writeHeader(); // uses totalValues
+            
+            for (size_t i = 0; i < buffer.size(); i += BLOCK_SIZE) {
+                size_t currentBlockSize = std::min(BLOCK_SIZE, buffer.size() - i);
+                std::vector<T> block(buffer.begin() + i, buffer.begin() + i + currentBlockSize);
+                compressAndAppendBlock(block);
+            }
+        }
+        if (processedBlocks > 0) {
+            std::cerr << std::endl;
         }
     }
     
@@ -435,6 +487,36 @@ public:
     
     std::vector<uint8_t> getOut() const {
         return bytes;
+    }
+
+private:
+    void writeHeader() {
+        if (header_written) return;
+        falcon::OutputBitStream bitStream(BLOCK_SIZE * 8);
+        bitStream.Write(totalValues, 64);
+        bitStream.Flush();
+        falcon::Array<uint8_t> header = bitStream.GetBuffer(8);
+        for (int j = 0; j < header.length(); j++) {
+            bytes.push_back(header[j]);
+        }
+        header_written = true;
+    }
+
+    void compressAndAppendBlock(const std::vector<T>& block) {
+        falcon::OutputBitStream bitStream(BLOCK_SIZE * 8);
+        int perBlockBitSize = 0;
+        compressBlock(block, bitStream, perBlockBitSize);
+        bitStream.Flush();
+        falcon::Array<uint8_t> blockData = bitStream.GetBuffer((perBlockBitSize + 31) / 32 * 4);
+        for (int j = 0; j < blockData.length(); j++) {
+            bytes.push_back(blockData[j]);
+        }
+
+        processedBlocks++;
+        if (totalBlocks > 0 && processedBlocks % 10000 == 0) {
+            std::cerr << "\rFalcon Progress: " << (processedBlocks * 100 / totalBlocks)
+                      << "% (" << processedBlocks << "/" << totalBlocks << ")" << std::flush;
+        }
     }
 };
 

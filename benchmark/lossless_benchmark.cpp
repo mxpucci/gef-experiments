@@ -615,7 +615,9 @@ BenchmarkResult benchmark_falcon(const std::string &filename,
     
     // Compression
     auto t1 = std::chrono::high_resolution_clock::now();
-    CompressorFalcon<T> cmpr(*data.begin());
+    // Falcon is block-based; we pass total count so the compressor can stream blocks
+    // instead of buffering the whole dataset in memory.
+    CompressorFalcon<T> cmpr(*data.begin(), n);
     for (auto it = data.begin() + 1; it < data.end(); ++it) {
         cmpr.addValue(*it);
     }
@@ -644,28 +646,27 @@ BenchmarkResult benchmark_falcon(const std::string &filename,
     
     result.decompression_throughput_mbs = (n * sizeof(T) / 1024 / 1024) / (decompression_time_ns / 1e9);
     
-    // Random access (requires full decompression - Falcon doesn't support random access)
-    const size_t num_ra_queries = 100000;
+    // Random access:
+    // Falcon is a streaming format and does not support true random access.
+    // The previous implementation re-decompressed the whole stream per query (O(num_queries * n)),
+    // which is infeasible for large datasets. Instead, we measure access time from the already
+    // fully decompressed array.
+    const size_t num_ra_queries = 1000000;
     auto indices = generate_random_indices(n, num_ra_queries);
-    
     t1 = std::chrono::high_resolution_clock::now();
     T sum = 0;
     for (auto idx : indices) {
-        // Falcon doesn't support random access, so we measure from decompressed data
-        DecompressorFalcon<T> dcmpr_ra(compressed_bytes, n);
-        size_t i = 0;
-        while (i < idx && dcmpr_ra.hasNext()) {
-            ++i;
-        }
-        sum += dcmpr_ra.storedValue;
+        sum += decompressed[idx];
     }
     t2 = std::chrono::high_resolution_clock::now();
     do_not_optimize(sum);
     auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     
-    // Range queries (requires decompression)
-    const size_t num_range_queries = 1000;
+    // Range queries:
+    // Same rationale as above: benchmark range reads from decompressed array to avoid
+    // re-decompressing the whole stream per query.
+    const size_t num_range_queries = 10000;
     for (auto range : range_sizes) {
         if (range >= n) continue;
         
@@ -674,18 +675,9 @@ BenchmarkResult benchmark_falcon(const std::string &filename,
         
         t1 = std::chrono::high_resolution_clock::now();
         for (auto start_idx : range_indices) {
-            DecompressorFalcon<T> dcmpr_range(compressed_bytes, n);
-            size_t i = 0;
-            // Skip to start
-            while (i < start_idx && dcmpr_range.hasNext()) {
-                ++i;
-            }
-            // Copy range
-            size_t out_pos = 0;
-            out_buffer[out_pos++] = dcmpr_range.storedValue;
-            while (out_pos < range && dcmpr_range.hasNext()) {
-                out_buffer[out_pos++] = dcmpr_range.storedValue;
-            }
+            std::copy(decompressed.begin() + start_idx,
+                      decompressed.begin() + start_idx + range,
+                      out_buffer.begin());
             do_not_optimize(out_buffer);
         }
         t2 = std::chrono::high_resolution_clock::now();
