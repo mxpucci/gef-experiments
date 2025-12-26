@@ -11,38 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      # 1. Checkout Your Repo
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      # 2. Checkout Squash & Patch Build Files
-      - name: Checkout Squash
-        run: |
-          # Clone Squash
-          git clone https://github.com/quixdb/squash.git _deps/squash
-          cd _deps/squash
-          git submodule init
-          
-          # Attempt update, but proceed on failure (FastARI 404)
-          git submodule update --recursive || echo "Submodule failures detected, patching CMakeLists below..."
-
-          # --- CRITICAL FIX: Patch CMakeLists.txt ---
-          # The error confirms Squash lists these plugins in plugins/CMakeLists.txt.
-          # We use 'sed' to delete ANY line containing these names. 
-          # This effectively removes them from the build queue.
-          
-          sed -i '/brieflz/d' plugins/CMakeLists.txt
-          sed -i '/fari/d'    plugins/CMakeLists.txt
-          sed -i '/zlib-ng/d' plugins/CMakeLists.txt
-          
-          # Now remove the directories to be clean
-          rm -rf plugins/fari plugins/brieflz plugins/zlib-ng
-          
-          # We keep 'brotli' because we installed 'brotli-devel'.
-
-      # 3. Create the Build Script
+      # 1. Create the Build Script (Run inside Docker)
       - name: Create Build Script
         run: |
           cat << 'EOF' > build_internal.sh
@@ -54,13 +28,11 @@ jobs:
           export CC=/opt/rh/devtoolset-10/root/usr/bin/gcc
           export CXX=/opt/rh/devtoolset-10/root/usr/bin/g++
           export SQUASH_PREFIX=/usr/local
+          # Apply Skylake optimizations to the library
           export TARGET_ARCH="-march=skylake-avx512 -mtune=skylake-avx512"
 
-          # Fix git ownership warning inside Docker
-          git config --global --add safe.directory /workspace
-
           # --- INSTALL DEPS ---
-          # brotli-devel added for Squash to use system lib
+          # We still need development headers for system libraries
           yum install -y cmake3 ninja-build libtool \
             zlib-devel bzip2-devel xz-devel lz4-devel libzstd-devel snappy-devel \
             brotli-devel \
@@ -68,22 +40,33 @@ jobs:
 
           ln -sf /usr/bin/cmake3 /usr/bin/cmake
 
-          # --- BUILD SQUASH ---
-          # -DCMAKE_POLICY_VERSION_MINIMUM=3.5 fixes the policy error
-          cmake -S _deps/squash -B _deps/squash/build -G Ninja \
+          # --- DOWNLOAD & BUILD SQUASH 0.7.0 ---
+          # We use the official release tarball to avoid git submodule errors.
+          wget https://github.com/quixdb/squash/releases/download/v0.7.0/squash-0.7.0.tar.bz2
+          tar -xjf squash-0.7.0.tar.bz2
+          
+          cd squash-0.7.0
+          
+          # Configure CMake
+          # Note: We disable -Werror to ensure old 2015 code compiles on modern GCC 10
+          cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=${SQUASH_PREFIX} \
-            -DCMAKE_C_FLAGS="${TARGET_ARCH}" \
-            -DCMAKE_CXX_FLAGS="${TARGET_ARCH}" \
+            -DCMAKE_C_FLAGS="${TARGET_ARCH} -w" \
+            -DCMAKE_CXX_FLAGS="${TARGET_ARCH} -w" \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5
             
-          cmake --build _deps/squash/build -j
-          make -C _deps/squash/build install || cmake --install _deps/squash/build
+          cmake --build build -j
+          make -C build install || cmake --install build
           
+          # Register new libs
           echo "${SQUASH_PREFIX}/lib" > /etc/ld.so.conf.d/squash.conf
           ldconfig
+          
+          # Go back to workspace
+          cd /workspace
 
-          # --- BUILD PROJECT ---
+          # --- BUILD YOUR PROJECT ---
           cmake -S . -B build-skylake -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DARCH_FLAGS="${TARGET_ARCH}" \
@@ -117,12 +100,15 @@ jobs:
             cp -vL "$lib" "$OUT/lib/" || true
           done < /tmp/libs.txt
 
+          # Copy Squash plugins (0.7.0 puts them in lib/squash/0.7.0/ or similar)
+          # We copy loosely to catch whatever structure it creates
           cp -r /usr/local/lib/squash/* "$OUT/lib/squash/" || true
           
           # Wrapper Script
           cat << 'WRAPPER' > "$OUT/run.sh"
           #!/bin/sh
           HERE="$(dirname "$(readlink -f "$0")")"
+          # 0.7.0 might use a versioned directory, so we point broadly
           export SQUASH_PATH="$HERE/lib/squash"
           export LD_LIBRARY_PATH="$HERE/lib:$LD_LIBRARY_PATH"
           exec "$HERE/LosslessBenchmarkFull" "$@"
@@ -134,7 +120,7 @@ jobs:
           
           chmod +x build_internal.sh
 
-      # 4. Run Build in Docker
+      # 2. Run Build in Docker (CentOS 7)
       - name: Run Build in Docker (CentOS 7)
         run: |
           docker run --rm \
@@ -143,7 +129,7 @@ jobs:
             quay.io/pypa/manylinux2014_x86_64:latest \
             /bin/bash /workspace/build_internal.sh
 
-      # 5. Upload Artifact
+      # 3. Upload Artifact
       - name: Upload Bundle
         uses: actions/upload-artifact@v4
         with:
