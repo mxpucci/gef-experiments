@@ -14,14 +14,25 @@ set(COMMON_OPT_FLAGS "-O3 -DNDEBUG -fno-math-errno -funroll-loops -ftree-vectori
 
 # Detect architecture and set appropriate flags
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
-    # Apple Silicon / ARM64
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=native ${COMMON_OPT_FLAGS}")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=native ${COMMON_OPT_FLAGS} -Wall -D_FILE_OFFSET_BITS=64")
+    set(DEFAULT_ARCH_FLAGS "-mcpu=native")
 else()
-    # x86_64 - enable AVX-512 and all SIMD extensions available on native CPU
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -mtune=native ${COMMON_OPT_FLAGS} -mfpmath=sse")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native -mtune=native ${COMMON_OPT_FLAGS} -mfpmath=sse -Wall -D_FILE_OFFSET_BITS=64 -m64")
+    # Default to native for local development, generic for portable builds
+    if(BUILD_PORTABLE)
+        set(DEFAULT_ARCH_FLAGS "-march=x86-64 -mtune=generic -mfpmath=sse")
+    else()
+        set(DEFAULT_ARCH_FLAGS "-march=native -mtune=native -mfpmath=sse")
+    endif()
 endif()
+
+# Allow CI to override ARCH_FLAGS (e.g., -DARCH_FLAGS="-march=skylake-avx512")
+if(NOT DEFINED ARCH_FLAGS)
+    set(ARCH_FLAGS "${DEFAULT_ARCH_FLAGS}")
+endif()
+
+message(STATUS "Target Architecture Flags: ${ARCH_FLAGS}")
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ARCH_FLAGS} ${COMMON_OPT_FLAGS}")
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   ${ARCH_FLAGS} ${COMMON_OPT_FLAGS} -Wall -D_FILE_OFFSET_BITS=64")
 
 # Statically link standard libraries for Linux portability
 if(UNIX AND NOT APPLE)

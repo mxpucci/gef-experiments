@@ -28,7 +28,7 @@
 
 // Squash compression library (optional)
 #ifdef USE_SQUASH
-#include <squash.h>
+#include <squash/squash.h>
 #define HAS_SQUASH 1
 #else
 #define HAS_SQUASH 0
