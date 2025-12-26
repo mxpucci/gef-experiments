@@ -25,22 +25,22 @@ jobs:
           cd _deps/squash
           git submodule init
           
-          # Attempt update, but proceed on failure (FastARI/404)
+          # Attempt update, but proceed on failure (FastARI 404)
           git submodule update --recursive || echo "Submodule failures detected, patching CMakeLists below..."
 
-          # --- FIX: Remove broken plugins from CMakeLists.txt ---
-          # We use 'sed' to delete lines containing the names of broken plugins.
-          # This stops CMake from trying to add_subdirectory() for folders that don't exist.
+          # --- CRITICAL FIX: Patch CMakeLists.txt ---
+          # The error confirms Squash lists these plugins in plugins/CMakeLists.txt.
+          # We use 'sed' to delete ANY line containing these names. 
+          # This effectively removes them from the build queue.
           
-          sed -i '/add_subdirectory(fari)/d' plugins/CMakeLists.txt
-          sed -i '/add_subdirectory(brieflz)/d' plugins/CMakeLists.txt
-          sed -i '/add_subdirectory(zlib-ng)/d' plugins/CMakeLists.txt
+          sed -i '/brieflz/d' plugins/CMakeLists.txt
+          sed -i '/fari/d'    plugins/CMakeLists.txt
+          sed -i '/zlib-ng/d' plugins/CMakeLists.txt
           
-          # Now it is safe to remove the directories
+          # Now remove the directories to be clean
           rm -rf plugins/fari plugins/brieflz plugins/zlib-ng
           
-          # Note: We keep 'brotli' because we installed 'brotli-devel' in the container.
-          # Squash will find the system library and won't need the empty submodule.
+          # We keep 'brotli' because we installed 'brotli-devel'.
 
       # 3. Create the Build Script
       - name: Create Build Script
@@ -56,6 +56,7 @@ jobs:
           export SQUASH_PREFIX=/usr/local
           export TARGET_ARCH="-march=skylake-avx512 -mtune=skylake-avx512"
 
+          # Fix git ownership warning inside Docker
           git config --global --add safe.directory /workspace
 
           # --- INSTALL DEPS ---
@@ -68,6 +69,7 @@ jobs:
           ln -sf /usr/bin/cmake3 /usr/bin/cmake
 
           # --- BUILD SQUASH ---
+          # -DCMAKE_POLICY_VERSION_MINIMUM=3.5 fixes the policy error
           cmake -S _deps/squash -B _deps/squash/build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=${SQUASH_PREFIX} \
