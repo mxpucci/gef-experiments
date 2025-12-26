@@ -217,6 +217,10 @@ private:
             digits++;
             td = pow10_table[digits];
             temp = value * td;
+            if (std::isinf(temp)) { // Check for overflow
+                digits = 16 - sp; // Force fallback
+                break;
+            }
             trac = temp + POW_NUM - POW_NUM;
         }
         
