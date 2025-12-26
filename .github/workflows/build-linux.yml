@@ -31,7 +31,8 @@ jobs:
           export TARGET_ARCH="-march=skylake-avx512 -mtune=skylake-avx512"
 
           # --- INSTALL DEPS ---
-          # Added 'ragel' here to fix the missing executable error
+          # ragel added for Squash
+          # brotli-devel added for your project
           yum install -y cmake3 ninja-build libtool \
             zlib-devel bzip2-devel xz-devel lz4-devel libzstd-devel snappy-devel \
             brotli-devel ragel \
@@ -39,14 +40,32 @@ jobs:
 
           ln -sf /usr/bin/cmake3 /usr/bin/cmake
 
+          # --- CRITICAL FIX: MANUALLY CREATE SNAPPY.PC ---
+          # CentOS 7's snappy-devel is missing this file, so we make it ourselves.
+          # This allows pkg_check_modules(SNAPPY) to work.
+          cat << 'PC' > /usr/lib64/pkgconfig/snappy.pc
+          prefix=/usr
+          exec_prefix=/usr
+          libdir=/usr/lib64
+          includedir=/usr/include
+
+          Name: snappy
+          Description: Snappy compression library
+          Version: 1.1.0
+          Libs: -L${libdir} -lsnappy
+          Cflags: -I${includedir}
+          PC
+          
+          # Ensure pkg-config finds it
+          export PKG_CONFIG_PATH=/usr/lib64/pkgconfig:${PKG_CONFIG_PATH:-}
+
           # --- DOWNLOAD & BUILD SQUASH 0.7.0 ---
           wget https://github.com/quixdb/squash/releases/download/v0.7.0/squash-0.7.0.tar.bz2
           tar -xjf squash-0.7.0.tar.bz2
           
           cd squash-0.7.0
           
-          # Configure CMake
-          # Added -DCMAKE_POLICY_VERSION_MINIMUM=3.5 to fix deprecation warnings
+          # Configure Squash
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=${SQUASH_PREFIX} \
@@ -57,6 +76,7 @@ jobs:
           cmake --build build -j
           make -C build install || cmake --install build
           
+          # Register new libs
           echo "${SQUASH_PREFIX}/lib" > /etc/ld.so.conf.d/squash.conf
           ldconfig
           
@@ -115,7 +135,6 @@ jobs:
           chmod +x build_internal.sh
 
       # 2. Run Build in Docker (CentOS 7)
-      # This step ensures we are using the environment with glibc 2.17 and yum installed packages
       - name: Run Build in Docker (CentOS 7)
         run: |
           docker run --rm \
