@@ -101,9 +101,24 @@ LoadedDataset load_custom_dataset(const std::string& filename) {
                   << expected_size_new << ") or old (" << expected_size_old << ") format." << std::endl;
     }
     
-    in.read(reinterpret_cast<char*>(data.data()), n * 8);
-    if (in.gcount() != static_cast<std::streamsize>(n * 8)) {
-        std::cerr << "Warning: Read fewer bytes than expected." << std::endl;
+    char* ptr = reinterpret_cast<char*>(data.data());
+    size_t total_bytes = n * 8;
+    size_t bytes_read = 0;
+    const size_t CHUNK_SIZE = 1024 * 1024 * 1024; // 1GB chunks
+
+    while (bytes_read < total_bytes) {
+        size_t to_read = std::min(CHUNK_SIZE, total_bytes - bytes_read);
+        in.read(ptr + bytes_read, to_read);
+        size_t read_this_time = in.gcount();
+        bytes_read += read_this_time;
+        
+        if (read_this_time < to_read) {
+            break; // EOF or error
+        }
+    }
+
+    if (bytes_read != total_bytes) {
+        std::cerr << "Warning: Read fewer bytes than expected. Expected " << total_bytes << ", got " << bytes_read << std::endl;
     }
     
     return {data, x};

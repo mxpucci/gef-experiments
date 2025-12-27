@@ -72,6 +72,7 @@ public:
     }
     
     static int getSP(double v) {
+        if (v == 0) return -324; // Handle 0 safely
         if (v >= 1) {
             for (int i = 0; i < 9; i++) {
                 if (v < mapSPGreater1[i + 1]) {
@@ -125,7 +126,7 @@ public:
         }
         
         double temp = v * get10iP(i);
-        if (std::isinf(temp)) return 17;
+        if (std::isinf(temp) || std::abs(temp) > 9.22e18) return 17;
         int64_t tempLong = static_cast<int64_t>(temp);
         while (tempLong != temp) {
             i++;
@@ -134,6 +135,7 @@ public:
             if (std::isinf(scale)) return 17;
             
             temp = v * scale;
+            if (std::abs(temp) > 9.22e18) return 17;
             tempLong = static_cast<int64_t>(temp);
         }
         
@@ -334,7 +336,14 @@ public:
             int e = ((vLong >> 52) & 0x7ff);
             int gAlpha = Elf64Utils::getFAlpha(alpha) + e - 1023;
             int eraseBits = 52 - gAlpha;
-            int64_t mask = 0xffffffffffffffffLL << eraseBits;
+            int64_t mask;
+            if (eraseBits < 0) {
+                mask = 0xffffffffffffffffLL;
+            } else if (eraseBits >= 64) {
+                mask = 0;
+            } else {
+                mask = 0xffffffffffffffffLL << eraseBits;
+            }
             int64_t delta = (~mask) & vLong;
             
             if (delta != 0 && eraseBits > 4) { // C2

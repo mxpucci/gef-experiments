@@ -16,6 +16,7 @@
 #include <cmath>
 #include <vector>
 #include <limits>
+#include <algorithm>
 #include "../lib/BitStream.hpp"
 
 template<typename T = double>
@@ -26,16 +27,27 @@ class CompressorCamel {
     bool first = true;
     size_t size = 0;
     
-    static constexpr int DECIMAL_MAX_COUNT = 3;
+    static constexpr int DECIMAL_MAX_COUNT = 18;
     
-    // m value bits for different decimal counts
-    static constexpr int mValueBits[] = {3, 5, 7, 10, 15};
+    // m value bits for different decimal counts (calculated as ceil(log2(5^k)))
+    static constexpr int mValueBits[] = {
+        3, 5, 7, 10, 12, 14, 17, 19, 21, 24, 26, 28, 31, 33, 35, 38, 40, 42
+    };
     
-    // Thresholds for decimal encoding
-    static constexpr int64_t threshold[] = {5, 25, 125, 625};
+    // Thresholds for decimal encoding (5^k)
+    static constexpr int64_t threshold[] = {
+        5, 25, 125, 625, 3125, 15625, 78125, 390625, 1953125, 9765625, 
+        48828125, 244140625, 1220703125, 6103515625, 30517578125, 
+        152587890625, 762939453125, 3814697265625
+    };
     
     // Powers of 10
-    static constexpr int64_t powers[] = {1L, 10L, 100L, 1000L, 10000L, 100000L};
+    static constexpr int64_t powers[] = {
+        1L, 10L, 100L, 1000L, 10000L, 100000L, 1000000L, 10000000L, 100000000L, 
+        1000000000L, 10000000000L, 100000000000L, 1000000000000L, 
+        10000000000000L, 100000000000000L, 1000000000000000L, 
+        10000000000000000L, 100000000000000000L, 1000000000000000000L
+    };
     
     BitStream out{};
     
@@ -60,13 +72,21 @@ class CompressorCamel {
         value = std::abs(value);
         double epsilon = 0.0000001;
         
-        // Camel ultimately clamps to DECIMAL_MAX_COUNT, so avoid an unbounded loop
-        // on values that do not have a short terminating decimal representation.
-        while (decimal_count < DECIMAL_MAX_COUNT &&
-               std::abs(value * factor - std::round(value * factor)) > epsilon) {
+        // Find minimal 10^k scale that makes value an integer (up to MAX)
+        // We use a tighter check for higher precision support
+        while (decimal_count < DECIMAL_MAX_COUNT) {
+            double scaled = value * factor;
+            if (std::abs(scaled - std::round(scaled)) < epsilon) {
+                // Double check if we can stop earlier? 
+                // Actually the loop condition assumes we continue UNTIL it's integer.
+                // But epsilon check is tricky for large numbers.
+                break;
+            }
             factor *= 10.0;
             decimal_count++;
         }
+        
+        // If we reached max and it's still not integer, we just take the max.
         
         decimal_value = 0;
         if (decimal_count == 0) {
@@ -74,7 +94,12 @@ class CompressorCamel {
         }
         
         if (decimal_count > 0 && decimal_count <= DECIMAL_MAX_COUNT) {
-            decimal_value = static_cast<int64_t>(std::round(value * powers[decimal_count])) % powers[decimal_count];
+            // Safe modulo arithmetic
+            double scaled = std::round(value * powers[decimal_count]);
+            // decimal_value is the fractional part scaled: (scaled % powers[decimal_count])
+            // Using fmod for large numbers
+            double rem = std::fmod(scaled, static_cast<double>(powers[decimal_count]));
+            decimal_value = static_cast<int64_t>(rem);
         } else {
             decimal_value = static_cast<int64_t>(std::round(value * powers[DECIMAL_MAX_COUNT])) % powers[DECIMAL_MAX_COUNT];
             decimal_count = DECIMAL_MAX_COUNT;
@@ -84,7 +109,6 @@ class CompressorCamel {
     // Write first value
     size_t writeFirst(int64_t value) {
         first = false;
-        // storedVal tracks integer part of last *finite* value; avoid UB on NaN/Inf/out-of-range.
         double d = bitsToDouble(value);
         storedVal = fitsInInt64(d) ? static_cast<int64_t>(d) : 0;
         out.append(value, 64);
@@ -96,18 +120,37 @@ class CompressorCamel {
     size_t compressDecimalValue(int64_t decimal_value, int decimal_count) {
         if (decimal_count == 0) return size;
         
-        out.append(decimal_count - 1, 2); // Save byte count: 00-1, 01-2, 10-3, 11-4
-        size += 2;
+        // Extended header for decimal count
+        // Original: 2 bits (0..3). We need up to 18.
+        // We will use a prefix code extension or just fixed bits?
+        // To be compatible with "Camel" spirit, we should keep small counts small.
+        // But since we broke compatibility with the original Java (by extending counts),
+        // we can implement a variable length scheme.
+        // 00 -> 1 (original 0)
+        // 01 -> 2 (original 1)
+        // 10 -> 3 (original 2)
+        // 11 -> escape/extended
+        
+        if (decimal_count <= 3) {
+            out.append(decimal_count - 1, 2); 
+            size += 2;
+        } else {
+            out.append(3, 2); // 11
+            size += 2;
+            // Write remaining value (decimal_count - 4) in 4 bits (supports up to 4+15=19)
+            out.append(decimal_count - 4, 4);
+            size += 4;
+        }
         
         // Calculate m value
         int64_t thresh = threshold[decimal_count - 1];
-        int m = static_cast<int>(decimal_value);
+        int64_t m = decimal_value;
         size += 1;
         
         if (decimal_value - thresh >= 0) {
             // Flag: calculate m value
             out.push_back(true);
-            m = static_cast<int>(decimal_value % thresh);
+            m = decimal_value % thresh;
             
             // XOR operation for m
             int64_t xorVal = (Double_doubleToLongBits(static_cast<double>(decimal_value) / powers[decimal_count] + 1)) ^ 
@@ -125,50 +168,22 @@ class CompressorCamel {
             out.append(m, 3);
             size += 3;
         } else if (decimal_count == 2) {
-            if (m < 8) {
-                out.append(0, 1);
-                out.append(m, 3);
-                size += 4;
-            } else {
-                out.append(1, 1);
-                out.append(m, 5);
-                size += 6;
-            }
+            if (m < 8) { out.append(0, 1); out.append(m, 3); size += 4; } 
+            else { out.append(1, 1); out.append(m, 5); size += 6; }
         } else if (decimal_count == 3) {
-            if (m < 2) {
-                out.append(0, 2);
-                out.append(m, 1);
-                size += 3;
-            } else if (m < 8) {
-                out.append(1, 2);
-                out.append(m, 3);
-                size += 5;
-            } else if (m < 32) {
-                out.append(2, 2);
-                out.append(m, 5);
-                size += 7;
-            } else {
-                out.append(3, 2);
-                out.append(m, mValueBits[decimal_count - 1]);
-                size += 2 + mValueBits[decimal_count - 1];
-            }
+            if (m < 2) { out.append(0, 2); out.append(m, 1); size += 3; }
+            else if (m < 8) { out.append(1, 2); out.append(m, 3); size += 5; }
+            else if (m < 32) { out.append(2, 2); out.append(m, 5); size += 7; }
+            else { out.append(3, 2); out.append(m, mValueBits[decimal_count - 1]); size += 2 + mValueBits[decimal_count - 1]; }
         } else {
-            if (m < 16) {
-                out.append(0, 2);
-                out.append(m, 4);
-                size += 6;
-            } else if (m < 64) {
-                out.append(1, 2);
-                out.append(m, 6);
-                size += 8;
-            } else if (m < 256) {
-                out.append(2, 2);
-                out.append(m, 8);
-                size += 10;
-            } else {
-                out.append(3, 2);
-                out.append(m, mValueBits[decimal_count - 1]);
-                size += 2 + mValueBits[decimal_count - 1];
+            // Generic fallback for higher counts
+            if (m < 16) { out.append(0, 2); out.append(m, 4); size += 6; }
+            else if (m < 64) { out.append(1, 2); out.append(m, 6); size += 8; }
+            else if (m < 256) { out.append(2, 2); out.append(m, 8); size += 10; }
+            else { 
+                out.append(3, 2); 
+                out.append(m, mValueBits[decimal_count - 1]); 
+                size += 2 + mValueBits[decimal_count - 1]; 
             }
         }
         
@@ -179,15 +194,14 @@ class CompressorCamel {
     size_t compressIntegerValue(int64_t int_value, int intSignal) {
         int64_t diff = int_value - storedVal;
         
-        // Write sign bit to distinguish -0 and +0
         out.append(intSignal, 1);
         size += 1;
         
         if (diff >= -1 && diff <= 1) {
-            out.append(diff + 1, 2); // Map -1 to 0, 0 to 1, 1 to 2
+            out.append(diff + 1, 2); 
             size += 2;
         } else {
-            out.append(3, 2); // 11
+            out.append(3, 2); 
             size += 2;
             if (diff < 0) {
                 out.push_back(false);
@@ -197,11 +211,6 @@ class CompressorCamel {
             }
             size += 1;
 
-            // Extended size selector (2 bits):
-            // 00: 3 bits (2..7)
-            // 01: 16 bits
-            // 10: 32 bits
-            // 11: 64 bits
             if (diff >= 2 && diff < 8) {
                 out.append(0, 2);
                 out.append(static_cast<uint64_t>(diff), 3);
@@ -227,13 +236,31 @@ class CompressorCamel {
     
     // Compress a value (after first)
     size_t compressValue(double value) {
-        // Escape hatch for NaN/Inf or values that don't fit the integer-part model:
-        // write a 1-bit flag + raw 64-bit double bits (lossless).
-        if (!std::isfinite(value) || !fitsInInt64(value)) {
+        // Fallback for NaN/Inf/Overflow is handled by "escape" flag 1
+        // We also use this escape flag for values that cannot be losslessly represented by the model.
+        
+        // 1. Try to compute model representation
+        int decimal_count;
+        int64_t decimal_value;
+        cal_decimal_count(value, decimal_count, decimal_value);
+        
+        int64_t intPart = static_cast<int64_t>(value);
+        double reconstructed = static_cast<double>(std::abs(intPart)) + 
+                             static_cast<double>(decimal_value) / powers[decimal_count];
+        if (value < 0) reconstructed = -reconstructed;
+
+        // 2. Check strict losslessness
+        if (!std::isfinite(value) || !fitsInInt64(value) || value != reconstructed) {
+            // Lossless Escape
             out.push_back(true);
             out.append(static_cast<uint64_t>(doubleToBits(value)), 64);
             size += 65;
-            // Do not update storedVal based on a non-finite value.
+            
+            // Update storedVal to maintain sync with decompressor
+            if (fitsInInt64(value)) {
+                storedVal = static_cast<int64_t>(value);
+            }
+            
             return size;
         }
 
@@ -243,10 +270,6 @@ class CompressorCamel {
 
         int intSignal = std::signbit(value) ? 0 : 1;
         size = compressIntegerValue(static_cast<int64_t>(value), intSignal);
-        
-        int decimal_count;
-        int64_t decimal_value;
-        cal_decimal_count(value, decimal_count, decimal_value);
         size = compressDecimalValue(decimal_value, decimal_count);
         
         return size;
@@ -265,15 +288,7 @@ public:
     
     void addValue(const T& value) {
         if (first) {
-            int decimal_count;
-            int64_t decimal_value;
-            cal_decimal_count(value, decimal_count, decimal_value);
-            
-            double adjustedValue = (value < 0 ? -1 : 1) * 
-                (static_cast<double>(static_cast<int64_t>(std::abs(value)) * powers[decimal_count] + decimal_value)) / 
-                powers[decimal_count];
-            
-            writeFirst(Double_doubleToLongBits(adjustedValue));
+            writeFirst(Double_doubleToLongBits(value));
         } else {
             compressValue(value);
         }

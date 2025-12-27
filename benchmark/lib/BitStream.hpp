@@ -88,6 +88,8 @@ struct BitStream {
         assert(len <= 64);
         assert(!data.empty());
 
+        if (len == 0) return 0;
+
         uint64_t t_bits = 0;
 
         if (len == m_used_slots) {
