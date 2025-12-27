@@ -7,6 +7,8 @@
  * This is a faithful port of the original CPU implementation from:
  * - src/cpu/Falcon_basic_decompressor.cpp
  * - src/utils/input_bit_stream.cc
+ * 
+ * Updated to support streaming decompression to reduce memory usage.
  */
 
 #include <cstdint>
@@ -108,11 +110,11 @@ class DecompressorFalcon {
     
     static constexpr size_t BLOCK_SIZE = 1025;
     
-    std::vector<T> decompressedValues;
-    size_t valueIndex = 0;
-    bool endOfStream = false;
-    size_t n;
-    size_t i = 0;
+    falcon::InputBitStream bitStream;
+    std::vector<T> currentBlock;
+    size_t currentBlockIndex = 0;
+    size_t totalValuesRead = 0;
+    size_t totalValuesExpected = 0;
     
     // From original: zigzag_decode
     static int64_t zigzag_decode(uint64_t value) {
@@ -193,75 +195,79 @@ class DecompressorFalcon {
         }
     }
     
-    void decompressAll(const std::vector<uint8_t>& input) {
-        if (input.size() < 8) return;
+    void decodeNextBlock() {
+        if (totalValuesRead >= totalValuesExpected) return;
+
+        size_t currentBlockSize = std::min(BLOCK_SIZE, totalValuesExpected - totalValuesRead);
+        std::vector<int64_t> integers;
+        int totalBitsRead = bitStream.ReadLong(64);
+        int maxDecimalPlaces = 0;
+        int isOk;
         
-        falcon::InputBitStream bitStream;
-        bitStream.SetBuffer(input);
+        decompressBlock(bitStream, integers, totalBitsRead, currentBlockSize, maxDecimalPlaces, isOk);
         
-        int64_t totalValues = bitStream.ReadLong(64);
-        size_t numBlocks = (totalValues + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        currentBlock.clear();
+        currentBlock.reserve(integers.size());
         
-        for (size_t blk = 0; blk < numBlocks; blk++) {
-            size_t currentBlockSize = std::min(BLOCK_SIZE, static_cast<size_t>(totalValues) - blk * BLOCK_SIZE);
-            std::vector<int64_t> integers;
-            int totalBitsRead = bitStream.ReadLong(64);
-            int maxDecimalPlaces = 0;
-            int isOk;
-            
-            decompressBlock(bitStream, integers, totalBitsRead, currentBlockSize, maxDecimalPlaces, isOk);
-            
-            if (isOk == 0) {
-                for (int64_t intValue : integers) {
-                    double d = decodeDoubleWithSignLast(static_cast<uint64_t>(intValue));
-                    decompressedValues.push_back(d);
-                }
-            } else {
-                double divisor = std::pow(10.0, maxDecimalPlaces);
-                for (int64_t intValue : integers) {
-                    double value = static_cast<double>(intValue) / divisor;
-                    decompressedValues.push_back(value);
-                }
+        if (isOk == 0) {
+            for (int64_t intValue : integers) {
+                double d = decodeDoubleWithSignLast(static_cast<uint64_t>(intValue));
+                currentBlock.push_back(d);
             }
-            
-            // Skip padding
-            int paddingBits = (totalBitsRead + 31) / 32 * 32 - totalBitsRead;
-            if (paddingBits > 0) {
-                bitStream.ReadLong(paddingBits);
+        } else {
+            double divisor = std::pow(10.0, maxDecimalPlaces);
+            for (int64_t intValue : integers) {
+                double value = static_cast<double>(intValue) / divisor;
+                currentBlock.push_back(value);
             }
         }
+        
+        // Skip padding
+        int paddingBits = (totalBitsRead + 31) / 32 * 32 - totalBitsRead;
+        if (paddingBits > 0) {
+            bitStream.ReadLong(paddingBits);
+        }
+        
+        currentBlockIndex = 0;
     }
     
 public:
     T storedValue = 0;
     
-    DecompressorFalcon(const std::vector<uint8_t>& bytes, size_t nlines) : n(nlines) {
-        decompressAll(bytes);
-        
-        if (!decompressedValues.empty()) {
-            storedValue = decompressedValues[0];
-            valueIndex = 0;
-            ++i;
+    DecompressorFalcon(const std::vector<uint8_t>& bytes, size_t nlines) {
+        if (bytes.size() < 8) {
+            totalValuesExpected = 0;
+            return;
         }
         
-        if (i > n || decompressedValues.empty()) {
-            endOfStream = true;
+        bitStream.SetBuffer(bytes);
+        totalValuesExpected = bitStream.ReadLong(64);
+        
+        // Initial decode
+        if (totalValuesExpected > 0) {
+            decodeNextBlock();
+            if (!currentBlock.empty()) {
+                storedValue = currentBlock[0];
+                totalValuesRead++; // Account for the first value which is now storedValue
+                currentBlockIndex++; // Advance index
+            }
         }
     }
     
     bool hasNext() {
-        if (!endOfStream) {
-            valueIndex++;
-            if (valueIndex < decompressedValues.size()) {
-                storedValue = decompressedValues[valueIndex];
-                ++i;
-                if (i > n) {
-                    endOfStream = true;
-                }
+        if (currentBlockIndex >= currentBlock.size()) {
+            if (totalValuesRead < totalValuesExpected) {
+                 // Load next block
+                 decodeNextBlock();
+                 if (currentBlock.empty()) return false;
             } else {
-                endOfStream = true;
+                return false;
             }
         }
-        return !endOfStream;
+        
+        storedValue = currentBlock[currentBlockIndex];
+        currentBlockIndex++;
+        totalValuesRead++;
+        return true;
     }
 };

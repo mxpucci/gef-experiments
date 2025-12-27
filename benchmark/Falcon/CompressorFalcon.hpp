@@ -179,7 +179,7 @@ public:
     static constexpr size_t BLOCK_SIZE = 1025;
     
 private:
-    static constexpr double POW_NUM = (1L << 51) + (1L << 52);
+    static constexpr double POW_NUM = (1LL << 51) + (1LL << 52);
     
     static constexpr double pow10_table[17] = {
         1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0,
@@ -513,10 +513,6 @@ private:
         }
 
         processedBlocks++;
-        if (totalBlocks > 0 && processedBlocks % 10000 == 0) {
-            std::cerr << "\rFalcon Progress: " << (processedBlocks * 100 / totalBlocks)
-                      << "% (" << processedBlocks << "/" << totalBlocks << ")" << std::flush;
-        }
     }
 };
 
