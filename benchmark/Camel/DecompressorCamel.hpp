@@ -201,15 +201,10 @@ class DecompressorCamel {
     }
     
     T nextValue() {
-        int rawFlag = in.get(1);
-        if (rawFlag == 1) {
-            int64_t bits = in.get(64);
-            double d = Long_longBitsToDouble(bits);
-            if (fitsInInt64(d)) {
-                storedIntVal = static_cast<int64_t>(d);
-            }
-            return static_cast<T>(d);
-        }
+        // Removed rawFlag reading since we no longer support raw value escape and always encode.
+        // int rawFlag = in.get(1);
+        // if (rawFlag == 1) { ... }
+        
         int intSignal;
         int64_t int_value = decompressIntegerValue(intSignal);
         return static_cast<T>(decompressDecimalValue(int_value, intSignal));

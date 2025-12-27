@@ -1,0 +1,2 @@
+compressor,dataset,num_values,uncompressed_bits,compressed_bits,compression_ratio,compression_throughput_mbs,decompression_throughput_mbs,random_access_ns,random_access_mbs,range_10_mbs,range_100_mbs,range_1000_mbs
+Camel,test_data.bin,2050,131200,66793,0.5091,66.2723,98.9890,16655.1700,0.4581,5.7226,47.3669,180.1765

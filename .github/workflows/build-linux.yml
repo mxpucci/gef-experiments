@@ -171,7 +171,7 @@ jobs:
           HERE="$(dirname "$(readlink -f "$0")")"
           
           # Point Squash explicitly to our flattened plugins folder
-          export SQUASH_PLUGINS_PATH="$HERE/lib/plugins"
+          export SQUASH_PLUGIN_PATH="$HERE/lib/plugins"
           
           # Add lib to path so plugins can find dependencies (libbrotlienc.so.1)
           export LD_LIBRARY_PATH="$HERE/lib:$LD_LIBRARY_PATH"
