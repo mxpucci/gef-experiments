@@ -171,10 +171,23 @@ jobs:
           HERE="$(dirname "$(readlink -f "$0")")"
           
           # Point Squash explicitly to our flattened plugins folder
+          # We set multiple variables to cover different Squash versions/conventions
           export SQUASH_PLUGIN_PATH="$HERE/lib/plugins"
+          export SQUASH_PLUGINS_PATH="$HERE/lib/plugins"
+          export SQUASH_PLUGINS="$HERE/lib/plugins"
+          export SQUASH_PLUGIN_DIR="$HERE/lib/plugins"
           
           # Add lib to path so plugins can find dependencies (libbrotlienc.so.1)
           export LD_LIBRARY_PATH="$HERE/lib:$LD_LIBRARY_PATH"
+          
+          # Debugging info
+          echo "--- DEBUG: SQUASH CONFIGURATION ---"
+          echo "Plugin path: $SQUASH_PLUGIN_PATH"
+          echo "Listing plugins:"
+          ls -R "$HERE/lib/plugins"
+          echo "Checking dependencies for brotli plugin (if found):"
+          find "$HERE/lib/plugins" -name "*brotli*" -exec ldd {} \; || true
+          echo "-----------------------------------"
           
           exec "$HERE/LosslessBenchmarkFull" "$@"
           WRAPPER
