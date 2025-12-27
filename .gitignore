@@ -6,3 +6,4 @@ cmake-*
 .clion.source.upload.marker
 data/
 lib/boost_1_83_0/libs/
+build/
