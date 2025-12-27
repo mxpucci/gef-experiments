@@ -21,6 +21,7 @@
 #include <iomanip>
 #include <functional>
 #include <climits>
+#include <cmath>
 
 // SDSL includes
 #include <sdsl/bit_vectors.hpp>
@@ -57,6 +58,56 @@
 // ============================================================================
 // Utility functions
 // ============================================================================
+
+struct LoadedDataset {
+    std::vector<int64_t> data;
+    int64_t decimals;
+};
+
+LoadedDataset load_custom_dataset(const std::string& filename) {
+    std::ifstream in(filename, std::ios::binary);
+    if (!in) {
+        throw std::runtime_error("Cannot open file: " + filename);
+    }
+
+    uint64_t n_val = 0;
+    in.read(reinterpret_cast<char*>(&n_val), 8);
+    size_t n = static_cast<size_t>(n_val);
+    
+    // Check if file size matches the new format (N + X + Data)
+    in.seekg(0, std::ios::end);
+    size_t file_size = in.tellg();
+    in.seekg(8, std::ios::beg); // Skip N
+    
+    // New format: 8 bytes N + 8 bytes X + N*8 bytes Data
+    size_t expected_size_new = 8 + 8 + n * 8;
+    // Old format: 8 bytes N + N*8 bytes Data (assuming 64-bit values)
+    size_t expected_size_old = 8 + n * 8;
+    
+    int64_t x = 0;
+    std::vector<int64_t> data(n);
+    
+    if (file_size == expected_size_new) {
+        uint64_t x_val = 0;
+        in.read(reinterpret_cast<char*>(&x_val), 8);
+        x = static_cast<int64_t>(x_val);
+    } else if (file_size == expected_size_old) {
+        // Fallback to old format, assume x=0 and data follows immediately
+        x = 0;
+    } else {
+        // Warning or error? Let's try to read data anyway if we can
+        // Assuming old format structure for safety if unknown
+        std::cerr << "Warning: File size " << file_size << " doesn't match expected new (" 
+                  << expected_size_new << ") or old (" << expected_size_old << ") format." << std::endl;
+    }
+    
+    in.read(reinterpret_cast<char*>(data.data()), n * 8);
+    if (in.gcount() != static_cast<std::streamsize>(n * 8)) {
+        std::cerr << "Warning: Read fewer bytes than expected." << std::endl;
+    }
+    
+    return {data, x};
+}
 
 template<class T>
 void do_not_optimize(T const &value) {
@@ -163,16 +214,19 @@ BenchmarkResult benchmark_neats(const std::string &filename,
     result.dataset = filename;
     
     // Load data
-    auto data = pfa::algorithm::io::read_data_binary<T, T>(filename, false);
+    auto loaded = load_custom_dataset(filename);
+    auto& data = loaded.data;
+    // NeaTS works on the integers directly
+    
+    result.num_values = data.size();
+    result.uncompressed_bits = data.size() * sizeof(T) * 8;
+    
     auto min_data = *std::min_element(data.begin(), data.end());
     min_data = min_data < 0 ? (min_data - 1) : -1;
     
     std::vector<T> processed_data(data.size());
     std::transform(data.begin(), data.end(), processed_data.begin(),
-                   [min_data](T d) { return d - min_data; });
-    
-    result.num_values = data.size();
-    result.uncompressed_bits = data.size() * sizeof(T) * 8;
+                   [min_data](int64_t d) { return static_cast<T>(d - min_data); });
     
     // Compression
     pfa::neats::compressor<uint32_t, T, double, float, double> compressor(max_bpc);
@@ -254,16 +308,19 @@ BenchmarkResult benchmark_dac(const std::string &filename,
     result.dataset = filename;
     
     // Load data
-    auto data = pfa::algorithm::io::read_data_binary<T, T>(filename, false);
+    auto loaded = load_custom_dataset(filename);
+    auto& data = loaded.data;
+    // DAC works on the integers directly
+    
+    result.num_values = data.size();
+    result.uncompressed_bits = data.size() * sizeof(T) * 8;
+    
     auto min_data = *std::min_element(data.begin(), data.end());
     min_data = min_data < 0 ? (min_data - 1) : -1;
     
     std::vector<uint64_t> u_data(data.size());
     std::transform(data.begin(), data.end(), u_data.begin(),
-                   [min_data](T x) { return static_cast<uint64_t>(x - min_data); });
-    
-    result.num_values = data.size();
-    result.uncompressed_bits = data.size() * sizeof(T) * 8;
+                   [min_data](int64_t x) { return static_cast<uint64_t>(x - min_data); });
     
     // Compression
     auto t1 = std::chrono::high_resolution_clock::now();
@@ -351,7 +408,15 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
     result.dataset = filename;
     
     // Load data
-    auto data = pfa::algorithm::io::read_data_binary<T, T>(filename, false);
+    auto loaded = load_custom_dataset(filename);
+    const auto& raw_data = loaded.data;
+    double divisor = std::pow(10.0, loaded.decimals);
+    
+    std::vector<T> data(raw_data.size());
+    for(size_t i=0; i<raw_data.size(); ++i) {
+        data[i] = static_cast<T>(raw_data[i]) / divisor;
+    }
+    
     result.num_values = data.size();
     result.uncompressed_bits = data.size() * sizeof(T) * 8;
     
@@ -495,7 +560,15 @@ BenchmarkResult benchmark_tsxor(const std::string &filename,
     result.dataset = filename;
     
     // Load data
-    auto data = pfa::algorithm::io::read_data_binary<T, T>(filename, false);
+    auto loaded = load_custom_dataset(filename);
+    const auto& raw_data = loaded.data;
+    double divisor = std::pow(10.0, loaded.decimals);
+    
+    std::vector<T> data(raw_data.size());
+    for(size_t i=0; i<raw_data.size(); ++i) {
+        data[i] = static_cast<T>(raw_data[i]) / divisor;
+    }
+    
     result.num_values = data.size();
     result.uncompressed_bits = data.size() * sizeof(T) * 8;
     
@@ -636,7 +709,15 @@ BenchmarkResult benchmark_falcon(const std::string &filename,
     result.dataset = filename;
     
     // Load data
-    auto data = pfa::algorithm::io::read_data_binary<T, T>(filename, false);
+    auto loaded = load_custom_dataset(filename);
+    const auto& raw_data = loaded.data;
+    double divisor = std::pow(10.0, loaded.decimals);
+    
+    std::vector<T> data(raw_data.size());
+    for(size_t i=0; i<raw_data.size(); ++i) {
+        data[i] = static_cast<T>(raw_data[i]) / divisor;
+    }
+    
     result.num_values = data.size();
     result.uncompressed_bits = data.size() * sizeof(T) * 8;
     
@@ -760,7 +841,11 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     }
     
     // Load data
-    auto data = pfa::algorithm::io::read_data_binary<T, T>(filename, false);
+    auto loaded = load_custom_dataset(filename);
+    auto& data = loaded.data;
+    // Squash compresses raw bytes, so we can use integers directly or convert if we want
+    // Assuming we want to compress the 64-bit values as is.
+    
     const size_t n = data.size();
     const size_t num_blocks = n / block_size + (n % block_size != 0);
     
@@ -939,7 +1024,6 @@ void print_usage(const char *prog_name) {
     std::cerr << "  -r <list>      Comma-separated list of range sizes (default: 10,100,1000,10000,100000)" << std::endl;
     std::cerr << "  -b <size>      Block size for block-based compressors (default: 1000)" << std::endl;
     std::cerr << "  -m <bpc>       Max bits per correction for NeaTS (default: 32)" << std::endl;
-    std::cerr << "  -d             Data is double (default: int64)" << std::endl;
     std::cerr << "  -h             Show this help" << std::endl;
 }
 
@@ -966,7 +1050,6 @@ int main(int argc, char *argv[]) {
     std::vector<size_t> range_sizes = {10, 100, 1000, 10000, 100000};
     size_t block_size = 1000;
     uint8_t max_bpc = 32;
-    bool use_double = false;
     std::string input_path;
     
     // Parse command line arguments
@@ -986,8 +1069,6 @@ int main(int argc, char *argv[]) {
             block_size = std::stoull(argv[++i]);
         } else if (arg == "-m" && i + 1 < argc) {
             max_bpc = std::stoi(argv[++i]);
-        } else if (arg == "-d") {
-            use_double = true;
         } else if (arg == "-h") {
             print_usage(argv[0]);
             return 0;
