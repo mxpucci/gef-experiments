@@ -99,12 +99,13 @@ struct BenchmarkResult {
     double compression_throughput_mbs;
     double decompression_throughput_mbs;
     double random_access_ns;
+    double random_access_mbs;
     std::vector<std::pair<size_t, double>> range_query_throughputs; // (range_size, MB/s)
     
     void print_header(std::ostream &out) const {
         out << "compressor,dataset,num_values,uncompressed_bits,compressed_bits,"
             << "compression_ratio,compression_throughput_mbs,decompression_throughput_mbs,"
-            << "random_access_ns";
+            << "random_access_ns,random_access_mbs";
         for (const auto &[range, _] : range_query_throughputs) {
             out << ",range_" << range << "_mbs";
         }
@@ -116,7 +117,7 @@ struct BenchmarkResult {
         out << compressor << "," << extract_filename(dataset) << "," << num_values << ","
             << uncompressed_bits << "," << compressed_bits << ","
             << compression_ratio << "," << compression_throughput_mbs << ","
-            << decompression_throughput_mbs << "," << random_access_ns;
+            << decompression_throughput_mbs << "," << random_access_ns << "," << random_access_mbs;
         for (const auto &[_, throughput] : range_query_throughputs) {
             out << "," << throughput;
         }
@@ -183,7 +184,7 @@ BenchmarkResult benchmark_neats(const std::string &filename,
     
     result.compressed_bits = compressor.size_in_bits();
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
-    result.compression_throughput_mbs = (data.size() * sizeof(T) / 1024 / 1024) / (compression_time_ns / 1e9);
+    result.compression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression
     std::vector<T> decompressed(data.size());
@@ -193,7 +194,7 @@ BenchmarkResult benchmark_neats(const std::string &filename,
     auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     do_not_optimize(decompressed);
     
-    result.decompression_throughput_mbs = (data.size() * sizeof(T) / 1024 / 1024) / (decompression_time_ns / 1e9);
+    result.decompression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
     // Verify decompression
     for (size_t i = 0; i < data.size(); ++i) {
@@ -216,6 +217,7 @@ BenchmarkResult benchmark_neats(const std::string &filename,
     do_not_optimize(sum);
     auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
+    result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
     // Range queries
     const size_t num_range_queries = 10000;
@@ -233,7 +235,7 @@ BenchmarkResult benchmark_neats(const std::string &filename,
         t2 = std::chrono::high_resolution_clock::now();
         
         auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024 / 1024) / (range_time_ns / 1e9);
+        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
         result.range_query_throughputs.emplace_back(range, throughput);
     }
     
@@ -272,7 +274,7 @@ BenchmarkResult benchmark_dac(const std::string &filename,
     
     result.compressed_bits = sdsl::size_in_bytes(dac_vector) * 8;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
-    result.compression_throughput_mbs = (data.size() * sizeof(T) / 1024 / 1024) / (compression_time_ns / 1e9);
+    result.compression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression
     std::vector<uint64_t> decompressed(data.size());
@@ -284,7 +286,15 @@ BenchmarkResult benchmark_dac(const std::string &filename,
     do_not_optimize(decompressed);
     auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
-    result.decompression_throughput_mbs = (data.size() * sizeof(T) / 1024 / 1024) / (decompression_time_ns / 1e9);
+    result.decompression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
+    
+    // Verify decompression
+    for (size_t i = 0; i < data.size(); ++i) {
+        if (u_data[i] != decompressed[i]) {
+            std::cerr << "DAC decompression error at " << i << std::endl;
+            break;
+        }
+    }
     
     // Random access
     const size_t num_ra_queries = 1000000;
@@ -299,6 +309,7 @@ BenchmarkResult benchmark_dac(const std::string &filename,
     do_not_optimize(sum);
     auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
+    result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
     // Range queries
     const size_t num_range_queries = 10000;
@@ -318,7 +329,7 @@ BenchmarkResult benchmark_dac(const std::string &filename,
         t2 = std::chrono::high_resolution_clock::now();
         
         auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024 / 1024) / (range_time_ns / 1e9);
+        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
         result.range_query_throughputs.emplace_back(range, throughput);
     }
     
@@ -370,7 +381,7 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
     
     result.compressed_bits = total_compressed_bits;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
-    result.compression_throughput_mbs = (n * sizeof(T) / 1024 / 1024) / (compression_time_ns / 1e9);
+    result.compression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression
     std::vector<T> decompressed(n);
@@ -388,7 +399,15 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
     do_not_optimize(decompressed);
     auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
-    result.decompression_throughput_mbs = (n * sizeof(T) / 1024 / 1024) / (decompression_time_ns / 1e9);
+    result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
+    
+    // Verify decompression
+    for (size_t i = 0; i < n; ++i) {
+        if (data[i] != decompressed[i]) {
+            std::cerr << compressor_name << " decompression error at " << i << std::endl;
+            break;
+        }
+    }
     
     // Random access (requires block decompression)
     const size_t num_ra_queries = 100000; // Fewer queries since it's slower
@@ -412,6 +431,7 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
     do_not_optimize(sum);
     auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
+    result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
     // Range queries (requires block-wise decompression)
     const size_t num_range_queries = 1000;
@@ -455,7 +475,7 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
         t2 = std::chrono::high_resolution_clock::now();
         
         auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024 / 1024) / (range_time_ns / 1e9);
+        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
         result.range_query_throughputs.emplace_back(range, throughput);
     }
     
@@ -505,7 +525,7 @@ BenchmarkResult benchmark_tsxor(const std::string &filename,
     
     result.compressed_bits = total_compressed_bits;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
-    result.compression_throughput_mbs = (n * sizeof(T) / 1024 / 1024) / (compression_time_ns / 1e9);
+    result.compression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression
     std::vector<T> decompressed(n);
@@ -523,7 +543,15 @@ BenchmarkResult benchmark_tsxor(const std::string &filename,
     do_not_optimize(decompressed);
     auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
-    result.decompression_throughput_mbs = (n * sizeof(T) / 1024 / 1024) / (decompression_time_ns / 1e9);
+    result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
+    
+    // Verify decompression
+    for (size_t i = 0; i < n; ++i) {
+        if (data[i] != decompressed[i]) {
+            std::cerr << "TSXor decompression error at " << i << std::endl;
+            break;
+        }
+    }
     
     // Random access
     const size_t num_ra_queries = 100000;
@@ -547,6 +575,7 @@ BenchmarkResult benchmark_tsxor(const std::string &filename,
     do_not_optimize(sum);
     auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
+    result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
     // Range queries
     const size_t num_range_queries = 1000;
@@ -588,7 +617,7 @@ BenchmarkResult benchmark_tsxor(const std::string &filename,
         t2 = std::chrono::high_resolution_clock::now();
         
         auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024 / 1024) / (range_time_ns / 1e9);
+        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
         result.range_query_throughputs.emplace_back(range, throughput);
     }
     
@@ -627,7 +656,7 @@ BenchmarkResult benchmark_falcon(const std::string &filename,
     
     result.compressed_bits = cmpr.getSize();
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
-    result.compression_throughput_mbs = (n * sizeof(T) / 1024 / 1024) / (compression_time_ns / 1e9);
+    result.compression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression
     std::vector<T> decompressed(n);
@@ -644,7 +673,15 @@ BenchmarkResult benchmark_falcon(const std::string &filename,
     do_not_optimize(decompressed);
     auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
-    result.decompression_throughput_mbs = (n * sizeof(T) / 1024 / 1024) / (decompression_time_ns / 1e9);
+    result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
+    
+    // Verify decompression
+    for (size_t i = 0; i < n; ++i) {
+        if (data[i] != decompressed[i]) {
+            std::cerr << "Falcon decompression error at " << i << std::endl;
+            break;
+        }
+    }
     
     // Random access:
     // Falcon is a streaming format and does not support true random access.
@@ -662,6 +699,7 @@ BenchmarkResult benchmark_falcon(const std::string &filename,
     do_not_optimize(sum);
     auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
+    result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
     // Range queries:
     // Same rationale as above: benchmark range reads from decompressed array to avoid
@@ -683,7 +721,7 @@ BenchmarkResult benchmark_falcon(const std::string &filename,
         t2 = std::chrono::high_resolution_clock::now();
         
         auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024 / 1024) / (range_time_ns / 1e9);
+        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
         result.range_query_throughputs.emplace_back(range, throughput);
     }
     
@@ -760,7 +798,7 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     
     result.compressed_bits = total_compressed_bits;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
-    result.compression_throughput_mbs = (n * sizeof(T) / 1024 / 1024) / (compression_time_ns / 1e9);
+    result.compression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression
     std::vector<T> decompressed(n);
@@ -786,7 +824,15 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     do_not_optimize(decompressed);
     auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
-    result.decompression_throughput_mbs = (n * sizeof(T) / 1024 / 1024) / (decompression_time_ns / 1e9);
+    result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
+    
+    // Verify decompression
+    for (size_t i = 0; i < n; ++i) {
+        if (data[i] != decompressed[i]) {
+            std::cerr << compressor_name << " decompression error at " << i << std::endl;
+            break;
+        }
+    }
     
     // Random access
     const size_t num_ra_queries = 100000;
@@ -816,6 +862,7 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     do_not_optimize(sum);
     auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
+    result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
     // Range queries
     const size_t num_range_queries = 1000;
@@ -857,7 +904,7 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
         t2 = std::chrono::high_resolution_clock::now();
         
         auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024 / 1024) / (range_time_ns / 1e9);
+        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
         result.range_query_throughputs.emplace_back(range, throughput);
     }
     
