@@ -245,7 +245,8 @@ BenchmarkResult benchmark_neats(const std::string &filename,
                    [min_data](int64_t d) { return static_cast<T>(d - min_data); });
     
     // Compression
-    pfa::neats::compressor<uint32_t, T, double, float, double> compressor(max_bpc);
+    // Use uint64_t for x_t to prevent overflow of bit offsets (offset_res) for large datasets (>512MB compressed)
+    pfa::neats::compressor<uint64_t, T, double, float, double> compressor(max_bpc);
     
     auto t1 = std::chrono::high_resolution_clock::now();
     compressor.partitioning(processed_data.begin(), processed_data.end());
