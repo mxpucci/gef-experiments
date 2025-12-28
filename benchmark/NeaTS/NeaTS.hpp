@@ -18,7 +18,7 @@
 
 namespace pfa::neats {
     namespace stdx = std::experimental;
-    
+
     // Default x_t changed to uint64_t to prevent overflow for large datasets
     template<typename x_t = uint64_t, typename y_t = int64_t, typename poly = double, typename T1 = float, typename T2 = double>
     class compressor {
@@ -402,7 +402,7 @@ namespace pfa::neats {
 
             x_t start = 0;
             uint8_t bpc;
-            uint32_t offset_res = 0;
+            uint64_t offset_res = 0;
             auto offset_coefficients = 0;
             auto offset_coefficients_s = 0;
             auto offset_coefficients_t0 = 0;
@@ -459,7 +459,7 @@ namespace pfa::neats {
 
             x_t start{};
             uint8_t bpc{};
-            uint32_t offset_res = 0;
+            uint64_t offset_res = 0;
             auto offset_coefficients = 0;
             auto offset_coefficients_s = 0;
             auto offset_coefficients_t0 = 0;
@@ -867,7 +867,7 @@ namespace pfa::neats {
                         auto j{0};
                         for (; j + simd_width <= num_residuals; j += simd_width) {
                             _residuals.copy_from(out_start + j, stdx::element_aligned);
-                            _residuals += apply_simd_linear(startv + j + st_off, t1v, t2v);
+                            _residuals += apply_simd_linear(startv + static_cast<float_scalar_t>(j + st_off), t1v, t2v);
                             _residuals.copy_to(out_start + j, stdx::element_aligned);
                         }
 
@@ -889,7 +889,7 @@ namespace pfa::neats {
                         auto j{0};
                         for (; j + simd_width <= num_residuals; j += simd_width) {
                             _residuals.copy_from(out_start + j, stdx::element_aligned);
-                            _residuals += apply_simd_quadratic(qstartv + j + st_off, t0v, t1v, t2v);
+                            _residuals += apply_simd_quadratic(qstartv + static_cast<float_scalar_t>(j + st_off), t0v, t1v, t2v);
                             _residuals.copy_to(out_start + j, stdx::element_aligned);
                         }
 
@@ -909,7 +909,7 @@ namespace pfa::neats {
                         auto j{0};
                         for (; j + simd_width <= num_residuals; j += simd_width) {
                             _residuals.copy_from(out_start + j, stdx::element_aligned);
-                            _residuals += apply_simd_exponential(startv + j + st_off, t1v, t2v);
+                            _residuals += apply_simd_exponential(startv + static_cast<float_scalar_t>(j + st_off), t1v, t2v);
                             _residuals.copy_to(out_start + j, stdx::element_aligned);
                         }
 
@@ -930,7 +930,7 @@ namespace pfa::neats {
                         auto j{0};
                         for (; j + simd_width <= num_residuals; j += simd_width) {
                             _residuals.copy_from(out_start + j, stdx::element_aligned);
-                            _residuals += apply_simd_radical(startv + j + st_off, sv, t1v, t2v);
+                            _residuals += apply_simd_radical(startv + static_cast<float_scalar_t>(j + st_off), sv, t1v, t2v);
                             _residuals.copy_to(out_start + j, stdx::element_aligned);
                         }
 
@@ -957,7 +957,7 @@ namespace pfa::neats {
 
             const auto bpc_width = bits_per_correction.width();
             auto em = starting_positions_ef.predecessor(e).index() + 1;
-            uint32_t wp = 0;
+            uint64_t wp = 0;
             constexpr auto np = 8;
             for (; imt + np < em; imt += np) {
 #pragma unroll
@@ -1143,7 +1143,7 @@ namespace pfa::neats {
             ostream << "ifragment,bpc,type,s,t0,t1,t2,len,residuals_uint32" << std::endl;
             x_t start = 0;
             uint8_t bpc;
-            uint32_t offset_res = 0;
+            uint64_t offset_res = 0;
             auto offset_coefficients = 0;
             auto offset_coefficients_s = 0;
             auto offset_coefficients_t0 = 0;
