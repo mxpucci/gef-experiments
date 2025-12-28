@@ -164,14 +164,15 @@ jobs:
           find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 $ENV_PATH/lib -name "libsnappy.so*" >> libs_to_copy.txt
           find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 $ENV_PATH/lib -name "liblzma.so*" >> libs_to_copy.txt
           
-          cat libs_to_copy.txt | sort -u | while read -r lib; do
+          # --- FIXED LOOP: Use 'sort -u input_file' piped directly into while loop ---
+          sort -u libs_to_copy.txt | while read -r lib; do
             base="$(basename "$lib")"
             case "$base" in
               ld-linux*|libc.so.*|libm.so.*|libpthread.so.*|librt.so.*|libdl.so.*)
                 continue ;;
             esac
             cp -vL "$lib" "$OUT/lib/" || true
-          done < libs_to_copy.txt
+          done
 
           # 3. FIX SYMLINKS (The Fix for Brotli)
           # We run ldconfig to create symlinks like libbrotlienc.so.1 -> libbrotlienc.so.1.0.9
