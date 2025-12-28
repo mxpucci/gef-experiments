@@ -196,7 +196,7 @@ struct BenchmarkResult {
 // Random index generators
 // ============================================================================
 
-std::vector<size_t> generate_random_indices(size_t n, size_t num_queries, uint32_t seed = 2323) {
+std::vector<size_t> generate_random_indices(size_t n, size_t num_queries, uint64_t seed = 2323) {
     std::mt19937 mt(seed);
     std::uniform_int_distribution<size_t> dist(0, n - 1);
     std::vector<size_t> indices(num_queries);
@@ -206,7 +206,7 @@ std::vector<size_t> generate_random_indices(size_t n, size_t num_queries, uint32
     return indices;
 }
 
-std::vector<size_t> generate_range_indices(size_t n, size_t range, size_t num_queries, uint32_t seed = 1234) {
+std::vector<size_t> generate_range_indices(size_t n, size_t range, size_t num_queries, uint64_t seed = 1234) {
     std::mt19937 mt(seed);
     if (range >= n) range = n - 1;
     std::uniform_int_distribution<size_t> dist(0, n - range - 1);
@@ -453,7 +453,7 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
         
         std::unique_ptr<Compressor> cmpr;
         if constexpr (std::is_same_v<Compressor, CompressorCamel<T>>) {
-            cmpr = std::make_unique<Compressor>(*data_block.begin(), static_cast<int>(loaded.decimals));
+            cmpr = std::make_unique<Compressor>(*data_block.begin(), static_cast<int64_t>(loaded.decimals));
         } else {
             cmpr = std::make_unique<Compressor>(*data_block.begin());
         }
@@ -943,7 +943,7 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
                                  const std::string &filename,
                                  const std::vector<size_t> &range_sizes,
                                  size_t block_size = 1000,
-                                 int level = -1) {
+                                 int64_t level = -1) {
     BenchmarkResult result;
     result.compressor = compressor_name;
     result.dataset = filename;
@@ -961,7 +961,7 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
         char level_s[4];
         opts = squash_options_new(codec, NULL);
         squash_object_ref_sink(opts);
-        snprintf(level_s, 4, "%d", level);
+        snprintf(level_s, 4, "%ld", level);
         squash_options_parse_option(opts, "level", level_s);
     }
     
@@ -1178,7 +1178,7 @@ int main(int argc, char *argv[]) {
     std::string input_path;
     
     // Parse command line arguments
-    for (int i = 1; i < argc; ++i) {
+    for (int64_t i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg == "-o" && i + 1 < argc) {
             output_file = argv[++i];
