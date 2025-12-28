@@ -154,13 +154,15 @@ jobs:
           # CRITICAL FIX: Explicitly find and copy compressor libraries that ldd might miss
           # (e.g. if plugins use dlopen)
           echo "Manually finding compressor libraries..."
-          find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 /opt/conda/lib -name "libbrotlienc.so*" >> libs_to_copy.txt
-          find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 /opt/conda/lib -name "libbrotlidec.so*" >> libs_to_copy.txt
-          find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 /opt/conda/lib -name "libbrotlicommon.so*" >> libs_to_copy.txt
-          find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 /opt/conda/lib -name "liblz4.so*" >> libs_to_copy.txt
-          find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 /opt/conda/lib -name "libzstd.so*" >> libs_to_copy.txt
-          find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 /opt/conda/lib -name "libsnappy.so*" >> libs_to_copy.txt
-          find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 /opt/conda/lib -name "liblzma.so*" >> libs_to_copy.txt
+          # Fix: Use $ENV_PATH instead of hardcoded /opt/conda/lib, and ensure we check all likely library paths
+          # Also use -follow to handle symlinks if find supports it, or just rely on multiple paths
+          find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 $ENV_PATH/lib -name "libbrotlienc.so*" >> libs_to_copy.txt
+          find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 $ENV_PATH/lib -name "libbrotlidec.so*" >> libs_to_copy.txt
+          find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 $ENV_PATH/lib -name "libbrotlicommon.so*" >> libs_to_copy.txt
+          find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 $ENV_PATH/lib -name "liblz4.so*" >> libs_to_copy.txt
+          find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 $ENV_PATH/lib -name "libzstd.so*" >> libs_to_copy.txt
+          find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 $ENV_PATH/lib -name "libsnappy.so*" >> libs_to_copy.txt
+          find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 $ENV_PATH/lib -name "liblzma.so*" >> libs_to_copy.txt
           
           cat libs_to_copy.txt | sort -u | while read -r lib; do
             base="$(basename "$lib")"
