@@ -866,7 +866,7 @@ namespace pfa::neats {
                         auto j{0};
                         for (; j + simd_width <= num_residuals; j += simd_width) {
                             _residuals.copy_from(out_start + j, stdx::element_aligned);
-                            _residuals += apply_simd_linear(startv + static_cast<float_scalar_t>(j + st_off), t1v, t2v);
+                            _residuals += apply_simd_linear(startv + floatv_simd_t(static_cast<float_scalar_t>(j + st_off)), t1v, t2v);
                             _residuals.copy_to(out_start + j, stdx::element_aligned);
                         }
 
@@ -888,7 +888,7 @@ namespace pfa::neats {
                         auto j{0};
                         for (; j + simd_width <= num_residuals; j += simd_width) {
                             _residuals.copy_from(out_start + j, stdx::element_aligned);
-                            _residuals += apply_simd_quadratic(qstartv + static_cast<float_scalar_t>(j + st_off), t0v, t1v, t2v);
+                            _residuals += apply_simd_quadratic(qstartv + floatv_simd_t(static_cast<float_scalar_t>(j + st_off)), t0v, t1v, t2v);
                             _residuals.copy_to(out_start + j, stdx::element_aligned);
                         }
 
@@ -908,7 +908,7 @@ namespace pfa::neats {
                         auto j{0};
                         for (; j + simd_width <= num_residuals; j += simd_width) {
                             _residuals.copy_from(out_start + j, stdx::element_aligned);
-                            _residuals += apply_simd_exponential(startv + static_cast<float_scalar_t>(j + st_off), t1v, t2v);
+                            _residuals += apply_simd_exponential(startv + floatv_simd_t(static_cast<float_scalar_t>(j + st_off)), t1v, t2v);
                             _residuals.copy_to(out_start + j, stdx::element_aligned);
                         }
 
@@ -929,7 +929,7 @@ namespace pfa::neats {
                         auto j{0};
                         for (; j + simd_width <= num_residuals; j += simd_width) {
                             _residuals.copy_from(out_start + j, stdx::element_aligned);
-                            _residuals += apply_simd_radical(startv + static_cast<float_scalar_t>(j + st_off), sv, t1v, t2v);
+                            _residuals += apply_simd_radical(startv + floatv_simd_t(static_cast<float_scalar_t>(j + st_off)), sv, t1v, t2v);
                             _residuals.copy_to(out_start + j, stdx::element_aligned);
                         }
 
