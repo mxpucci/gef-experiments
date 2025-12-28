@@ -627,7 +627,7 @@ BenchmarkResult benchmark_tsxor(const std::string &filename,
     }
     auto t2 = std::chrono::high_resolution_clock::now();
     auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-    
+
     result.compressed_bits = total_compressed_bits;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
     result.compression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
@@ -732,15 +732,17 @@ BenchmarkResult benchmark_tsxor(const std::string &filename,
 // ============================================================================
 // Falcon Benchmark (uses byte vector buffer)
 // ============================================================================
-
 template<typename T = double>
 BenchmarkResult benchmark_falcon(const std::string &filename,
-                                  const std::vector<size_t> &range_sizes) {
+                                 const std::vector<size_t> &range_sizes,
+                                 size_t block_size = 1000) { // Default to 1000 to match your proposal
     BenchmarkResult result;
-    result.compressor = "Falcon";
+    result.compressor = "Falcon (Block-Based)";
     result.dataset = filename;
     
-    // Load data
+    // -------------------------------------------------------------------------
+    // 1. Load Data
+    // -------------------------------------------------------------------------
     auto loaded = load_custom_dataset(filename);
     const auto& raw_data = loaded.data;
     double divisor = std::pow(10.0, loaded.decimals);
@@ -754,70 +756,126 @@ BenchmarkResult benchmark_falcon(const std::string &filename,
     result.uncompressed_bits = data.size() * sizeof(T) * 8;
     
     const size_t n = data.size();
+    const size_t num_blocks = (n + block_size - 1) / block_size;
     
-    // Compression
+    // -------------------------------------------------------------------------
+    // 2. Compression (Independent Blocks)
+    // -------------------------------------------------------------------------
+    size_t total_compressed_bits = 0;
+    std::vector<std::vector<uint8_t>> compressed_blocks(num_blocks);
+    
     auto t1 = std::chrono::high_resolution_clock::now();
-    // Falcon is block-based; we pass total count so the compressor can stream blocks
-    // instead of buffering the whole dataset in memory.
-    CompressorFalcon<T> cmpr(*data.begin(), n);
-    for (auto it = data.begin() + 1; it < data.end(); ++it) {
-        cmpr.addValue(*it);
+    
+    for (size_t ib = 0; ib < num_blocks; ++ib) {
+        // Identify range for this block
+        const size_t start_idx = ib * block_size;
+        const size_t end_idx = std::min(start_idx + block_size, n);
+        const size_t current_bs = end_idx - start_idx;
+        
+        // Initialize Compressor for JUST this block
+        // Note: We pass current_bs so Falcon writes the correct header count
+        CompressorFalcon<T> cmpr(data[start_idx], current_bs);
+        
+        for (size_t k = 1; k < current_bs; ++k) {
+            cmpr.addValue(data[start_idx + k]);
+        }
+        cmpr.close();
+        
+        // Store results
+        total_compressed_bits += cmpr.getSize();
+        compressed_blocks[ib] = cmpr.getOut(); 
     }
-    cmpr.close();
+    
     auto t2 = std::chrono::high_resolution_clock::now();
     auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
-    result.compressed_bits = cmpr.getSize();
+    // -------------------------------------------------------------------------
+    // Memory Estimation Correction
+    // -------------------------------------------------------------------------
+    // To fairly compare "RAM Usage" of the format, we must account for the Index.
+    // We generated 'num_blocks' blocks. A real system needs an offset table (uint64_t)
+    // to find where block 'i' lives.
+    size_t index_overhead_bits = num_blocks * 64; 
+    
+    result.compressed_bits = total_compressed_bits + index_overhead_bits;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
     result.compression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
-    // Full decompression
+    // -------------------------------------------------------------------------
+    // 3. Full Decompression (Sanity Check & Throughput)
+    // -------------------------------------------------------------------------
     std::vector<T> decompressed(n);
-    auto compressed_bytes = cmpr.bytes;
-    
     t1 = std::chrono::high_resolution_clock::now();
-    DecompressorFalcon<T> dcmpr(compressed_bytes, n);
-    size_t offset = 0;
-    decompressed[offset++] = dcmpr.storedValue;
-    while (dcmpr.hasNext()) {
-        decompressed[offset++] = dcmpr.storedValue;
-    }
-    t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(decompressed);
-    auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
-    result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
-    
-    // Verify decompression
-    for (size_t i = 0; i < n; ++i) {
-        if (data[i] != decompressed[i]) {
-            std::cerr << "Falcon decompression error at " << i << std::endl;
-            break;
+    size_t output_offset = 0;
+    for (size_t ib = 0; ib < num_blocks; ++ib) {
+        size_t expected_count = std::min(block_size, n - ib * block_size);
+        
+        // Decompress independent block
+        DecompressorFalcon<T> dcmpr(compressed_blocks[ib], expected_count);
+        
+        // Falcon Decompressor initializes storedValue with the first item immediately
+        decompressed[output_offset++] = dcmpr.storedValue;
+        
+        while (dcmpr.hasNext()) {
+            decompressed[output_offset++] = dcmpr.storedValue;
         }
     }
     
-    // Random access:
-    // Falcon is a streaming format and does not support true random access.
-    // The previous implementation re-decompressed the whole stream per query (O(num_queries * n)),
-    // which is infeasible for large datasets. Instead, we measure access time from the already
-    // fully decompressed array.
-    const size_t num_ra_queries = 1000000;
+    t2 = std::chrono::high_resolution_clock::now();
+    do_not_optimize(decompressed);
+    auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
+    result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
+    
+    // Verification
+    for (size_t i = 0; i < n; ++i) {
+        if (data[i] != decompressed[i]) {
+            std::cerr << "Falcon (Chunked) decompression error at index " << i << std::endl;
+            break;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. Random Access (Decompress ONLY the target block)
+    // -------------------------------------------------------------------------
+    const size_t num_ra_queries = 10000;
     auto indices = generate_random_indices(n, num_ra_queries);
+    
     t1 = std::chrono::high_resolution_clock::now();
     T sum = 0;
+    
     for (auto idx : indices) {
-        sum += decompressed[idx];
+        size_t ib = idx / block_size;
+        size_t offset_in_block = idx % block_size;
+        size_t expected_count = std::min(block_size, n - ib * block_size);
+        
+        // Instantiate decompressor only for the required block
+        DecompressorFalcon<T> dcmpr(compressed_blocks[ib], expected_count);
+        
+        // Scan to the specific offset
+        size_t current_pos = 0;
+        if (offset_in_block == 0) {
+            sum += dcmpr.storedValue;
+        } else {
+            // hasNext() advances to the next value and updates storedValue
+            while (current_pos < offset_in_block && dcmpr.hasNext()) {
+                current_pos++;
+            }
+            sum += dcmpr.storedValue;
+        }
     }
+    
     t2 = std::chrono::high_resolution_clock::now();
     do_not_optimize(sum);
+    
     auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
-    
-    // Range queries:
-    // Same rationale as above: benchmark range reads from decompressed array to avoid
-    // re-decompressing the whole stream per query.
-    const size_t num_range_queries = 10000;
+
+    // -------------------------------------------------------------------------
+    // 5. Range Queries
+    // -------------------------------------------------------------------------
+    const size_t num_range_queries = 1000;
     for (auto range : range_sizes) {
         if (range >= n) continue;
         
@@ -826,9 +884,40 @@ BenchmarkResult benchmark_falcon(const std::string &filename,
         
         t1 = std::chrono::high_resolution_clock::now();
         for (auto start_idx : range_indices) {
-            std::copy(decompressed.begin() + start_idx,
-                      decompressed.begin() + start_idx + range,
-                      out_buffer.begin());
+            size_t start_block = start_idx / block_size;
+            size_t end_block = (start_idx + range - 1) / block_size;
+            
+            size_t out_pos = 0;
+            
+            // We only decompress the blocks overlapping the range
+            for (size_t ib = start_block; ib <= end_block; ++ib) {
+                size_t expected_count = std::min(block_size, n - ib * block_size);
+                DecompressorFalcon<T> dcmpr(compressed_blocks[ib], expected_count);
+                
+                size_t block_start_global = ib * block_size;
+                
+                // Determine how many items to skip in this block (only for the first block)
+                size_t skip = (ib == start_block) ? (start_idx - block_start_global) : 0;
+                
+                size_t current_in_block = 0;
+                
+                // Fast skip
+                // Note: storedValue is the 0-th element. 
+                // We need to call hasNext 'skip' times to put 'storedValue' at index 'skip'
+                while(current_in_block < skip && dcmpr.hasNext()) {
+                    current_in_block++;
+                }
+                
+                // Copy
+                while (out_pos < range) {
+                    out_buffer[out_pos++] = dcmpr.storedValue;
+                    current_in_block++;
+                    
+                    // Boundary check: if we hit end of block or end of range, break
+                    if (current_in_block >= expected_count) break;
+                    if (!dcmpr.hasNext()) break; 
+                }
+            }
             do_not_optimize(out_buffer);
         }
         t2 = std::chrono::high_resolution_clock::now();

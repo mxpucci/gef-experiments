@@ -188,7 +188,6 @@ private:
         100000000000000.0, 1000000000000000.0, 10000000000000000.0
     };
     
-    std::vector<uint8_t> output;
     std::vector<T> buffer;                 // legacy (when total count is unknown)
     std::vector<T> block_buffer;           // streaming block buffer
     size_t totalValues = 0;
@@ -476,13 +475,19 @@ public:
                 compressAndAppendBlock(block);
             }
         }
-        if (processedBlocks > 0) {
-            std::cerr << std::endl;
-        }
     }
     
     size_t getSize() const {
-        return bytes.size() * 8;
+        size_t total_bits = 0;
+        // Account for the object overhead
+        total_bits += sizeof(*this) * 8;
+        // Account for the compressed data size (RAM usage)
+        total_bits += bytes.size() * 8;
+        // Account for the streaming block buffer size
+        total_bits += block_buffer.size() * sizeof(T) * 8;
+        // Account for the legacy buffer size
+        total_bits += buffer.size() * sizeof(T) * 8;
+        return total_bits;
     }
     
     std::vector<uint8_t> getOut() const {
