@@ -18,8 +18,9 @@
 
 namespace pfa::neats {
     namespace stdx = std::experimental;
-
-    template<typename x_t = uint32_t, typename y_t = int64_t, typename poly = double, typename T1 = float, typename T2 = double>
+    
+    // Default x_t changed to uint64_t to prevent overflow for large datasets
+    template<typename x_t = uint64_t, typename y_t = int64_t, typename poly = double, typename T1 = float, typename T2 = double>
     class compressor {
         using poa_t = typename pfa::piecewise_optimal_approximation<x_t, y_t, poly, T1, T2>;
         using polygon_t = poa_t::convex_polygon_t;

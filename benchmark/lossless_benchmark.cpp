@@ -246,6 +246,7 @@ BenchmarkResult benchmark_neats(const std::string &filename,
     
     // Compression
     // Use uint64_t for x_t to prevent overflow of bit offsets (offset_res) for large datasets (>512MB compressed)
+    // T is already int64_t by default in the template
     pfa::neats::compressor<uint64_t, T, double, float, double> compressor(max_bpc);
     
     auto t1 = std::chrono::high_resolution_clock::now();
