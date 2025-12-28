@@ -945,6 +945,8 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     BenchmarkResult result;
     result.compressor = compressor_name;
     result.dataset = filename;
+    // Initialize num_values to 0 to indicate invalid/incomplete result by default
+    result.num_values = 0;
     
     SquashCodec *codec = squash_get_codec(compressor_name.c_str());
     if (codec == nullptr) {
@@ -1270,6 +1272,17 @@ int main(int argc, char *argv[]) {
                     continue;
                 }
                 
+                if (result.num_values == 0 && comp != "falcon" && comp != "neats" && comp != "dac" && 
+                    comp != "gorilla" && comp != "chimp" && comp != "chimp128" && 
+                    comp != "tsxor" && comp != "elf" && comp != "camel") {
+                   // If num_values is 0, it means the benchmark failed (e.g. missing squash codec)
+                   // We don't check non-squash compressors because they don't set num_values=0 on failure in the same way 
+                   // (they usually throw or crash, or set it correctly if they succeed)
+                   // But for Squash, we explicitly set it to 0 on codec failure.
+                   std::cerr << " skipping result output due to failure." << std::endl;
+                   continue;
+                }
+
                 if (!header_printed) {
                     result.print_header(*out);
                     header_printed = true;
