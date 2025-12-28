@@ -122,6 +122,8 @@ jobs:
 
           # 1. FLATTEN SQUASH PLUGINS
           # We copy plugins to a simple 'lib/plugins' folder to avoid path confusion
+          # CRITICAL FIX: We must FLATTEN the directory structure. 
+          # Squash 0.7 often expects .so files directly in the SQUASH_PLUGIN_DIR
           mkdir -p "$OUT/lib/plugins"
           
           # Detect the install directory safely (checking lib64 first)
@@ -139,7 +141,9 @@ jobs:
           
           if [ -n "$SRC_PLUGIN_DIR" ]; then
              echo "Copying plugins from $SRC_PLUGIN_DIR..."
-             cp -r "$SRC_PLUGIN_DIR"/* "$OUT/lib/plugins/"
+             # Use find to locate all .so and .ini files and copy them to the root of the plugins dir
+             find "$SRC_PLUGIN_DIR" -name "*.so" -exec cp -v {} "$OUT/lib/plugins/" \;
+             find "$SRC_PLUGIN_DIR" -name "*.ini" -exec cp -v {} "$OUT/lib/plugins/" \;
           else
              echo "WARNING: No plugins found to copy!"
           fi
