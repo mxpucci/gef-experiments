@@ -10,11 +10,13 @@
 #include <ranges>
 #include <experimental/simd>
 #include <execution>
+#include <functional>
+#include <stdfloat>
+
+// Portability guard for BMI instructions
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
 #include <immintrin.h>
 #endif
-#include <functional>
-#include <stdfloat>
 
 namespace pfa::neats {
     namespace stdx = std::experimental;
@@ -80,7 +82,7 @@ namespace pfa::neats {
                 }, m));
                 return std::visit([](auto &&mo) -> size_t { return std::decay_t<decltype(mo)>::fun_t::size_in_bits(); },
                                   m) +
-                       bpc * (k - i); //+ LOG2(_n / 20);
+                       bpc * (k - i);
             }
         };
 
@@ -94,7 +96,7 @@ namespace pfa::neats {
             model_types_1 = sdsl::bit_vector(num_partitions, 0);
             qbv = sdsl::bit_vector(num_partitions, 0);
 
-            std::vector<uint64_t> offset_residuals(num_partitions, 0); // minus one because the first offset is 0
+            std::vector<uint64_t> offset_residuals(num_partitions, 0); 
 
             uint64_t offset = 0;
             uint64_t start = 0;
@@ -162,7 +164,7 @@ namespace pfa::neats {
             model_types_1 = sdsl::bit_vector(num_partitions, 0);
             qbv = sdsl::bit_vector(num_partitions, 0);
 
-            std::vector<uint64_t> offset_residuals(num_partitions, 0); // minus one because the first offset is 0
+            std::vector<uint64_t> offset_residuals(num_partitions, 0);
 
             auto apply_simd_linear = [](auto x, auto s, floatv_simd_t t0, floatv_simd_t t1, floatv_simd_t t2) -> intv_simd_t {
                 return stdx::static_simd_cast<intv_simd_t>(stdx::ceil(x * t1 + t2));
@@ -343,7 +345,7 @@ namespace pfa::neats {
                             frontier[im].second = std::get<1>(t);
                             local_partitions[im] = std::get<2>(t);
 
-                        } else { // relax prefix edge (i, k)
+                        } else { 
                             auto i = frontier[im].first;
                             auto bpc = pfa::algorithm::epsilon_to_bpc(std::visit([](auto &&mod) -> int64_t {
                                 return mod.epsilon;
@@ -411,7 +413,7 @@ namespace pfa::neats {
 
             for (auto index_model_fun = 0; index_model_fun < l; ++index_model_fun) {
                 auto end =
-                        index_model_fun == (l - 1) ? n : *(++it_end);//starting_positions_select(index_model_fun + 2);
+                        index_model_fun == (l - 1) ? n : *(++it_end);
 
                 bpc = bits_per_correction[index_model_fun];
                 auto imt = index_model_fun;
@@ -423,7 +425,7 @@ namespace pfa::neats {
                 std::optional<x_t> s = std::nullopt;
                 std::optional<T1> t0 = std::nullopt;
 
-                if ((typename poa_t::approx_fun_t) (mt) == poa_t::approx_fun_t::Sqrt) { // Too arbitrary?
+                if ((typename poa_t::approx_fun_t) (mt) == poa_t::approx_fun_t::Sqrt) {
                     s = coefficients_s[offset_coefficients_s++];
                 } else if ((typename poa_t::approx_fun_t) (mt) == poa_t::approx_fun_t::Quadratic) {
                     t0 = coefficients_t0[offset_coefficients_t0++];
@@ -446,140 +448,14 @@ namespace pfa::neats {
             }
         }
 
-
-        template<typename T = int64_t, typename float_scalar_t = std::conditional_t<sizeof(T) == 4, float, double>>
-        inline void simd_approximations(float_scalar_t *out) { //, It in_begin, It in_end) {
-            namespace stdx = std::experimental;
-
-            const auto approx_v = out;
-            const auto v_simd_width = floatv_simd_t{static_cast<float_scalar_t>(simd_width)};
-
-            auto n = _n;
-
-            x_t start{};
-            uint8_t bpc{};
-            uint32_t offset_res = 0;
-            auto offset_coefficients = 0;
-            auto offset_coefficients_s = 0;
-            auto offset_coefficients_t0 = 0;
-
-            auto l = bits_per_correction.size();
-            auto it_end = starting_positions_ef.at(0);
-
-            std::array<float_scalar_t, simd_width> x_v = {};
-            std::iota(x_v.begin(), x_v.end(), 1);
-
-            for (auto index_model_fun = 0; index_model_fun < l; ++index_model_fun) {
-                auto end = index_model_fun == (l - 1) ? n : *(++it_end);
-                bpc = bits_per_correction[index_model_fun];
-                auto imt = index_model_fun;
-                auto mt = (uint8_t) (model_types_0[imt]) | ((uint8_t) (model_types_1[imt]) << 1);
-
-                auto t1 = coefficients_t1[offset_coefficients];
-                auto t2 = coefficients_t2[offset_coefficients];
-                offset_coefficients++;
-
-                auto t0 = coefficients_t0[offset_coefficients_t0];
-                auto s = coefficients_s[offset_coefficients_s];
-                auto t0v = floatv_simd_t{static_cast<float_scalar_t>(t0)};
-                auto sv = floatv_simd_t{static_cast<float_scalar_t>(s)};
-
-                floatv_simd_t t1v{static_cast<float_scalar_t>(t1)};
-                floatv_simd_t t2v{static_cast<float_scalar_t>(t2)};
-
-                auto _iw{0};
-                floatv_simd_t _iwv{static_cast<float_scalar_t>(_iw)};
-                float_scalar_t eps =
-                        bpc != 0 ? static_cast<float_scalar_t>(BPC_TO_EPSILON(bpc) + 1) : float_scalar_t{0};
-                floatv_simd_t v, r;
-
-                if (static_cast<poa_t::approx_fun_t>(mt) == poa_t::approx_fun_t::Linear) {
-                    auto j{start};
-                    for (; j + simd_width <= end; j += simd_width) {
-                        v.copy_from(&x_v[0], stdx::element_aligned);
-                        r.copy_from(&approx_v[j], stdx::element_aligned);
-                        v = v + v_simd_width * _iwv;
-                        r = stdx::ceil(t1v * v + t2v) + r;
-                        r.copy_to(&approx_v[j], stdx::element_aligned);
-                        _iwv = floatv_simd_t{++_iw};
-                    }
-
-                    while (j < end) {
-                        auto f = std::ceil(t1 * ((j - start) + 1) + t2);
-                        approx_v[j] += f;
-                        ++j;
-                    }
-
-                } else if (static_cast<poa_t::approx_fun_t>(mt) == poa_t::approx_fun_t::Quadratic) {
-                    auto j{start};
-                    for (; j + simd_width <= end; j += simd_width) {
-                        v.copy_from(&x_v[0], stdx::element_aligned);
-                        r.copy_from(&approx_v[j], stdx::element_aligned);
-                        v = v - 1 + v_simd_width * _iwv;
-                        r = stdx::ceil(t0v * v * v + t1v * v + t2v) + r;
-                        r.copy_to(&approx_v[j], stdx::element_aligned);
-                        _iwv = floatv_simd_t{++_iw};
-                    }
-
-                    while (j < end) {
-                        auto x = j - start;
-                        auto f = std::ceil(t0 * x * x + t1 * x + t2);
-                        approx_v[j] += f;
-                        ++j;
-                    }
-                    offset_coefficients_t0++;
-                } else if (static_cast<poa_t::approx_fun_t>(mt) == poa_t::approx_fun_t::Sqrt) {
-                    auto j{start};
-                    for (; j + simd_width <= end; j += simd_width) {
-                        v.copy_from(&x_v[0], stdx::element_aligned);
-                        r.copy_from(&approx_v[j], stdx::element_aligned);
-                        v = v + v_simd_width * _iwv + sv;
-                        r = stdx::round(t1v * stdx::sqrt(v) + t2v) + r;
-                        r.copy_to(&approx_v[j], stdx::element_aligned);
-                        _iwv = floatv_simd_t{++_iw};
-                    }
-
-                    while (j < end) {
-                        auto x = (j + 1) - (start - s);
-                        auto f = std::round(t1 * std::sqrt(x) + t2);
-                        approx_v[j] += f;
-                        ++j;
-                    }
-
-                    offset_coefficients_s++;
-                } else if (static_cast<poa_t::approx_fun_t>(mt) == poa_t::approx_fun_t::Exponential) {
-                    auto j{start};
-                    for (; j + simd_width <= end; j += simd_width) {
-                        v.copy_from(&x_v[0], stdx::element_aligned);
-                        r.copy_from(&approx_v[j], stdx::element_aligned);
-                        v = v + v_simd_width * _iwv;
-                        r = stdx::round(t2v * stdx::exp(t1v * v)) + r;
-                        r.copy_to(&approx_v[j], stdx::element_aligned);
-                        _iwv = floatv_simd_t{++_iw};
-                    }
-
-                    while (j < end) {
-                        auto x = (j + 1) - start;
-                        auto f = std::round(t2 * std::exp(t1 * x));
-                        approx_v[j] += f;
-                        ++j;
-                    }
-                }
-
-                start = end;
-            }
-        }
-
-        /** Extract contiguous bits from a 64-bit integer. */
         inline uint64_t bextr(uint64_t word, unsigned int offset, unsigned int length) const {
-#ifdef __BMI__
+#if defined(__BMI__) && (defined(__x86_64__) || defined(_M_X64))
             return _bextr_u64(word, offset, length);
 #else
             return (word >> offset) & sdsl::bits::lo_set[length];
 #endif
         }
 
-/** Reads the specified number of bits (must be < 58) from the given position. */
         inline uint64_t read_field(const uint64_t *data, uint64_t bit_offset, uint8_t length) const {
             assert(length < 58);
             auto ptr = reinterpret_cast<const char*>(data);
@@ -590,7 +466,6 @@ namespace pfa::neats {
         template<typename T>
         inline void simd_decompress(T *out) {
             auto unpack_residuals = [this](const auto im, x_t offset_res, const auto num_residuals, auto *out_start) {
-                constexpr auto _simd_width_bit_size = simd_width * sizeof(int_scalar_t) * 8; // 512 bits
                 const uint8_t bpc = bits_per_correction[im];
                 const int_scalar_t eps = BPC_TO_EPSILON(bpc) + 1;
 
@@ -648,8 +523,10 @@ namespace pfa::neats {
 
             const floatv_simd_t startv([](int i) { return i + 1; });
             const floatv_simd_t qstartv([](int i) { return i; });
+            
+            // NOTE: Added st_off to handle offsets correctly across scan and decompress
             auto unpack_poa = [&](poa_t::approx_fun_t mt, x_t offset_coeff_s, x_t offset_coeff_t0, x_t offset_coeff,
-                                  const auto num_residuals, auto *out_start) {
+                                  x_t st_off, const auto num_residuals, auto *out_start) {
 
                 float_scalar_t t0, t1, t2, s;
                 floatv_simd_t t0v, t1v, t2v, sv;
@@ -664,12 +541,12 @@ namespace pfa::neats {
                         auto j{0};
                         for (; j + simd_width <= num_residuals; j += simd_width) {
                             _residuals.copy_from(out_start + j, stdx::element_aligned);
-                            _residuals += apply_simd_linear(startv + j, t1v, t2v);
+                            _residuals += apply_simd_linear(startv + floatv_simd_t(static_cast<float_scalar_t>(j + st_off)), t1v, t2v);
                             _residuals.copy_to(out_start + j, stdx::element_aligned);
                         }
 
                         for (; j < num_residuals; ++j) {
-                            int_scalar_t _y = apply_linear(j + 1, t1, t2);
+                            int_scalar_t _y = apply_linear(j + st_off + 1, t1, t2);
                             *(out_start + j) += _y;
                         }
                         break;
@@ -685,12 +562,12 @@ namespace pfa::neats {
                         auto j{0};
                         for (; j + simd_width <= num_residuals; j += simd_width) {
                             _residuals.copy_from(out_start + j, stdx::element_aligned);
-                            _residuals += apply_simd_quadratic(qstartv + j, t0v, t1v, t2v);
+                            _residuals += apply_simd_quadratic(qstartv + floatv_simd_t(static_cast<float_scalar_t>(j + st_off)), t0v, t1v, t2v);
                             _residuals.copy_to(out_start + j, stdx::element_aligned);
                         }
 
                         for (; j < num_residuals; ++j) {
-                            int_scalar_t _y = apply_quadratic(j, t0, t1, t2);
+                            int_scalar_t _y = apply_quadratic(j + st_off, t0, t1, t2);
                             *(out_start + j) += _y;
                         }
                         break;
@@ -705,12 +582,12 @@ namespace pfa::neats {
                         auto j{0};
                         for (; j + simd_width <= num_residuals; j += simd_width) {
                             _residuals.copy_from(out_start + j, stdx::element_aligned);
-                            _residuals += apply_simd_exponential(startv + j, t1v, t2v);
+                            _residuals += apply_simd_exponential(startv + floatv_simd_t(static_cast<float_scalar_t>(j + st_off)), t1v, t2v);
                             _residuals.copy_to(out_start + j, stdx::element_aligned);
                         }
 
                         for (; j < num_residuals; ++j) {
-                            int_scalar_t _y = apply_exponential(j + 1, t1, t2);
+                            int_scalar_t _y = apply_exponential(j + 1 + st_off, t1, t2);
                             *(out_start + j) += _y;
                         }
                         break;
@@ -726,12 +603,12 @@ namespace pfa::neats {
                         auto j{0};
                         for (; j + simd_width <= num_residuals; j += simd_width) {
                             _residuals.copy_from(out_start + j, stdx::element_aligned);
-                            _residuals += apply_simd_radical(startv + j, sv, t1v, t2v);
+                            _residuals += apply_simd_radical(startv + floatv_simd_t(static_cast<float_scalar_t>(j + st_off)), sv, t1v, t2v);
                             _residuals.copy_to(out_start + j, stdx::element_aligned);
                         }
 
                         for (; j < num_residuals; ++j) {
-                            int_scalar_t _y = apply_radical(j + 1, s, t1, t2);
+                            int_scalar_t _y = apply_radical(j + 1 + st_off, s, t1, t2);
                             *(out_start + j) += _y;
                         }
                         break;
@@ -762,7 +639,9 @@ namespace pfa::neats {
                     mt = static_cast<poa_t::approx_fun_t>(model_types_0[i_model + j] | (model_types_1[i_model + j] << 1));
                     _bpc = read_field(bits_per_correction.data(), (i_model + j) * bpc_width, bpc_width);
                     if (_bpc != 0) unpack_residuals(i_model + j, offset_res, end - start, out + start);
-                    unpack_poa(mt, offset_coefficients_s, offset_coefficients_t0, offset_coefficients + j, end - start,
+                    
+                    // Passing 0 as st_off since full decompression is continuous
+                    unpack_poa(mt, offset_coefficients_s, offset_coefficients_t0, offset_coefficients + j, 0, end - start,
                                out + start);
 
                     offset_coefficients_s += mt == poa_t::approx_fun_t::Sqrt;
@@ -779,8 +658,10 @@ namespace pfa::neats {
                 bpc = read_field(bits_per_correction.data(), i_model * bpc_width, bpc_width);
                 auto mt = static_cast<poa_t::approx_fun_t>(model_types_0[i_model] | (model_types_1[i_model] << 1));
                 if (bpc != 0) unpack_residuals(i_model, offset_res, end - start, out + start);
-                unpack_poa(mt, offset_coefficients_s, offset_coefficients_t0, offset_coefficients, end - start,
+                
+                unpack_poa(mt, offset_coefficients_s, offset_coefficients_t0, offset_coefficients, 0, end - start,
                            out + start);
+                
                 offset_coefficients++;
                 offset_coefficients_s += mt == poa_t::approx_fun_t::Sqrt;
                 offset_coefficients_t0 += mt == poa_t::approx_fun_t::Quadratic;
@@ -792,7 +673,6 @@ namespace pfa::neats {
         template<typename T>
         inline void simd_scan(x_t s, x_t e, T *out) const {
             auto unpack_residuals = [this](const auto im, x_t offset_res, const auto num_residuals, auto *out_start) {
-                constexpr auto _simd_width_bit_size = simd_width * sizeof(int_scalar_t) * 8; // 512 bits
                 const uint8_t bpc = bits_per_correction[im];
                 const int_scalar_t eps = BPC_TO_EPSILON(bpc) + 1;
 
@@ -876,7 +756,6 @@ namespace pfa::neats {
                         }
                         break;
                     }
-
                     case poa_t::approx_fun_t::Quadratic : {
                         t0 = coefficients_t0[offset_coeff_t0];
                         t0v = floatv_simd_t{t0};
@@ -1090,52 +969,6 @@ namespace pfa::neats {
             return y;
         }
 
-
-        constexpr auto size() const {
-            return _n;
-        }
-
-        constexpr uint8_t bits_per_residual() {
-            return max_bpc;
-        }
-
-        inline size_t serialize(std::ostream &os, sdsl::structure_tree_node *v = nullptr,
-                                const std::string &name = "") const {
-            if (_n == 0) {
-                throw std::runtime_error("compressor empty");
-            }
-
-            auto child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
-            size_t written_bytes = 0;
-            written_bytes += sdsl::write_member(max_bpc, os, child, "max_bpc");
-            written_bytes += sdsl::write_member(_n, os, child, "size");
-            written_bytes += sdsl::write_member(residuals_bit_size, os, child, "residuals_bit_size");
-
-            written_bytes += starting_positions_ef.serialize(os, child, "starting_positions_ef");
-
-            written_bytes += sdsl::serialize(residuals, os, child, "residuals");
-            written_bytes += offset_residuals_ef.serialize(os, child, "offset_residuals_ef");
-            written_bytes += sdsl::serialize(bits_per_correction, os, child, "bits_per_correction");
-            written_bytes += sdsl::serialize(model_types_0, os, child, "model_types_0");
-            written_bytes += sdsl::serialize(model_types_1, os, child, "model_types_1");
-            written_bytes += sdsl::serialize(qbv, os, child, "qbv");
-
-            written_bytes += sdsl::write_member(coefficients_t0.size(), os, child, "coefficients_t0.size()");
-            written_bytes += sdsl::serialize_vector(coefficients_t0, os, child, "coefficients_t0");
-
-            written_bytes += sdsl::write_member(coefficients_s.size(), os, child, "coefficients_s.size()");
-            written_bytes += sdsl::serialize_vector(coefficients_s, os, child, "coefficients_s");
-
-            written_bytes += sdsl::write_member(coefficients_t1.size(), os, child, "coefficients_t1.size()");
-            written_bytes += sdsl::serialize_vector(coefficients_t1, os, child, "coefficients_t1");
-            written_bytes += sdsl::serialize_vector(coefficients_t2, os, child, "coefficients_t2");
-
-            sdsl::structure_tree::add_size(child, written_bytes);
-            return written_bytes;
-        }
-
-        
-
         void inline write_info_csv(std::ostream &ostream) {
             ostream.precision(5);
             ostream << std::fixed;
@@ -1152,7 +985,7 @@ namespace pfa::neats {
 
             for (auto index_model_fun = 0; index_model_fun < l; ++index_model_fun) {
                 auto end =
-                        index_model_fun == (l - 1) ? _n : *(++it_end);//starting_positions_select(index_model_fun + 2);
+                        index_model_fun == (l - 1) ? _n : *(++it_end);
                 ostream << index_model_fun << ",";
 
                 bpc = bits_per_correction[index_model_fun];
@@ -1167,7 +1000,7 @@ namespace pfa::neats {
                 std::optional<x_t> s = std::nullopt;
                 std::optional<T1> t0 = std::nullopt;
 
-                if ((typename poa_t::approx_fun_t) (mt) == poa_t::approx_fun_t::Sqrt) { // Too arbitrary?
+                if ((typename poa_t::approx_fun_t) (mt) == poa_t::approx_fun_t::Sqrt) {
                     s = coefficients_s[offset_coefficients_s++];
                     ostream << (uint64_t) (s.value()) << ",";
                 } else if ((typename poa_t::approx_fun_t) (mt) == poa_t::approx_fun_t::Quadratic) {
@@ -1234,6 +1067,48 @@ namespace pfa::neats {
             return lc;
         }
 
+        inline size_t serialize(std::ostream &os, sdsl::structure_tree_node *v = nullptr,
+                                const std::string &name = "") const {
+            if (_n == 0) {
+                throw std::runtime_error("compressor empty");
+            }
+
+            auto child = sdsl::structure_tree::add_child(v, name, sdsl::util::class_name(*this));
+            size_t written_bytes = 0;
+            written_bytes += sdsl::write_member(max_bpc, os, child, "max_bpc");
+            written_bytes += sdsl::write_member(_n, os, child, "size");
+            written_bytes += sdsl::write_member(residuals_bit_size, os, child, "residuals_bit_size");
+
+            written_bytes += starting_positions_ef.serialize(os, child, "starting_positions_ef");
+
+            written_bytes += sdsl::serialize(residuals, os, child, "residuals");
+            written_bytes += offset_residuals_ef.serialize(os, child, "offset_residuals_ef");
+            written_bytes += sdsl::serialize(bits_per_correction, os, child, "bits_per_correction");
+            written_bytes += sdsl::serialize(model_types_0, os, child, "model_types_0");
+            written_bytes += sdsl::serialize(model_types_1, os, child, "model_types_1");
+            written_bytes += sdsl::serialize(qbv, os, child, "qbv");
+
+            written_bytes += sdsl::write_member(coefficients_t0.size(), os, child, "coefficients_t0.size()");
+            written_bytes += sdsl::serialize_vector(coefficients_t0, os, child, "coefficients_t0");
+
+            written_bytes += sdsl::write_member(coefficients_s.size(), os, child, "coefficients_s.size()");
+            written_bytes += sdsl::serialize_vector(coefficients_s, os, child, "coefficients_s");
+
+            written_bytes += sdsl::write_member(coefficients_t1.size(), os, child, "coefficients_t1.size()");
+            written_bytes += sdsl::serialize_vector(coefficients_t1, os, child, "coefficients_t1");
+            written_bytes += sdsl::serialize_vector(coefficients_t2, os, child, "coefficients_t2");
+
+            sdsl::structure_tree::add_size(child, written_bytes);
+            return written_bytes;
+        }
+
+        constexpr auto size() const {
+            return _n;
+        }
+
+        constexpr uint8_t bits_per_residual() {
+            return max_bpc;
+        }
 
     };
 }

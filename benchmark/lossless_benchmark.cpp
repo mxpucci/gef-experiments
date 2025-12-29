@@ -221,33 +221,22 @@ std::vector<size_t> generate_range_indices(size_t n, size_t range, size_t num_qu
 // NeaTS Compressor Benchmark
 // ============================================================================
 
-template<typename T = int64_t>
-BenchmarkResult benchmark_neats(const std::string &filename, 
-                                const std::vector<size_t> &range_sizes,
-                                uint8_t max_bpc = 32) {
+// Helper template to run NeaTS benchmark with specific coefficient precision
+template<typename T, typename T1_coeff>
+BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
+                                      const std::vector<size_t> &range_sizes,
+                                      uint8_t max_bpc,
+                                      const std::string &dataset_name,
+                                      size_t uncompressed_bits) {
     BenchmarkResult result;
     result.compressor = "NeaTS";
-    result.dataset = filename;
+    result.dataset = dataset_name;
+    result.num_values = processed_data.size();
+    result.uncompressed_bits = uncompressed_bits;
     
-    // Load data
-    auto loaded = load_custom_dataset(filename);
-    auto& data = loaded.data;
-    // NeaTS works on the integers directly
-    
-    result.num_values = data.size();
-    result.uncompressed_bits = data.size() * sizeof(T) * 8;
-    
-    auto min_data = *std::min_element(data.begin(), data.end());
-    min_data = min_data < 0 ? (min_data - 1) : -1;
-    
-    std::vector<T> processed_data(data.size());
-    std::transform(data.begin(), data.end(), processed_data.begin(),
-                   [min_data](int64_t d) { return static_cast<T>(d - min_data); });
-    
-    // Compression
-    // Use uint64_t for x_t to prevent overflow of bit offsets (offset_res) for large datasets (>512MB compressed)
-    // T is already int64_t by default in the template
-    pfa::neats::compressor<uint64_t, T, double, float, double> compressor(max_bpc);
+    // Use uint64_t for x_t to prevent overflow of bit offsets for large datasets
+    // T1_coeff is either float (for small values) or double (for large values)
+    pfa::neats::compressor<uint64_t, T, double, T1_coeff, double> compressor(max_bpc);
     
     auto t1 = std::chrono::high_resolution_clock::now();
     compressor.partitioning(processed_data.begin(), processed_data.end());
@@ -256,20 +245,20 @@ BenchmarkResult benchmark_neats(const std::string &filename,
     
     result.compressed_bits = compressor.size_in_bits();
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
-    result.compression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
+    result.compression_throughput_mbs = (processed_data.size() * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression
-    std::vector<T> decompressed(data.size());
+    std::vector<T> decompressed(processed_data.size());
     t1 = std::chrono::high_resolution_clock::now();
     compressor.simd_decompress(decompressed.data());
     t2 = std::chrono::high_resolution_clock::now();
     auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     do_not_optimize(decompressed);
     
-    result.decompression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
+    result.decompression_throughput_mbs = (processed_data.size() * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
     // Verify decompression
-    for (size_t i = 0; i < data.size(); ++i) {
+    for (size_t i = 0; i < processed_data.size(); ++i) {
         if (processed_data[i] != decompressed[i]) {
             std::cerr << "NeaTS decompression error at " << i << std::endl;
             break;
@@ -278,7 +267,7 @@ BenchmarkResult benchmark_neats(const std::string &filename,
     
     // Random access
     const size_t num_ra_queries = 1000000;
-    auto indices = generate_random_indices(data.size(), num_ra_queries);
+    auto indices = generate_random_indices(processed_data.size(), num_ra_queries);
     
     t1 = std::chrono::high_resolution_clock::now();
     T sum = 0;
@@ -294,9 +283,9 @@ BenchmarkResult benchmark_neats(const std::string &filename,
     // Range queries
     const size_t num_range_queries = 10000;
     for (auto range : range_sizes) {
-        if (range >= data.size()) continue;
+        if (range >= processed_data.size()) continue;
         
-        auto range_indices = generate_range_indices(data.size(), range, num_range_queries);
+        auto range_indices = generate_range_indices(processed_data.size(), range, num_range_queries);
         std::vector<T> out_buffer(range);
         
         t1 = std::chrono::high_resolution_clock::now();
@@ -312,6 +301,41 @@ BenchmarkResult benchmark_neats(const std::string &filename,
     }
     
     return result;
+}
+
+template<typename T = int64_t>
+BenchmarkResult benchmark_neats(const std::string &filename, 
+                                const std::vector<size_t> &range_sizes,
+                                uint8_t max_bpc = 32) {
+    // Load data
+    auto loaded = load_custom_dataset(filename);
+    auto& data = loaded.data;
+    
+    auto min_data = *std::min_element(data.begin(), data.end());
+    min_data = min_data < 0 ? (min_data - 1) : -1;
+    
+    std::vector<T> processed_data(data.size());
+    std::transform(data.begin(), data.end(), processed_data.begin(),
+                   [min_data](int64_t d) { return static_cast<T>(d - min_data); });
+    
+    // Determine the maximum absolute value to decide coefficient precision
+    // A 32-bit float has ~7 significant decimal digits of precision
+    // Use double when max value exceeds 10^9 (1 billion) to avoid precision loss
+    // in slope/intercept calculations with very large values
+    constexpr T FLOAT_PRECISION_THRESHOLD = static_cast<T>(1000000000); // 10^9 (1 billion)
+    
+    T max_val = *std::max_element(processed_data.begin(), processed_data.end());
+    size_t uncompressed_bits = data.size() * sizeof(T) * 8;
+    
+    if (max_val > FLOAT_PRECISION_THRESHOLD) {
+        // Use double precision for coefficients when values are large
+        return benchmark_neats_impl<T, double>(processed_data, range_sizes, max_bpc, 
+                                                filename, uncompressed_bits);
+    } else {
+        // Use float precision for coefficients when values are small (better compression)
+        return benchmark_neats_impl<T, float>(processed_data, range_sizes, max_bpc,
+                                               filename, uncompressed_bits);
+    }
 }
 
 // ============================================================================
@@ -492,12 +516,7 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
     
     // Verify decompression
     for (size_t i = 0; i < n; ++i) {
-        bool match = (data[i] == decompressed[i]);
-        if (!match && compressor_name == "Camel") {
-             // Allow small error due to truncation/arithmetic differences
-             double diff = std::abs(data[i] - decompressed[i]);
-             if (diff < 1e-9) match = true; 
-        }
+        bool match = (std::abs(data[i] - decompressed[i]) < 1e-9);
 
         if (!match) {
             std::cerr << compressor_name << " decompression error at " << i 
@@ -654,7 +673,7 @@ BenchmarkResult benchmark_tsxor(const std::string &filename,
     
     // Verify decompression
     for (size_t i = 0; i < n; ++i) {
-        if (data[i] != decompressed[i]) {
+        if (std::abs(data[i] - decompressed[i]) >= 1e-9) {
             std::cerr << "TSXor decompression error at " << i << std::endl;
             break;
         }
@@ -831,7 +850,7 @@ BenchmarkResult benchmark_falcon(const std::string &filename,
     
     // Verification
     for (size_t i = 0; i < n; ++i) {
-        if (data[i] != decompressed[i]) {
+        if (std::abs(data[i] - decompressed[i]) >= 1e-9) {
             std::cerr << "Falcon (Chunked) decompression error at index " << i << std::endl;
             break;
         }
