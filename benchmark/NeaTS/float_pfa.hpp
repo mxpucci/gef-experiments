@@ -402,6 +402,11 @@ namespace pfa {
                 upperbound_t u{typename convex_polygon_t::segment_t(m, _uq)};
                 return {u, l};
             }
+            
+            // Check if bounds would be valid before computing
+            inline bool bounds_valid(const data_point &p) const {
+                return (p.second - epsilon) > 0;
+            }
 
             struct exponential {
 
@@ -482,36 +487,28 @@ namespace pfa {
             using fun_t = exponential;
 
             inline bool add_point(convex_polygon_t &g, const data_point &p_start) const {
-                bool intersect;
+                // Guard: if log argument would be <= 0, fail intersection without corrupting polygon
+                if (!bounds_valid(p_start)) {
+                    return false;
+                }
                 auto [l, u] = compute_bounds(p_start);
-                intersect = g.update(l, u);
-                return intersect;
+                return g.update(l, u);
             }
 
             static constexpr exponential create_fun(const convex_polygon_t &g, const data_point &p) {
                 if (g.empty()) {
-                    //auto d = Segment::from_points(Point{0.0, static_cast<T2>(p.second)}, Point{0.0, static_cast<T2>(p.second)});
-                    //return exponential{p.first, 0.0, static_cast<T2>(p.second), d};
                     return exponential{p.first, static_cast<T1>(0.0), static_cast<T2>(p.second)};
                 } else if (g.is_init()) {
                     auto [u0, l0] = g.init.value();
                     auto b = (u0._s._q + l0._s._q) / 2.0;
-                    //auto d = Segment::from_points(Point{0.0, static_cast<T2>(b)}, Point{0.0, static_cast<T2>(b)});
-                    //return exponential{p.first, 0.0, static_cast<T2>(std::exp(b)), d};
                     return exponential{p.first, static_cast<T1>(0.0), static_cast<T2>(std::exp(b))};
                 } else {
                     auto pl = g.ul();
                     auto pr = g.lr();
 
-
                     auto mp_a = (pl.x() + pr.x()) / 2.0;
                     auto mp_b = (pr.y() + pl.y()) / 2.0;
 
-                    //auto mp_a = pl.x();
-                    //auto mp_b = pl.y();
-
-                    //auto d = Segment::from_points(pl, pr);
-                    //return exponential{p.first, static_cast<T1>(mp_a), static_cast<T2>(std::exp(mp_b)), d};
                     return exponential{p.first, static_cast<T1>(mp_a), static_cast<T2>(std::exp(mp_b))};
                 }
             }

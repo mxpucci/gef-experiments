@@ -229,7 +229,6 @@ std::vector<size_t> generate_range_indices(size_t n, size_t range, size_t num_qu
 // NeaTS Compressor Benchmark
 // ============================================================================
 
-// Helper template to run NeaTS benchmark with specific coefficient precision
 template<typename T, typename T1_coeff>
 BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
                                       const std::vector<size_t> &range_sizes,
@@ -328,9 +327,9 @@ BenchmarkResult benchmark_neats(const std::string &filename,
     
     // Determine the maximum absolute value to decide coefficient precision
     // A 32-bit float has ~7 significant decimal digits of precision
-    // Use double when max value exceeds 10^9 (1 billion) to avoid precision loss
+    // Use double when max value exceeds 10^6 (1 million) to avoid precision loss
     // in slope/intercept calculations with very large values
-    constexpr T FLOAT_PRECISION_THRESHOLD = static_cast<T>(1000000000); // 10^9 (1 billion)
+    constexpr T FLOAT_PRECISION_THRESHOLD = static_cast<T>(1000000); // 10^6 (1 million)
     
     T max_val = *std::max_element(processed_data.begin(), processed_data.end());
     size_t uncompressed_bits = data.size() * sizeof(T) * 8;
@@ -345,7 +344,6 @@ BenchmarkResult benchmark_neats(const std::string &filename,
                                                filename, uncompressed_bits);
     }
 }
-
 // ============================================================================
 // GEF Wrapper and Benchmark
 // ============================================================================
