@@ -1,0 +1,3 @@
+[submodule "lib/generalized-elias-fano"]
+	path = lib/generalized-elias-fano
+	url = https://github.com/mxpucci/generalized-elias-fano

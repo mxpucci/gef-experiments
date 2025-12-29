@@ -56,6 +56,14 @@
 #include "Falcon/CompressorFalcon.hpp"
 #include "Falcon/DecompressorFalcon.hpp"
 
+// GEF includes
+#include "gef/UniformedPartitioner.hpp"
+#include "gef/RLE_GEF.hpp"
+#include "gef/U_GEF.hpp"
+#include "gef/B_GEF.hpp"
+#include "gef/B_GEF_STAR.hpp"
+#include "datastructures/SDSLBitVectorFactory.hpp"
+
 // ============================================================================
 // Utility functions
 // ============================================================================
@@ -336,6 +344,141 @@ BenchmarkResult benchmark_neats(const std::string &filename,
         return benchmark_neats_impl<T, float>(processed_data, range_sizes, max_bpc,
                                                filename, uncompressed_bits);
     }
+}
+
+// ============================================================================
+// GEF Wrapper and Benchmark
+// ============================================================================
+
+static constexpr size_t GEF_UNIFORM_PARTITION_SIZE = 32000;
+
+template<typename T>
+struct RLE_GEF_Wrapper : public gef::RLE_GEF<T> {
+    template<typename C>
+    RLE_GEF_Wrapper(const C& data, std::shared_ptr<IBitVectorFactory> factory)
+        : gef::RLE_GEF<T>(factory, data) {}
+    
+    RLE_GEF_Wrapper() : gef::RLE_GEF<T>() {}
+    // RLE_GEF supports copy, so defaults are fine
+};
+
+template<typename T, gef::SplitPointStrategy Strategy>
+struct U_GEF_Wrapper : public gef::U_GEF<T> {
+    template<typename C>
+    U_GEF_Wrapper(const C& data, std::shared_ptr<IBitVectorFactory> factory)
+        : gef::U_GEF<T>(factory, data, Strategy) {}
+    
+    U_GEF_Wrapper() : gef::U_GEF<T>() {}
+};
+
+template<typename T, gef::SplitPointStrategy Strategy>
+struct B_GEF_Wrapper : public gef::B_GEF<T> {
+    template<typename C>
+    B_GEF_Wrapper(const C& data, std::shared_ptr<IBitVectorFactory> factory)
+        : gef::B_GEF<T>(factory, data, Strategy) {}
+    
+    B_GEF_Wrapper() : gef::B_GEF<T>() {}
+};
+
+template<typename T, gef::SplitPointStrategy Strategy>
+struct B_GEF_STAR_Wrapper : public gef::B_GEF_STAR<T> {
+    template<typename C>
+    B_GEF_STAR_Wrapper(const C& data, std::shared_ptr<IBitVectorFactory> factory)
+        : gef::B_GEF_STAR<T>(factory, data, Strategy) {}
+    
+    B_GEF_STAR_Wrapper() : gef::B_GEF_STAR<T>() {}
+};
+
+template<typename GEFType, typename T = int64_t>
+BenchmarkResult benchmark_gef(const std::string &compressor_name,
+                              const std::string &filename,
+                              const std::vector<size_t> &range_sizes,
+                              size_t block_size = 1000) {
+    BenchmarkResult result;
+    result.compressor = compressor_name;
+    result.dataset = filename;
+    
+    auto loaded = load_custom_dataset(filename);
+    auto& raw_data = loaded.data;
+    
+    // Shift data to be non-negative if needed
+    auto min_data = *std::min_element(raw_data.begin(), raw_data.end());
+    min_data = min_data < 0 ? (min_data - 1) : -1;
+    
+    std::vector<T> data(raw_data.size());
+    std::transform(raw_data.begin(), raw_data.end(), data.begin(),
+                   [min_data](int64_t d) { return static_cast<T>(d - min_data); });
+                   
+    result.num_values = data.size();
+    result.uncompressed_bits = data.size() * sizeof(T) * 8;
+    
+    auto factory = std::make_shared<SDSLBitVectorFactory>();
+    
+    // Compression
+    auto t1 = std::chrono::high_resolution_clock::now();
+    // UniformedPartitioner(data, k, args...) -> Wrapper(view, factory)
+    GEFType compressor(data, block_size, factory);
+    auto t2 = std::chrono::high_resolution_clock::now();
+    auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
+    
+    result.compressed_bits = compressor.size_in_bytes() * 8;
+    result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
+    result.compression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
+    
+    // Full decompression
+    std::vector<T> decompressed(data.size());
+    t1 = std::chrono::high_resolution_clock::now();
+    compressor.get_elements(0, data.size(), decompressed);
+    t2 = std::chrono::high_resolution_clock::now();
+    do_not_optimize(decompressed);
+    
+    auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
+    result.decompression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
+    
+    // Verify decompression
+    for (size_t i = 0; i < data.size(); ++i) {
+        if (data[i] != decompressed[i]) {
+            std::cerr << compressor_name << " decompression error at " << i << std::endl;
+            break;
+        }
+    }
+    
+    // Random access
+    const size_t num_ra_queries = 1000000;
+    auto indices = generate_random_indices(data.size(), num_ra_queries);
+    
+    t1 = std::chrono::high_resolution_clock::now();
+    T sum = 0;
+    for (auto idx : indices) {
+        sum += compressor[idx];
+    }
+    t2 = std::chrono::high_resolution_clock::now();
+    do_not_optimize(sum);
+    auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
+    result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
+    result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
+    
+    // Range queries
+    const size_t num_range_queries = 10000;
+    for (auto range : range_sizes) {
+        if (range >= data.size()) continue;
+        
+        auto range_indices = generate_range_indices(data.size(), range, num_range_queries);
+        std::vector<T> out_buffer(range);
+        
+        t1 = std::chrono::high_resolution_clock::now();
+        for (auto start_idx : range_indices) {
+            compressor.get_elements(start_idx, range, out_buffer);
+            do_not_optimize(out_buffer);
+        }
+        t2 = std::chrono::high_resolution_clock::now();
+        
+        auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
+        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
+        result.range_query_throughputs.emplace_back(range, throughput);
+    }
+    
+    return result;
 }
 
 // ============================================================================
@@ -1160,13 +1303,14 @@ void print_usage(const char *prog_name) {
     std::cerr << "  -o <file>      Output CSV file (default: stdout)" << std::endl;
     std::cerr << "  -c <list>      Comma-separated list of compressors (default: all)" << std::endl;
 #if HAS_SQUASH
-    std::cerr << "                 Available: neats,dac,gorilla,chimp,chimp128,tsxor,elf,camel,falcon,lz4,zstd,brotli,xz,snappy" << std::endl;
+    std::cerr << "                 Available: neats,dac,rle_gef,u_gef_approximate,u_gef_optimal,b_gef_approximate,b_gef_optimal,b_star_gef_approximate,b_star_gef_optimal,gorilla,chimp,chimp128,tsxor,elf,camel,falcon,lz4,zstd,brotli,xz,snappy" << std::endl;
 #else
-    std::cerr << "                 Available: neats,dac,gorilla,chimp,chimp128,tsxor,elf,camel,falcon" << std::endl;
+    std::cerr << "                 Available: neats,dac,rle_gef,u_gef_approximate,u_gef_optimal,b_gef_approximate,b_gef_optimal,b_star_gef_approximate,b_star_gef_optimal,gorilla,chimp,chimp128,tsxor,elf,camel,falcon" << std::endl;
     std::cerr << "                 (Compile with -DUSE_SQUASH for lz4,zstd,brotli,xz,snappy)" << std::endl;
 #endif
     std::cerr << "  -r <list>      Comma-separated list of range sizes (default: 10,100,1000,10000,100000)" << std::endl;
     std::cerr << "  -b <size>      Block size for block-based compressors (default: 1000)" << std::endl;
+    std::cerr << "                 (Note: *_gef compressors use fixed UniformedPartitioner block size = " << GEF_UNIFORM_PARTITION_SIZE << ")" << std::endl;
     std::cerr << "  -m <bpc>       Max bits per correction for NeaTS (default: 32)" << std::endl;
     std::cerr << "  -h             Show this help" << std::endl;
 }
@@ -1185,10 +1329,14 @@ int main(int argc, char *argv[]) {
     // Default parameters
     std::string output_file;
 #if HAS_SQUASH
-    std::vector<std::string> compressors = {"neats", "dac", "gorilla", "chimp", "chimp128", "tsxor",
+    std::vector<std::string> compressors = {"neats", "dac", "rle_gef", "u_gef_approximate", "u_gef_optimal", 
+                                            "b_gef_approximate", "b_gef_optimal", "b_star_gef_approximate", "b_star_gef_optimal",
+                                            "gorilla", "chimp", "chimp128", "tsxor",
                                             "elf", "camel", "falcon", "lz4", "zstd", "brotli", "snappy"};
 #else
-    std::vector<std::string> compressors = {"neats", "dac", "gorilla", "chimp", "chimp128", "tsxor",
+    std::vector<std::string> compressors = {"neats", "dac", "rle_gef", "u_gef_approximate", "u_gef_optimal", 
+                                            "b_gef_approximate", "b_gef_optimal", "b_star_gef_approximate", "b_star_gef_optimal",
+                                            "gorilla", "chimp", "chimp128", "tsxor",
                                             "elf", "camel", "falcon"};
 #endif
     std::vector<size_t> range_sizes = {10, 100, 1000, 10000, 100000};
@@ -1264,6 +1412,27 @@ int main(int argc, char *argv[]) {
                     result = benchmark_neats<int64_t>(filename, range_sizes, max_bpc);
                 } else if (comp == "dac") {
                     result = benchmark_dac<int64_t>(filename, range_sizes);
+                } else if (comp == "rle_gef") {
+                    using UP_RLE = gef::UniformedPartitioner<int64_t, RLE_GEF_Wrapper<int64_t>, std::shared_ptr<IBitVectorFactory>>;
+                    result = benchmark_gef<UP_RLE, int64_t>("rle_gef", filename, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                } else if (comp == "u_gef_approximate") {
+                    using UP_U = gef::UniformedPartitioner<int64_t, U_GEF_Wrapper<int64_t, gef::APPROXIMATE_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
+                    result = benchmark_gef<UP_U, int64_t>("u_gef_approximate", filename, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                } else if (comp == "u_gef_optimal") {
+                    using UP_U = gef::UniformedPartitioner<int64_t, U_GEF_Wrapper<int64_t, gef::OPTIMAL_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
+                    result = benchmark_gef<UP_U, int64_t>("u_gef_optimal", filename, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                } else if (comp == "b_gef_approximate") {
+                    using UP_B = gef::UniformedPartitioner<int64_t, B_GEF_Wrapper<int64_t, gef::APPROXIMATE_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
+                    result = benchmark_gef<UP_B, int64_t>("b_gef_approximate", filename, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                } else if (comp == "b_gef_optimal") {
+                    using UP_B = gef::UniformedPartitioner<int64_t, B_GEF_Wrapper<int64_t, gef::OPTIMAL_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
+                    result = benchmark_gef<UP_B, int64_t>("b_gef_optimal", filename, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                } else if (comp == "b_star_gef_approximate") {
+                    using UP_B_STAR = gef::UniformedPartitioner<int64_t, B_GEF_STAR_Wrapper<int64_t, gef::APPROXIMATE_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
+                    result = benchmark_gef<UP_B_STAR, int64_t>("b_star_gef_approximate", filename, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                } else if (comp == "b_star_gef_optimal") {
+                    using UP_B_STAR = gef::UniformedPartitioner<int64_t, B_GEF_STAR_Wrapper<int64_t, gef::OPTIMAL_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
+                    result = benchmark_gef<UP_B_STAR, int64_t>("b_star_gef_optimal", filename, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
                 } else if (comp == "gorilla") {
                     result = benchmark_bitstream_compressor<CompressorGorilla<double>, DecompressorGorilla<double>, double>(
                         "Gorilla", filename, range_sizes, block_size);
@@ -1293,7 +1462,8 @@ int main(int argc, char *argv[]) {
                     continue;
                 }
                 
-                if (result.num_values == 0 && comp != "falcon" && comp != "neats" && comp != "dac" && 
+                if (result.num_values == 0 && comp != "falcon" && comp != "neats" && comp != "dac" && comp != "rle_gef" &&
+                    comp.find("_gef") == std::string::npos &&
                     comp != "gorilla" && comp != "chimp" && comp != "chimp128" && 
                     comp != "tsxor" && comp != "elf" && comp != "camel") {
                    // If num_values is 0, it means the benchmark failed (e.g. missing squash codec)

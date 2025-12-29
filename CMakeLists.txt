@@ -51,17 +51,47 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
     endif()
 endif()
 
+# Enable OpenMP for parallel processing (used by GEF)
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    message(STATUS "OpenMP found - parallel processing enabled")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
+
 add_library(sux INTERFACE)
 target_include_directories(sux INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/lib/sux)
 
 add_library(sdsl INTERFACE)
 target_include_directories(sdsl INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/lib/sdsl-lite/include)
 
+# --- Pasta (rank/select bitvectors) ---
+include(FetchContent)
+set(TLX_INSTALL OFF CACHE BOOL "" FORCE)
+set(TLX_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(TLX_BUILD_BENCHMARKS OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+    pasta
+    GIT_REPOSITORY https://github.com/pasta-toolbox/bit_vector.git
+    GIT_TAG        main
+)
+FetchContent_MakeAvailable(pasta)
+set(PASTA_INCLUDE_DIR ${pasta_SOURCE_DIR}/include)
+
+# --- GEF Library (Manual integration to avoid submodule CMake issues) ---
+add_library(gef STATIC lib/generalized-elias-fano/src/gef.cpp)
+target_include_directories(gef PUBLIC 
+    lib/generalized-elias-fano/include
+    ${PASTA_INCLUDE_DIR}
+)
+target_link_libraries(gef PUBLIC sdsl sux pasta_bit_vector)
+# Add required flags for GEF
+target_compile_options(gef PUBLIC -ffast-math -funroll-loops)
+
 # Comprehensive lossless compressor benchmark (without squash)
 add_executable(LosslessBenchmark benchmark/lossless_benchmark.cpp
         benchmark/NeaTS/NeaTS.hpp
         benchmark/NeaTS/algorithms.hpp)
-target_link_libraries(LosslessBenchmark sdsl sux)
+target_link_libraries(LosslessBenchmark sdsl sux gef)
 
 # Comprehensive lossless compressor benchmark (with squash - optional)
 option(NEATS_WITH_SQUASH "Build LosslessBenchmarkFull with Squash" ON)
@@ -121,6 +151,7 @@ if(NEATS_WITH_SQUASH)
             PRIVATE
                 sdsl
                 sux
+                gef
                 Squash::Lib
                 PkgConfig::LZ4
                 PkgConfig::ZSTD
