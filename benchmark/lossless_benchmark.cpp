@@ -282,13 +282,19 @@ BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
     result.num_values = processed_data.size();
     result.uncompressed_bits = uncompressed_bits;
     
+    std::cerr << "[benchmark_neats_impl] Starting with processed_data.size()=" << processed_data.size() 
+              << ", max_bpc=" << (int)max_bpc << std::endl;
+    
     // Use uint64_t for x_t to prevent overflow of bit offsets for large datasets
     // T1_coeff is either float (for small values) or double (for large values)
+    std::cerr << "[benchmark_neats_impl] Creating compressor..." << std::endl;
     pfa::neats::compressor<uint64_t, T, double, T1_coeff, double> compressor(max_bpc);
     
+    std::cerr << "[benchmark_neats_impl] Calling partitioning..." << std::endl;
     auto t1 = std::chrono::high_resolution_clock::now();
     compressor.partitioning(processed_data.begin(), processed_data.end());
     auto t2 = std::chrono::high_resolution_clock::now();
+    std::cerr << "[benchmark_neats_impl] Partitioning completed" << std::endl;
     auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
     result.compressed_bits = compressor.size_in_bits();
@@ -1429,19 +1435,12 @@ int main(int argc, char *argv[]) {
             bench_data.decimals = loaded.decimals;
             bench_data.uncompressed_bits = loaded.data.size() * sizeof(int64_t) * 8;
             
-            // Prepare shifted data (non-negative) directly, avoid keeping raw_data
             size_t n = loaded.data.size();
             auto min_data = *std::min_element(loaded.data.begin(), loaded.data.end());
             bench_data.min_val = min_data < 0 ? (min_data - 1) : -1;
             
-            bench_data.shifted_data.resize(n);
-            std::transform(loaded.data.begin(), loaded.data.end(), bench_data.shifted_data.begin(),
-                       [&bench_data](int64_t d) { return d - bench_data.min_val; });
-            
-            // Free raw_data immediately - we only keep shifted_data for now
-            // double_data will be computed from shifted_data when needed
-            loaded.data.clear();
-            loaded.data.shrink_to_fit();
+            // Move raw_data to bench_data (SQUASH compressors need this)
+            bench_data.raw_data = std::move(loaded.data);
             
             // Prepare indices
             bench_data.random_indices = generate_random_indices(n, 1000000);
@@ -1460,15 +1459,60 @@ int main(int argc, char *argv[]) {
         }
         
         // Separate compressors by data type needed
+        std::vector<std::string> raw_data_compressors;     // SQUASH: lz4, zstd, brotli, xz, snappy
         std::vector<std::string> shifted_data_compressors; // neats, dac, *_gef
         std::vector<std::string> double_data_compressors;  // gorilla, chimp, etc.
         
         for (const auto &comp : compressors) {
+#if HAS_SQUASH
+            if (comp == "lz4" || comp == "zstd" || comp == "brotli" || 
+                comp == "xz" || comp == "snappy") {
+                raw_data_compressors.push_back(comp);
+            } else
+#endif
             if (comp == "neats" || comp == "dac" || comp == "rle_gef" ||
                 comp.find("_gef") != std::string::npos) {
                 shifted_data_compressors.push_back(comp);
             } else {
                 double_data_compressors.push_back(comp);
+            }
+        }
+        
+        // Phase 0: Run compressors that need raw_data (SQUASH compressors)
+#if HAS_SQUASH
+        for (const auto &comp : raw_data_compressors) {
+            std::cerr << "  Running " << comp << "..." << std::flush;
+            
+            BenchmarkResult result;
+            
+            try {
+                result = benchmark_squash<int64_t>(comp, bench_data, range_sizes, block_size);
+                
+                if (!header_printed) {
+                    result.print_header(*out);
+                    header_printed = true;
+                }
+                result.print(*out);
+                std::cerr << " done" << std::endl;
+                
+            } catch (const std::exception &e) {
+                std::cerr << " error: " << e.what() << std::endl;
+            }
+        }
+#endif
+        
+        // Convert raw_data to shifted_data and free raw_data
+        if (!shifted_data_compressors.empty() || !double_data_compressors.empty()) {
+            if (!bench_data.raw_data.empty()) {
+                std::cerr << "  Converting raw_data to shifted_data..." << std::flush;
+                size_t n = bench_data.raw_data.size();
+                bench_data.shifted_data.resize(n);
+                std::transform(bench_data.raw_data.begin(), bench_data.raw_data.end(), 
+                               bench_data.shifted_data.begin(),
+                               [&bench_data](int64_t d) { return d - bench_data.min_val; });
+                // Free raw_data
+                std::vector<int64_t>().swap(bench_data.raw_data);
+                std::cerr << " done" << std::endl;
             }
         }
         
@@ -1554,14 +1598,6 @@ int main(int argc, char *argv[]) {
                         "Camel", bench_data, range_sizes, block_size);
                 } else if (comp == "falcon") {
                     result = benchmark_falcon<double>(bench_data, range_sizes);
-#if HAS_SQUASH
-                } else if (comp == "lz4" || comp == "zstd" || comp == "brotli" || 
-                           comp == "xz" || comp == "snappy") {
-                    // Squash compressors need raw_data which we no longer keep
-                    // They would need to reload from file for large datasets
-                    std::cerr << " skipped (raw_data not available for memory optimization)" << std::endl;
-                    continue;
-#endif
                 } else {
                     std::cerr << " unknown compressor, skipping" << std::endl;
                     continue;

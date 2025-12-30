@@ -491,21 +491,7 @@ namespace pfa {
 
                 inline exponential copy(x_t s1) const {
                     auto z = static_cast<T2>(s1 - starting_position);
-                    // Guard: limit exp argument to prevent overflow/underflow
-                    // |a * z| > 30 would cause exp() to change b by factor > 10^13
-                    auto exp_arg = a * z;
-                    if (std::abs(exp_arg) > 30.0) {
-                        // Fall back to constant model to prevent numerical instability
-                        return exponential{s1, static_cast<T1>(0.0), b};
-                    }
-                    auto exp_az = std::exp(exp_arg);
-                    if (!std::isfinite(exp_az) || exp_az == 0.0) {
-                        return exponential{s1, static_cast<T1>(0.0), b};
-                    }
-                    auto b1 = b * exp_az;
-                    if (!std::isfinite(b1) || b1 == 0.0) {
-                        return exponential{s1, static_cast<T1>(0.0), b};
-                    }
+                    auto b1 = b * std::exp(a * z);
                     return exponential{s1, a, static_cast<T2>(b1)};
                 }
 

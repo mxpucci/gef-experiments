@@ -348,9 +348,10 @@ namespace pfa::neats {
                         auto im = col + row * ncols;
 
                         if (frontier[im].second <= k) {
+                            // Pass k as start_x since that's where the data actually starts
                             auto t = std::visit([&](auto &&model) -> std::tuple<x_t, x_t, out_t> {
                                 return pfa::algorithm::make_segment<poa_t>(model, g, (begin + k), end,
-                                                                           frontier[im].second);
+                                                                           static_cast<uint32_t>(k));
                             }, m[im]);
 
                             frontier[im].first = std::get<0>(t);
@@ -377,6 +378,10 @@ namespace pfa::neats {
                     for (size_t col = 0; col < ncols; ++col) {
                         auto im = col + row * ncols;
                         auto j = frontier[im].second;
+                        
+                        // Only process if j > k (segment must go forward)
+                        if (j <= static_cast<x_t>(k)) continue;
+                        
                         auto bpc = pfa::algorithm::epsilon_to_bpc(std::visit([](auto &&mod) -> int64_t {
                             return mod.epsilon;
                         }, m[im]));
