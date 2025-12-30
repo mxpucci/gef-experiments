@@ -405,7 +405,17 @@ namespace pfa {
             
             // Check if bounds would be valid before computing
             inline bool bounds_valid(const data_point &p) const {
-                return (p.second - epsilon) > 0;
+                // Ensure log arguments are positive and won't produce extreme values
+                auto lower_arg = p.second - epsilon;
+                auto upper_arg = p.second + epsilon;
+                if (lower_arg <= 0 || upper_arg <= 0) return false;
+                // Also check that the log values won't be too extreme (avoid overflow in exp later)
+                // log(x) > 700 would cause exp(log(x)) to overflow for double
+                auto log_lower = std::log(static_cast<double>(lower_arg));
+                auto log_upper = std::log(static_cast<double>(upper_arg));
+                if (!std::isfinite(log_lower) || !std::isfinite(log_upper)) return false;
+                if (std::abs(log_lower) > 700 || std::abs(log_upper) > 700) return false;
+                return true;
             }
 
             struct exponential {
@@ -423,7 +433,12 @@ namespace pfa {
                 inline y_t operator()(x_t i) const {
                     assert(i >= starting_position);
                     const double x = i - starting_position;
-                    return round(b * std::exp(a * x));
+                    auto result = b * std::exp(a * x);
+                    // Guard: if prediction is invalid, return b (constant approximation)
+                    if (!std::isfinite(result)) {
+                        return static_cast<y_t>(std::round(b));
+                    }
+                    return static_cast<y_t>(std::round(result));
                 }
 
                 [[nodiscard]] constexpr static size_t size_in_bits() {
@@ -469,7 +484,15 @@ namespace pfa {
 
                 inline exponential copy(x_t s1) const {
                     auto z = static_cast<T2>(s1 - starting_position);
-                    auto b1 = b * std::exp(a * z);
+                    auto exp_az = std::exp(a * z);
+                    // Guard: if exp overflows/underflows, return degenerate constant model
+                    if (!std::isfinite(exp_az) || exp_az == 0.0) {
+                        return exponential{s1, static_cast<T1>(0.0), b};
+                    }
+                    auto b1 = b * exp_az;
+                    if (!std::isfinite(b1) || b1 == 0.0) {
+                        return exponential{s1, static_cast<T1>(0.0), b};
+                    }
                     return exponential{s1, a, static_cast<T2>(b1)};
                 }
 
@@ -495,13 +518,18 @@ namespace pfa {
                 return g.update(l, u);
             }
 
-            static constexpr exponential create_fun(const convex_polygon_t &g, const data_point &p) {
+            static inline exponential create_fun(const convex_polygon_t &g, const data_point &p) {
                 if (g.empty()) {
                     return exponential{p.first, static_cast<T1>(0.0), static_cast<T2>(p.second)};
                 } else if (g.is_init()) {
                     auto [u0, l0] = g.init.value();
                     auto b = (u0._s._q + l0._s._q) / 2.0;
-                    return exponential{p.first, static_cast<T1>(0.0), static_cast<T2>(std::exp(b))};
+                    auto exp_b = std::exp(b);
+                    // Guard: if exp overflows/underflows, return constant model
+                    if (!std::isfinite(exp_b) || exp_b == 0.0) {
+                        return exponential{p.first, static_cast<T1>(0.0), static_cast<T2>(p.second)};
+                    }
+                    return exponential{p.first, static_cast<T1>(0.0), static_cast<T2>(exp_b)};
                 } else {
                     auto pl = g.ul();
                     auto pr = g.lr();
@@ -509,7 +537,12 @@ namespace pfa {
                     auto mp_a = (pl.x() + pr.x()) / 2.0;
                     auto mp_b = (pr.y() + pl.y()) / 2.0;
 
-                    return exponential{p.first, static_cast<T1>(mp_a), static_cast<T2>(std::exp(mp_b))};
+                    auto exp_mp_b = std::exp(mp_b);
+                    // Guard: if exp overflows/underflows, return constant model
+                    if (!std::isfinite(exp_mp_b) || exp_mp_b == 0.0) {
+                        return exponential{p.first, static_cast<T1>(0.0), static_cast<T2>(p.second)};
+                    }
+                    return exponential{p.first, static_cast<T1>(mp_a), static_cast<T2>(exp_mp_b)};
                 }
             }
 
