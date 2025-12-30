@@ -57,6 +57,10 @@
 #include "Falcon/DecompressorFalcon.hpp"
 
 // GEF includes
+// Disable OpenMP for GEF benchmarks to ensure consistent single-threaded performance
+#ifdef _OPENMP
+  #undef _OPENMP
+#endif
 #include "gef/UniformedPartitioner.hpp"
 #include "gef/RLE_GEF.hpp"
 #include "gef/U_GEF.hpp"
@@ -206,12 +210,33 @@ struct BenchmarkData {
     std::vector<int64_t> shifted_data; 
     std::vector<double> double_data;
     int64_t decimals;
+    int64_t min_val; // Store for converting shifted_data to double_data later
     size_t uncompressed_bits;
     
     // Indices
     std::vector<size_t> random_indices;
     // Map range size to indices
     std::map<size_t, std::vector<size_t>> range_query_indices;
+    
+    // Convert shifted_data to double_data and free shifted_data
+    void convert_shifted_to_double() {
+        if (shifted_data.empty()) return;
+        
+        int64_t divisor_int = 1;
+        for (int64_t d = 0; d < decimals; ++d) divisor_int *= 10;
+        double divisor = static_cast<double>(divisor_int);
+        
+        double_data.resize(shifted_data.size());
+        for (size_t i = 0; i < shifted_data.size(); ++i) {
+            // raw_data[i] = shifted_data[i] + min_val
+            // double_data[i] = raw_data[i] / divisor
+            double_data[i] = static_cast<double>(shifted_data[i] + min_val) / divisor;
+        }
+        
+        // Free shifted_data
+        shifted_data.clear();
+        shifted_data.shrink_to_fit();
+    }
 };
 
 // ============================================================================
@@ -1401,37 +1426,32 @@ int main(int argc, char *argv[]) {
         
         try {
             auto loaded = load_custom_dataset(filename);
-            bench_data.raw_data = std::move(loaded.data);
             bench_data.decimals = loaded.decimals;
-            bench_data.uncompressed_bits = bench_data.raw_data.size() * sizeof(int64_t) * 8;
+            bench_data.uncompressed_bits = loaded.data.size() * sizeof(int64_t) * 8;
             
-            // Prepare shifted data (non-negative)
-            bench_data.shifted_data.resize(bench_data.raw_data.size());
-            auto min_data = *std::min_element(bench_data.raw_data.begin(), bench_data.raw_data.end());
-            int64_t min_val = min_data < 0 ? (min_data - 1) : -1;
-            std::transform(bench_data.raw_data.begin(), bench_data.raw_data.end(), bench_data.shifted_data.begin(),
-                       [min_val](int64_t d) { return d - min_val; });
-                       
-            // Prepare double data
-            bench_data.double_data.resize(bench_data.raw_data.size());
-            // Use integer power to avoid floating-point error from std::pow
-            int64_t divisor_int = 1;
-            for (int64_t d = 0; d < bench_data.decimals; ++d) divisor_int *= 10;
-            double divisor = static_cast<double>(divisor_int);
-            for(size_t i=0; i<bench_data.raw_data.size(); ++i) {
-                bench_data.double_data[i] = static_cast<double>(bench_data.raw_data[i]) / divisor;
-            }
+            // Prepare shifted data (non-negative) directly, avoid keeping raw_data
+            size_t n = loaded.data.size();
+            auto min_data = *std::min_element(loaded.data.begin(), loaded.data.end());
+            bench_data.min_val = min_data < 0 ? (min_data - 1) : -1;
+            
+            bench_data.shifted_data.resize(n);
+            std::transform(loaded.data.begin(), loaded.data.end(), bench_data.shifted_data.begin(),
+                       [&bench_data](int64_t d) { return d - bench_data.min_val; });
+            
+            // Free raw_data immediately - we only keep shifted_data for now
+            // double_data will be computed from shifted_data when needed
+            loaded.data.clear();
+            loaded.data.shrink_to_fit();
             
             // Prepare indices
-            // Generate max needed: 1,000,000 random queries
-            bench_data.random_indices = generate_random_indices(bench_data.raw_data.size(), 1000000);
+            bench_data.random_indices = generate_random_indices(n, 1000000);
             
             // Generate range queries
             for(auto range : range_sizes) {
-                 if (range < bench_data.raw_data.size()) {
-                     bench_data.range_query_indices[range] = generate_range_indices(bench_data.raw_data.size(), range, 10000); // Max 10000
+                 if (range < n) {
+                     bench_data.range_query_indices[range] = generate_range_indices(n, range, 10000);
                  } else {
-                     bench_data.range_query_indices[range] = {}; // Empty if range too big
+                     bench_data.range_query_indices[range] = {};
                  }
             }
         } catch (const std::exception &e) {
@@ -1439,7 +1459,21 @@ int main(int argc, char *argv[]) {
             continue;
         }
         
+        // Separate compressors by data type needed
+        std::vector<std::string> shifted_data_compressors; // neats, dac, *_gef
+        std::vector<std::string> double_data_compressors;  // gorilla, chimp, etc.
+        
         for (const auto &comp : compressors) {
+            if (comp == "neats" || comp == "dac" || comp == "rle_gef" ||
+                comp.find("_gef") != std::string::npos) {
+                shifted_data_compressors.push_back(comp);
+            } else {
+                double_data_compressors.push_back(comp);
+            }
+        }
+        
+        // Phase 1: Run compressors that need shifted_data
+        for (const auto &comp : shifted_data_compressors) {
             std::cerr << "  Running " << comp << "..." << std::flush;
             
             BenchmarkResult result;
@@ -1470,7 +1504,38 @@ int main(int argc, char *argv[]) {
                 } else if (comp == "b_star_gef_optimal") {
                     using UP_B_STAR = gef::UniformedPartitioner<int64_t, B_GEF_STAR_Wrapper<int64_t, gef::OPTIMAL_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
                     result = benchmark_gef<UP_B_STAR, int64_t>("b_star_gef_optimal", bench_data, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
-                } else if (comp == "gorilla") {
+                } else {
+                    std::cerr << " unknown compressor, skipping" << std::endl;
+                    continue;
+                }
+                
+                if (!header_printed) {
+                    result.print_header(*out);
+                    header_printed = true;
+                }
+                result.print(*out);
+                std::cerr << " done" << std::endl;
+                
+            } catch (const std::exception &e) {
+                std::cerr << " error: " << e.what() << std::endl;
+            }
+        }
+        
+        // Phase 2: Convert shifted_data to double_data if needed
+        if (!double_data_compressors.empty() && !bench_data.shifted_data.empty()) {
+            std::cerr << "  Converting shifted_data to double_data..." << std::flush;
+            bench_data.convert_shifted_to_double();
+            std::cerr << " done" << std::endl;
+        }
+        
+        // Phase 3: Run compressors that need double_data
+        for (const auto &comp : double_data_compressors) {
+            std::cerr << "  Running " << comp << "..." << std::flush;
+            
+            BenchmarkResult result;
+            
+            try {
+                if (comp == "gorilla") {
                     result = benchmark_bitstream_compressor<CompressorGorilla<double>, DecompressorGorilla<double>, double>(
                         "Gorilla", bench_data, range_sizes, block_size);
                 } else if (comp == "chimp") {
@@ -1492,23 +1557,14 @@ int main(int argc, char *argv[]) {
 #if HAS_SQUASH
                 } else if (comp == "lz4" || comp == "zstd" || comp == "brotli" || 
                            comp == "xz" || comp == "snappy") {
-                    result = benchmark_squash<int64_t>(comp, bench_data, range_sizes, block_size);
+                    // Squash compressors need raw_data which we no longer keep
+                    // They would need to reload from file for large datasets
+                    std::cerr << " skipped (raw_data not available for memory optimization)" << std::endl;
+                    continue;
 #endif
                 } else {
                     std::cerr << " unknown compressor, skipping" << std::endl;
                     continue;
-                }
-                
-                if (result.num_values == 0 && comp != "falcon" && comp != "neats" && comp != "dac" && comp != "rle_gef" &&
-                    comp.find("_gef") == std::string::npos &&
-                    comp != "gorilla" && comp != "chimp" && comp != "chimp128" && 
-                    comp != "tsxor" && comp != "elf" && comp != "camel") {
-                   // If num_values is 0, it means the benchmark failed (e.g. missing squash codec)
-                   // We don't check non-squash compressors because they don't set num_values=0 on failure in the same way 
-                   // (they usually throw or crash, or set it correctly if they succeed)
-                   // But for Squash, we explicitly set it to 0 on codec failure.
-                   std::cerr << " skipping result output due to failure." << std::endl;
-                   continue;
                 }
 
                 if (!header_printed) {
