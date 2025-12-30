@@ -157,7 +157,7 @@ std::vector<std::string> get_files(const std::string &path) {
 }
 
 std::string extract_filename(const std::string &path) {
-    return std::filesystem::path(path).filename().string();
+    return std::filesystem::path(path).stem().string();
 }
 
 // ============================================================================
@@ -200,6 +200,20 @@ struct BenchmarkResult {
     }
 };
 
+struct BenchmarkData {
+    std::string filename;
+    std::vector<int64_t> raw_data;
+    std::vector<int64_t> shifted_data; 
+    std::vector<double> double_data;
+    int64_t decimals;
+    size_t uncompressed_bits;
+    
+    // Indices
+    std::vector<size_t> random_indices;
+    // Map range size to indices
+    std::map<size_t, std::vector<size_t>> range_query_indices;
+};
+
 // ============================================================================
 // Random index generators
 // ============================================================================
@@ -232,6 +246,8 @@ std::vector<size_t> generate_range_indices(size_t n, size_t range, size_t num_qu
 template<typename T, typename T1_coeff>
 BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
                                       const std::vector<size_t> &range_sizes,
+                                      const std::vector<size_t> &random_indices,
+                                      const std::map<size_t, std::vector<size_t>> &range_query_indices,
                                       uint8_t max_bpc,
                                       const std::string &dataset_name,
                                       size_t uncompressed_bits) {
@@ -264,7 +280,6 @@ BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
     
     result.decompression_throughput_mbs = (processed_data.size() * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
-    // Verify decompression
     for (size_t i = 0; i < processed_data.size(); ++i) {
         if (processed_data[i] != decompressed[i]) {
             std::cerr << "NeaTS decompression error at " << i << std::endl;
@@ -273,12 +288,11 @@ BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
     }
     
     // Random access
-    const size_t num_ra_queries = 1000000;
-    auto indices = generate_random_indices(processed_data.size(), num_ra_queries);
+    const size_t num_ra_queries = random_indices.size();
     
     t1 = std::chrono::high_resolution_clock::now();
     T sum = 0;
-    for (auto idx : indices) {
+    for (auto idx : random_indices) {
         sum += compressor[idx];
     }
     t2 = std::chrono::high_resolution_clock::now();
@@ -288,11 +302,11 @@ BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
     // Range queries
-    const size_t num_range_queries = 10000;
+    const size_t num_range_queries = range_query_indices.begin()->second.size();
     for (auto range : range_sizes) {
         if (range >= processed_data.size()) continue;
         
-        auto range_indices = generate_range_indices(processed_data.size(), range, num_range_queries);
+        const auto& range_indices = range_query_indices.at(range);
         std::vector<T> out_buffer(range);
         
         t1 = std::chrono::high_resolution_clock::now();
@@ -311,19 +325,11 @@ BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
 }
 
 template<typename T = int64_t>
-BenchmarkResult benchmark_neats(const std::string &filename, 
+BenchmarkResult benchmark_neats(const BenchmarkData &bench_data, 
                                 const std::vector<size_t> &range_sizes,
                                 uint8_t max_bpc = 32) {
-    // Load data
-    auto loaded = load_custom_dataset(filename);
-    auto& data = loaded.data;
-    
-    auto min_data = *std::min_element(data.begin(), data.end());
-    min_data = min_data < 0 ? (min_data - 1) : -1;
-    
-    std::vector<T> processed_data(data.size());
-    std::transform(data.begin(), data.end(), processed_data.begin(),
-                   [min_data](int64_t d) { return static_cast<T>(d - min_data); });
+    // Use shifted data
+    const auto& processed_data = bench_data.shifted_data;
     
     // Determine the maximum absolute value to decide coefficient precision
     // A 32-bit float has ~7 significant decimal digits of precision
@@ -332,16 +338,17 @@ BenchmarkResult benchmark_neats(const std::string &filename,
     constexpr T FLOAT_PRECISION_THRESHOLD = static_cast<T>(1000000); // 10^6 (1 million)
     
     T max_val = *std::max_element(processed_data.begin(), processed_data.end());
-    size_t uncompressed_bits = data.size() * sizeof(T) * 8;
     
     if (max_val > FLOAT_PRECISION_THRESHOLD) {
         // Use double precision for coefficients when values are large
-        return benchmark_neats_impl<T, double>(processed_data, range_sizes, max_bpc, 
-                                                filename, uncompressed_bits);
+        return benchmark_neats_impl<T, double>(processed_data, range_sizes, 
+                                                bench_data.random_indices, bench_data.range_query_indices,
+                                                max_bpc, bench_data.filename, bench_data.uncompressed_bits);
     } else {
         // Use float precision for coefficients when values are small (better compression)
-        return benchmark_neats_impl<T, float>(processed_data, range_sizes, max_bpc,
-                                               filename, uncompressed_bits);
+        return benchmark_neats_impl<T, float>(processed_data, range_sizes,
+                                               bench_data.random_indices, bench_data.range_query_indices,
+                                               max_bpc, bench_data.filename, bench_data.uncompressed_bits);
     }
 }
 // ============================================================================
@@ -389,26 +396,18 @@ struct B_GEF_STAR_Wrapper : public gef::B_GEF_STAR<T> {
 
 template<typename GEFType, typename T = int64_t>
 BenchmarkResult benchmark_gef(const std::string &compressor_name,
-                              const std::string &filename,
+                              const BenchmarkData &bench_data,
                               const std::vector<size_t> &range_sizes,
                               size_t block_size = 1000) {
     BenchmarkResult result;
     result.compressor = compressor_name;
-    result.dataset = filename;
+    result.dataset = bench_data.filename;
     
-    auto loaded = load_custom_dataset(filename);
-    auto& raw_data = loaded.data;
-    
-    // Shift data to be non-negative if needed
-    auto min_data = *std::min_element(raw_data.begin(), raw_data.end());
-    min_data = min_data < 0 ? (min_data - 1) : -1;
-    
-    std::vector<T> data(raw_data.size());
-    std::transform(raw_data.begin(), raw_data.end(), data.begin(),
-                   [min_data](int64_t d) { return static_cast<T>(d - min_data); });
+    // Use shifted data
+    const auto& data = bench_data.shifted_data;
                    
     result.num_values = data.size();
-    result.uncompressed_bits = data.size() * sizeof(T) * 8;
+    result.uncompressed_bits = bench_data.uncompressed_bits;
     
     auto factory = std::make_shared<SDSLBitVectorFactory>();
     
@@ -433,7 +432,6 @@ BenchmarkResult benchmark_gef(const std::string &compressor_name,
     auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.decompression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
-    // Verify decompression
     for (size_t i = 0; i < data.size(); ++i) {
         if (data[i] != decompressed[i]) {
             std::cerr << compressor_name << " decompression error at " << i << std::endl;
@@ -442,12 +440,11 @@ BenchmarkResult benchmark_gef(const std::string &compressor_name,
     }
     
     // Random access
-    const size_t num_ra_queries = 1000000;
-    auto indices = generate_random_indices(data.size(), num_ra_queries);
+    const size_t num_ra_queries = bench_data.random_indices.size();
     
     t1 = std::chrono::high_resolution_clock::now();
     T sum = 0;
-    for (auto idx : indices) {
+    for (auto idx : bench_data.random_indices) {
         sum += compressor[idx];
     }
     t2 = std::chrono::high_resolution_clock::now();
@@ -457,11 +454,11 @@ BenchmarkResult benchmark_gef(const std::string &compressor_name,
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
     // Range queries
-    const size_t num_range_queries = 10000;
+    const size_t num_range_queries = bench_data.range_query_indices.begin()->second.size();
     for (auto range : range_sizes) {
         if (range >= data.size()) continue;
         
-        auto range_indices = generate_range_indices(data.size(), range, num_range_queries);
+        const auto& range_indices = bench_data.range_query_indices.at(range);
         std::vector<T> out_buffer(range);
         
         t1 = std::chrono::high_resolution_clock::now();
@@ -484,26 +481,21 @@ BenchmarkResult benchmark_gef(const std::string &compressor_name,
 // ============================================================================
 
 template<typename T = int64_t>
-BenchmarkResult benchmark_dac(const std::string &filename, 
+BenchmarkResult benchmark_dac(const BenchmarkData &bench_data, 
                               const std::vector<size_t> &range_sizes) {
     BenchmarkResult result;
     result.compressor = "DAC";
-    result.dataset = filename;
+    result.dataset = bench_data.filename;
     
-    // Load data
-    auto loaded = load_custom_dataset(filename);
-    auto& data = loaded.data;
-    // DAC works on the integers directly
+    // Use shifted data which is already non-negative
+    const auto& data = bench_data.shifted_data;
     
     result.num_values = data.size();
-    result.uncompressed_bits = data.size() * sizeof(T) * 8;
-    
-    auto min_data = *std::min_element(data.begin(), data.end());
-    min_data = min_data < 0 ? (min_data - 1) : -1;
+    result.uncompressed_bits = bench_data.uncompressed_bits;
     
     std::vector<uint64_t> u_data(data.size());
     std::transform(data.begin(), data.end(), u_data.begin(),
-                   [min_data](int64_t x) { return static_cast<uint64_t>(x - min_data); });
+                   [](int64_t x) { return static_cast<uint64_t>(x); });
     
     // Compression
     auto t1 = std::chrono::high_resolution_clock::now();
@@ -528,7 +520,6 @@ BenchmarkResult benchmark_dac(const std::string &filename,
     
     result.decompression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
-    // Verify decompression
     for (size_t i = 0; i < data.size(); ++i) {
         if (u_data[i] != decompressed[i]) {
             std::cerr << "DAC decompression error at " << i << std::endl;
@@ -537,12 +528,11 @@ BenchmarkResult benchmark_dac(const std::string &filename,
     }
     
     // Random access
-    const size_t num_ra_queries = 1000000;
-    auto indices = generate_random_indices(data.size(), num_ra_queries);
+    const size_t num_ra_queries = bench_data.random_indices.size();
     
     t1 = std::chrono::high_resolution_clock::now();
     uint64_t sum = 0;
-    for (auto idx : indices) {
+    for (auto idx : bench_data.random_indices) {
         sum += dac_vector[idx];
     }
     t2 = std::chrono::high_resolution_clock::now();
@@ -552,11 +542,11 @@ BenchmarkResult benchmark_dac(const std::string &filename,
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
     // Range queries
-    const size_t num_range_queries = 10000;
+    const size_t num_range_queries = bench_data.range_query_indices.begin()->second.size();
     for (auto range : range_sizes) {
         if (range >= data.size()) continue;
         
-        auto range_indices = generate_range_indices(data.size(), range, num_range_queries);
+        const auto& range_indices = bench_data.range_query_indices.at(range);
         std::vector<uint64_t> out_buffer(range);
         
         t1 = std::chrono::high_resolution_clock::now();
@@ -583,25 +573,18 @@ BenchmarkResult benchmark_dac(const std::string &filename,
 
 template<typename Compressor, typename Decompressor, typename T = double>
 BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_name,
-                                                const std::string &filename,
+                                                const BenchmarkData &bench_data,
                                                 const std::vector<size_t> &range_sizes,
                                                 size_t block_size = 1000) {
     BenchmarkResult result;
     result.compressor = compressor_name;
-    result.dataset = filename;
+    result.dataset = bench_data.filename;
     
-    // Load data
-    auto loaded = load_custom_dataset(filename);
-    const auto& raw_data = loaded.data;
-    double divisor = std::pow(10.0, loaded.decimals);
-    
-    std::vector<T> data(raw_data.size());
-    for(size_t i=0; i<raw_data.size(); ++i) {
-        data[i] = static_cast<T>(raw_data[i]) / divisor;
-    }
+    // Use double data
+    const auto& data = bench_data.double_data;
     
     result.num_values = data.size();
-    result.uncompressed_bits = data.size() * sizeof(T) * 8;
+    result.uncompressed_bits = bench_data.uncompressed_bits;
     
     const size_t n = data.size();
     const size_t num_blocks = (n / block_size) + (n % block_size != 0);
@@ -613,17 +596,18 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
     auto t1 = std::chrono::high_resolution_clock::now();
     for (size_t ib = 0; ib < num_blocks; ++ib) {
         const size_t bs = std::min(block_size, n - ib * block_size);
-        auto data_block = std::vector<T>(data.begin() + ib * block_size,
-                                         data.begin() + ib * block_size + bs);
+        // Using iterators directly from the main vector
+        auto start_it = data.begin() + ib * block_size;
+        auto end_it = start_it + bs;
         
         std::unique_ptr<Compressor> cmpr;
         if constexpr (std::is_same_v<Compressor, CompressorCamel<T>>) {
-            cmpr = std::make_unique<Compressor>(*data_block.begin(), static_cast<int64_t>(loaded.decimals));
+            cmpr = std::make_unique<Compressor>(*start_it, static_cast<int64_t>(bench_data.decimals));
         } else {
-            cmpr = std::make_unique<Compressor>(*data_block.begin());
+            cmpr = std::make_unique<Compressor>(*start_it);
         }
 
-        for (auto it = data_block.begin() + 1; it < data_block.end(); ++it) {
+        for (auto it = start_it + 1; it < end_it; ++it) {
             cmpr->addValue(*it);
         }
         cmpr->close();
@@ -645,8 +629,12 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
         const size_t bs = std::min(block_size, n - ib * block_size);
         auto dcmpr = Decompressor(compressed_blocks[ib]->getBuffer(), bs);
         decompressed[offset++] = dcmpr.storedValue;
-        while (dcmpr.hasNext()) {
-            decompressed[offset++] = dcmpr.storedValue;
+        for (size_t k = 1; k < bs; ++k) {
+            if (dcmpr.hasNext()) {
+                decompressed[offset++] = dcmpr.storedValue;
+            } else {
+                break;
+            }
         }
     }
     t2 = std::chrono::high_resolution_clock::now();
@@ -655,7 +643,6 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
     
     result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
-    // Verify decompression
     for (size_t i = 0; i < n; ++i) {
         bool match = (std::abs(data[i] - decompressed[i]) < 1e-9);
 
@@ -667,14 +654,19 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
             break;
         }
     }
-    
+
     // Random access (requires block decompression)
     const size_t num_ra_queries = 100000; // Fewer queries since it's slower
-    auto indices = generate_random_indices(n, num_ra_queries);
+    // Use subset of random indices if we generated more for others?
+    // The original code used 100,000 for this, but 1,000,000 for others.
+    // bench_data.random_indices has 1,000,000. We can just take the first 100,000.
     
     t1 = std::chrono::high_resolution_clock::now();
     T sum = 0;
-    for (auto idx : indices) {
+    size_t query_count = 0;
+    for (auto idx : bench_data.random_indices) {
+        if (query_count++ >= num_ra_queries) break;
+        
         size_t ib = idx / block_size;
         size_t offset_in_block = idx % block_size;
         size_t bs = std::min(block_size, n - ib * block_size);
@@ -694,14 +686,18 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
     
     // Range queries (requires block-wise decompression)
     const size_t num_range_queries = 1000;
+    
     for (auto range : range_sizes) {
         if (range >= n) continue;
         
-        auto range_indices = generate_range_indices(n, range, num_range_queries);
+        const auto& range_indices = bench_data.range_query_indices.at(range);
         std::vector<T> out_buffer(range);
         
         t1 = std::chrono::high_resolution_clock::now();
+        size_t q_count = 0;
         for (auto start_idx : range_indices) {
+            if (q_count++ >= num_range_queries) break;
+            
             size_t start_block = start_idx / block_size;
             size_t end_block = (start_idx + range - 1) / block_size;
             
@@ -725,7 +721,9 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
                     if (out_pos < range) {
                         out_buffer[out_pos++] = dcmpr.storedValue;
                     }
-                    if (!dcmpr.hasNext()) break;
+                    if (block_start + i + 1 < copy_end) {
+                         if (!dcmpr.hasNext()) break;
+                    }
                     ++i;
                 }
             }
@@ -746,25 +744,18 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
 // ============================================================================
 
 template<typename T = double>
-BenchmarkResult benchmark_tsxor(const std::string &filename,
+BenchmarkResult benchmark_tsxor(const BenchmarkData &bench_data,
                                 const std::vector<size_t> &range_sizes,
                                 size_t block_size = 1000) {
     BenchmarkResult result;
     result.compressor = "TSXor";
-    result.dataset = filename;
+    result.dataset = bench_data.filename;
     
-    // Load data
-    auto loaded = load_custom_dataset(filename);
-    const auto& raw_data = loaded.data;
-    double divisor = std::pow(10.0, loaded.decimals);
-    
-    std::vector<T> data(raw_data.size());
-    for(size_t i=0; i<raw_data.size(); ++i) {
-        data[i] = static_cast<T>(raw_data[i]) / divisor;
-    }
+    // Use double data
+    const auto& data = bench_data.double_data;
     
     result.num_values = data.size();
-    result.uncompressed_bits = data.size() * sizeof(T) * 8;
+    result.uncompressed_bits = bench_data.uncompressed_bits;
     
     const size_t n = data.size();
     const size_t num_blocks = (n / block_size) + (n % block_size != 0);
@@ -776,11 +767,12 @@ BenchmarkResult benchmark_tsxor(const std::string &filename,
     auto t1 = std::chrono::high_resolution_clock::now();
     for (size_t ib = 0; ib < num_blocks; ++ib) {
         const size_t bs = std::min(block_size, n - ib * block_size);
-        auto data_block = std::vector<T>(data.begin() + ib * block_size,
-                                         data.begin() + ib * block_size + bs);
+        // Using iterators directly from the main vector
+        auto start_it = data.begin() + ib * block_size;
+        auto end_it = start_it + bs;
         
-        CompressorTSXor<T> cmpr(*data_block.begin());
-        for (auto it = data_block.begin() + 1; it < data_block.end(); ++it) {
+        CompressorTSXor<T> cmpr(*start_it);
+        for (auto it = start_it + 1; it < end_it; ++it) {
             cmpr.addValue(*it);
         }
         cmpr.close();
@@ -802,8 +794,12 @@ BenchmarkResult benchmark_tsxor(const std::string &filename,
         const size_t bs = std::min(block_size, n - ib * block_size);
         DecompressorTSXor<T> dcmpr(compressed_blocks[ib], bs);
         decompressed[offset++] = dcmpr.storedValue;
-        while (dcmpr.hasNext()) {
-            decompressed[offset++] = dcmpr.storedValue;
+        for (size_t k = 1; k < bs; ++k) {
+            if (dcmpr.hasNext()) {
+                decompressed[offset++] = dcmpr.storedValue;
+            } else {
+                break;
+            }
         }
     }
     t2 = std::chrono::high_resolution_clock::now();
@@ -812,7 +808,6 @@ BenchmarkResult benchmark_tsxor(const std::string &filename,
     
     result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
-    // Verify decompression
     for (size_t i = 0; i < n; ++i) {
         if (std::abs(data[i] - decompressed[i]) >= 1e-9) {
             std::cerr << "TSXor decompression error at " << i << std::endl;
@@ -822,11 +817,13 @@ BenchmarkResult benchmark_tsxor(const std::string &filename,
     
     // Random access
     const size_t num_ra_queries = 100000;
-    auto indices = generate_random_indices(n, num_ra_queries);
     
     t1 = std::chrono::high_resolution_clock::now();
     T sum = 0;
-    for (auto idx : indices) {
+    size_t q_count = 0;
+    for (auto idx : bench_data.random_indices) {
+        if (q_count++ >= num_ra_queries) break;
+        
         size_t ib = idx / block_size;
         size_t offset_in_block = idx % block_size;
         size_t bs = std::min(block_size, n - ib * block_size);
@@ -849,11 +846,14 @@ BenchmarkResult benchmark_tsxor(const std::string &filename,
     for (auto range : range_sizes) {
         if (range >= n) continue;
         
-        auto range_indices = generate_range_indices(n, range, num_range_queries);
+        const auto& range_indices = bench_data.range_query_indices.at(range);
         std::vector<T> out_buffer(range);
         
         t1 = std::chrono::high_resolution_clock::now();
+        size_t q_count_range = 0;
         for (auto start_idx : range_indices) {
+            if (q_count_range++ >= num_range_queries) break;
+            
             size_t start_block = start_idx / block_size;
             size_t end_block = (start_idx + range - 1) / block_size;
             
@@ -875,7 +875,9 @@ BenchmarkResult benchmark_tsxor(const std::string &filename,
                     if (out_pos < range) {
                         out_buffer[out_pos++] = dcmpr.storedValue;
                     }
-                    if (!dcmpr.hasNext()) break;
+                    if (block_start + i + 1 < copy_end) {
+                        if (!dcmpr.hasNext()) break;
+                    }
                     ++i;
                 }
             }
@@ -895,27 +897,18 @@ BenchmarkResult benchmark_tsxor(const std::string &filename,
 // Falcon Benchmark (uses byte vector buffer)
 // ============================================================================
 template<typename T = double>
-BenchmarkResult benchmark_falcon(const std::string &filename,
+BenchmarkResult benchmark_falcon(const BenchmarkData &bench_data,
                                  const std::vector<size_t> &range_sizes,
                                  size_t block_size = 1000) { // Default to 1000 to match your proposal
     BenchmarkResult result;
     result.compressor = "Falcon (Block-Based)";
-    result.dataset = filename;
+    result.dataset = bench_data.filename;
     
-    // -------------------------------------------------------------------------
-    // 1. Load Data
-    // -------------------------------------------------------------------------
-    auto loaded = load_custom_dataset(filename);
-    const auto& raw_data = loaded.data;
-    double divisor = std::pow(10.0, loaded.decimals);
-    
-    std::vector<T> data(raw_data.size());
-    for(size_t i=0; i<raw_data.size(); ++i) {
-        data[i] = static_cast<T>(raw_data[i]) / divisor;
-    }
+    // Use double data
+    const auto& data = bench_data.double_data;
     
     result.num_values = data.size();
-    result.uncompressed_bits = data.size() * sizeof(T) * 8;
+    result.uncompressed_bits = bench_data.uncompressed_bits;
     
     const size_t n = data.size();
     const size_t num_blocks = (n + block_size - 1) / block_size;
@@ -951,15 +944,7 @@ BenchmarkResult benchmark_falcon(const std::string &filename,
     auto t2 = std::chrono::high_resolution_clock::now();
     auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
-    // -------------------------------------------------------------------------
-    // Memory Estimation Correction
-    // -------------------------------------------------------------------------
-    // To fairly compare "RAM Usage" of the format, we must account for the Index.
-    // We generated 'num_blocks' blocks. A real system needs an offset table (uint64_t)
-    // to find where block 'i' lives.
-    size_t index_overhead_bits = num_blocks * 64; 
-    
-    result.compressed_bits = total_compressed_bits + index_overhead_bits;
+    result.compressed_bits = total_compressed_bits;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
     result.compression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
@@ -979,8 +964,12 @@ BenchmarkResult benchmark_falcon(const std::string &filename,
         // Falcon Decompressor initializes storedValue with the first item immediately
         decompressed[output_offset++] = dcmpr.storedValue;
         
-        while (dcmpr.hasNext()) {
-            decompressed[output_offset++] = dcmpr.storedValue;
+        for (size_t k = 1; k < expected_count; ++k) {
+            if (dcmpr.hasNext()) {
+                decompressed[output_offset++] = dcmpr.storedValue;
+            } else {
+                break;
+            }
         }
     }
     
@@ -989,7 +978,7 @@ BenchmarkResult benchmark_falcon(const std::string &filename,
     auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
-    // Verification
+
     for (size_t i = 0; i < n; ++i) {
         if (std::abs(data[i] - decompressed[i]) >= 1e-9) {
             std::cerr << "Falcon (Chunked) decompression error at index " << i << std::endl;
@@ -1001,12 +990,14 @@ BenchmarkResult benchmark_falcon(const std::string &filename,
     // 4. Random Access (Decompress ONLY the target block)
     // -------------------------------------------------------------------------
     const size_t num_ra_queries = 10000;
-    auto indices = generate_random_indices(n, num_ra_queries);
     
     t1 = std::chrono::high_resolution_clock::now();
     T sum = 0;
+    size_t q_count = 0;
     
-    for (auto idx : indices) {
+    for (auto idx : bench_data.random_indices) {
+        if (q_count++ >= num_ra_queries) break;
+
         size_t ib = idx / block_size;
         size_t offset_in_block = idx % block_size;
         size_t expected_count = std::min(block_size, n - ib * block_size);
@@ -1041,11 +1032,14 @@ BenchmarkResult benchmark_falcon(const std::string &filename,
     for (auto range : range_sizes) {
         if (range >= n) continue;
         
-        auto range_indices = generate_range_indices(n, range, num_range_queries);
+        const auto& range_indices = bench_data.range_query_indices.at(range);
         std::vector<T> out_buffer(range);
         
         t1 = std::chrono::high_resolution_clock::now();
+        size_t q_count_range = 0;
         for (auto start_idx : range_indices) {
+            if (q_count_range++ >= num_range_queries) break;
+            
             size_t start_block = start_idx / block_size;
             size_t end_block = (start_idx + range - 1) / block_size;
             
@@ -1100,13 +1094,13 @@ BenchmarkResult benchmark_falcon(const std::string &filename,
 #if HAS_SQUASH
 template<typename T = int64_t>
 BenchmarkResult benchmark_squash(const std::string &compressor_name,
-                                 const std::string &filename,
+                                 const BenchmarkData &bench_data,
                                  const std::vector<size_t> &range_sizes,
                                  size_t block_size = 1000,
                                  int64_t level = -1) {
     BenchmarkResult result;
     result.compressor = compressor_name;
-    result.dataset = filename;
+    result.dataset = bench_data.filename;
     // Initialize num_values to 0 to indicate invalid/incomplete result by default
     result.num_values = 0;
     
@@ -1125,17 +1119,14 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
         squash_options_parse_option(opts, "level", level_s);
     }
     
-    // Load data
-    auto loaded = load_custom_dataset(filename);
-    auto& data = loaded.data;
-    // Squash compresses raw bytes, so we can use integers directly or convert if we want
-    // Assuming we want to compress the 64-bit values as is.
+    // Use raw data
+    const auto& data = bench_data.raw_data;
     
     const size_t n = data.size();
     const size_t num_blocks = n / block_size + (n % block_size != 0);
     
     result.num_values = n;
-    result.uncompressed_bits = n * sizeof(T) * 8;
+    result.uncompressed_bits = bench_data.uncompressed_bits;
     
     // Compression
     size_t total_compressed_bits = 0;
@@ -1144,12 +1135,12 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     auto t1 = std::chrono::high_resolution_clock::now();
     for (size_t ib = 0; ib < num_blocks; ++ib) {
         const size_t bs = std::min(block_size, n - ib * block_size);
-        auto data_block = std::vector<T>(data.begin() + ib * block_size,
-                                         data.begin() + ib * block_size + bs);
+        auto start_it = data.begin() + ib * block_size;
+        auto end_it = start_it + bs;
         
         std::vector<uint8_t> data_bytes;
-        for (const auto &val : data_block) {
-            auto bytes = to_bytes<T>(val);
+        for (auto it = start_it; it != end_it; ++it) {
+            auto bytes = to_bytes<T>(*it);
             data_bytes.insert(data_bytes.end(), bytes.begin(), bytes.end());
         }
         
@@ -1196,7 +1187,6 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     
     result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
-    // Verify decompression
     for (size_t i = 0; i < n; ++i) {
         if (data[i] != decompressed[i]) {
             std::cerr << compressor_name << " decompression error at " << i << std::endl;
@@ -1206,11 +1196,13 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     
     // Random access
     const size_t num_ra_queries = 100000;
-    auto indices = generate_random_indices(n, num_ra_queries);
     
     t1 = std::chrono::high_resolution_clock::now();
     T sum = 0;
-    for (auto idx : indices) {
+    size_t q_count = 0;
+    for (auto idx : bench_data.random_indices) {
+        if (q_count++ >= num_ra_queries) break;
+        
         size_t ib = idx / block_size;
         size_t offset = idx % block_size;
         size_t bs = std::min(block_size, n - ib * block_size);
@@ -1239,11 +1231,14 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     for (auto range : range_sizes) {
         if (range >= n) continue;
         
-        auto range_indices = generate_range_indices(n, range, num_range_queries);
+        const auto& range_indices = bench_data.range_query_indices.at(range);
         std::vector<T> out_buffer(range);
         
         t1 = std::chrono::high_resolution_clock::now();
+        size_t q_count_range = 0;
         for (auto start_idx : range_indices) {
+            if (q_count_range++ >= num_range_queries) break;
+            
             size_t start_block = start_idx / block_size;
             size_t end_block = (start_idx + range - 1) / block_size;
             size_t buffer_blocks = end_block - start_block + 1;
@@ -1400,6 +1395,50 @@ int main(int argc, char *argv[]) {
     for (const auto &filename : files) {
         std::cerr << "Processing: " << filename << std::endl;
         
+        // Prepare data ONCE to avoid reloading and reprocessing for every compressor
+        BenchmarkData bench_data;
+        bench_data.filename = filename;
+        
+        try {
+            auto loaded = load_custom_dataset(filename);
+            bench_data.raw_data = std::move(loaded.data);
+            bench_data.decimals = loaded.decimals;
+            bench_data.uncompressed_bits = bench_data.raw_data.size() * sizeof(int64_t) * 8;
+            
+            // Prepare shifted data (non-negative)
+            bench_data.shifted_data.resize(bench_data.raw_data.size());
+            auto min_data = *std::min_element(bench_data.raw_data.begin(), bench_data.raw_data.end());
+            int64_t min_val = min_data < 0 ? (min_data - 1) : -1;
+            std::transform(bench_data.raw_data.begin(), bench_data.raw_data.end(), bench_data.shifted_data.begin(),
+                       [min_val](int64_t d) { return d - min_val; });
+                       
+            // Prepare double data
+            bench_data.double_data.resize(bench_data.raw_data.size());
+            // Use integer power to avoid floating-point error from std::pow
+            int64_t divisor_int = 1;
+            for (int64_t d = 0; d < bench_data.decimals; ++d) divisor_int *= 10;
+            double divisor = static_cast<double>(divisor_int);
+            for(size_t i=0; i<bench_data.raw_data.size(); ++i) {
+                bench_data.double_data[i] = static_cast<double>(bench_data.raw_data[i]) / divisor;
+            }
+            
+            // Prepare indices
+            // Generate max needed: 1,000,000 random queries
+            bench_data.random_indices = generate_random_indices(bench_data.raw_data.size(), 1000000);
+            
+            // Generate range queries
+            for(auto range : range_sizes) {
+                 if (range < bench_data.raw_data.size()) {
+                     bench_data.range_query_indices[range] = generate_range_indices(bench_data.raw_data.size(), range, 10000); // Max 10000
+                 } else {
+                     bench_data.range_query_indices[range] = {}; // Empty if range too big
+                 }
+            }
+        } catch (const std::exception &e) {
+            std::cerr << "Error loading dataset " << filename << ": " << e.what() << std::endl;
+            continue;
+        }
+        
         for (const auto &comp : compressors) {
             std::cerr << "  Running " << comp << "..." << std::flush;
             
@@ -1407,53 +1446,53 @@ int main(int argc, char *argv[]) {
             
             try {
                 if (comp == "neats") {
-                    result = benchmark_neats<int64_t>(filename, range_sizes, max_bpc);
+                    result = benchmark_neats<int64_t>(bench_data, range_sizes, max_bpc);
                 } else if (comp == "dac") {
-                    result = benchmark_dac<int64_t>(filename, range_sizes);
+                    result = benchmark_dac<int64_t>(bench_data, range_sizes);
                 } else if (comp == "rle_gef") {
                     using UP_RLE = gef::UniformedPartitioner<int64_t, RLE_GEF_Wrapper<int64_t>, std::shared_ptr<IBitVectorFactory>>;
-                    result = benchmark_gef<UP_RLE, int64_t>("rle_gef", filename, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                    result = benchmark_gef<UP_RLE, int64_t>("rle_gef", bench_data, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
                 } else if (comp == "u_gef_approximate") {
                     using UP_U = gef::UniformedPartitioner<int64_t, U_GEF_Wrapper<int64_t, gef::APPROXIMATE_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
-                    result = benchmark_gef<UP_U, int64_t>("u_gef_approximate", filename, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                    result = benchmark_gef<UP_U, int64_t>("u_gef_approximate", bench_data, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
                 } else if (comp == "u_gef_optimal") {
                     using UP_U = gef::UniformedPartitioner<int64_t, U_GEF_Wrapper<int64_t, gef::OPTIMAL_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
-                    result = benchmark_gef<UP_U, int64_t>("u_gef_optimal", filename, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                    result = benchmark_gef<UP_U, int64_t>("u_gef_optimal", bench_data, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
                 } else if (comp == "b_gef_approximate") {
                     using UP_B = gef::UniformedPartitioner<int64_t, B_GEF_Wrapper<int64_t, gef::APPROXIMATE_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
-                    result = benchmark_gef<UP_B, int64_t>("b_gef_approximate", filename, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                    result = benchmark_gef<UP_B, int64_t>("b_gef_approximate", bench_data, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
                 } else if (comp == "b_gef_optimal") {
                     using UP_B = gef::UniformedPartitioner<int64_t, B_GEF_Wrapper<int64_t, gef::OPTIMAL_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
-                    result = benchmark_gef<UP_B, int64_t>("b_gef_optimal", filename, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                    result = benchmark_gef<UP_B, int64_t>("b_gef_optimal", bench_data, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
                 } else if (comp == "b_star_gef_approximate") {
                     using UP_B_STAR = gef::UniformedPartitioner<int64_t, B_GEF_STAR_Wrapper<int64_t, gef::APPROXIMATE_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
-                    result = benchmark_gef<UP_B_STAR, int64_t>("b_star_gef_approximate", filename, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                    result = benchmark_gef<UP_B_STAR, int64_t>("b_star_gef_approximate", bench_data, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
                 } else if (comp == "b_star_gef_optimal") {
                     using UP_B_STAR = gef::UniformedPartitioner<int64_t, B_GEF_STAR_Wrapper<int64_t, gef::OPTIMAL_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
-                    result = benchmark_gef<UP_B_STAR, int64_t>("b_star_gef_optimal", filename, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                    result = benchmark_gef<UP_B_STAR, int64_t>("b_star_gef_optimal", bench_data, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
                 } else if (comp == "gorilla") {
                     result = benchmark_bitstream_compressor<CompressorGorilla<double>, DecompressorGorilla<double>, double>(
-                        "Gorilla", filename, range_sizes, block_size);
+                        "Gorilla", bench_data, range_sizes, block_size);
                 } else if (comp == "chimp") {
                     result = benchmark_bitstream_compressor<CompressorChimp<double>, DecompressorChimp<double>, double>(
-                        "Chimp", filename, range_sizes, block_size);
+                        "Chimp", bench_data, range_sizes, block_size);
                 } else if (comp == "chimp128") {
                     result = benchmark_bitstream_compressor<CompressorChimp128<double>, DecompressorChimp128<double>, double>(
-                        "Chimp128", filename, range_sizes, block_size);
+                        "Chimp128", bench_data, range_sizes, block_size);
                 } else if (comp == "tsxor") {
-                    result = benchmark_tsxor<double>(filename, range_sizes, block_size);
+                    result = benchmark_tsxor<double>(bench_data, range_sizes, block_size);
                 } else if (comp == "elf") {
                     result = benchmark_bitstream_compressor<CompressorElf<double>, DecompressorElf<double>, double>(
-                        "Elf", filename, range_sizes, block_size);
+                        "Elf", bench_data, range_sizes, block_size);
                 } else if (comp == "camel") {
                     result = benchmark_bitstream_compressor<CompressorCamel<double>, DecompressorCamel<double>, double>(
-                        "Camel", filename, range_sizes, block_size);
+                        "Camel", bench_data, range_sizes, block_size);
                 } else if (comp == "falcon") {
-                    result = benchmark_falcon<double>(filename, range_sizes);
+                    result = benchmark_falcon<double>(bench_data, range_sizes);
 #if HAS_SQUASH
                 } else if (comp == "lz4" || comp == "zstd" || comp == "brotli" || 
                            comp == "xz" || comp == "snappy") {
-                    result = benchmark_squash<int64_t>(comp, filename, range_sizes, block_size);
+                    result = benchmark_squash<int64_t>(comp, bench_data, range_sizes, block_size);
 #endif
                 } else {
                     std::cerr << " unknown compressor, skipping" << std::endl;

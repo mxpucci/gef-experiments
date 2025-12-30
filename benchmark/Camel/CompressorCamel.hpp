@@ -193,7 +193,7 @@ class CompressorCamel {
     // Compress integer part
     size_t compressIntegerValue(int64_t int_value, int intSignal) {
         int64_t diff = int_value - storedVal;
-        
+
         out.append(intSignal, 1);
         size += 1;
         
@@ -236,48 +236,28 @@ class CompressorCamel {
     
     // Compress a value (after first)
     size_t compressValue(double value) {
-        // Fallback for NaN/Inf/Overflow is handled by "escape" flag 1
-        // We also use this escape flag for values that cannot be losslessly represented by the model.
-        
-        // 1. Try to compute model representation
+        // 1. Compute model representation
         int decimal_count;
         int64_t decimal_value;
         cal_decimal_count(value, decimal_count, decimal_value);
         
-        int64_t intPart = static_cast<int64_t>(value);
-        double reconstructed = static_cast<double>(std::abs(intPart)) + 
-                             static_cast<double>(decimal_value) / powers[decimal_count];
-        if (value < 0) reconstructed = -reconstructed;
-
-        // Lossless check removed as per user request to trust precision-based truncation.
-        // We only check finiteness.
-        if (!std::isfinite(value)) {
-             // Lossless Escape for non-finite values only?
-             // Or just treat them as errors?
-             // The original code handled !isfinite in the escape block.
-             // Let's keep a minimal escape for Inf/NaN if needed, but user said "remove this fallback".
-             // If we remove it, we proceed to encode.
-             // But intPart for NaN is undefined behavior or 0?
-             // std::isfinite check was combined with fitsInInt64.
-             // If value is NaN, intPart is undef.
-             // We should probably keep escape for !isfinite.
-             
-             // Re-reading user request: "I do not want to store 64 bits explicitly. This fallback should be removed."
-             // "Let's leverage such an information and trucate by x".
-             // This implies for valid numbers.
-             // If I have NaN, I can't truncate.
-             // I'll assume inputs are finite numbers for now or that we don't care about NaN in this benchmark context (datasets are usually numbers).
-             // However, to be safe, if !isfinite, we might crash if we try to encode.
-             // But let's follow instruction "This fallback should be removed".
+        // Correctly handle values close to the next integer (e.g. 17.999...)
+        // where cal_decimal_count determines they are integers (count=0/1, val=0)
+        // but simple casting would truncate (e.g. to 17).
+        int64_t intPart;
+        double abs_val = std::abs(value);
+        
+        // Use the same epsilon as in cal_decimal_count
+        if (std::abs(abs_val - std::round(abs_val)) < 0.0000001) {
+             // It's effectively an integer, so round to nearest
+             intPart = static_cast<int64_t>(std::round(value));
+        } else {
+             intPart = static_cast<int64_t>(value);
         }
 
         // Normal Camel path: integer+decimal encoding.
-        // Removed the "false" flag (1 bit) as we no longer have a "raw value" escape path.
-        // out.push_back(false);
-        // size += 1;
-
         int intSignal = std::signbit(value) ? 0 : 1;
-        size = compressIntegerValue(static_cast<int64_t>(value), intSignal);
+        size = compressIntegerValue(intPart, intSignal);
         size = compressDecimalValue(decimal_value, decimal_count);
         
         return size;

@@ -592,21 +592,6 @@ namespace pfa {
                         result.emplace_back(f);
                         g.clear();
                         last = --i;
-                        /*
-                        for (auto j = f.starting_position; j < last; ++j) {
-                            auto approx = f(j + 1);
-                            auto y = *(begin + j);
-                            auto err = std::abs(approx - y);
-                            if (err > (epsilon + 1)) {
-                                std::cout << approx  << "!=" << y << std::endl;
-                                std::cout << "INDEX: " << i << std::endl;
-                                std::cout << "START: " << f.starting_position << std::endl;
-                                std::cout << "END: " << last << std::endl;
-                                std::cout << "ERROR" << std::endl;
-                            }
-                        }
-                        */
-
                     }
                 }
 
