@@ -409,6 +409,13 @@ namespace pfa {
                 auto lower_arg = p.second - epsilon;
                 auto upper_arg = p.second + epsilon;
                 if (lower_arg <= 0 || upper_arg <= 0) return false;
+                
+                // For very large values (> 10^8), exponential model becomes numerically unstable
+                // due to floating-point precision issues in exp() and log()
+                // This causes residual overflow in lossless compression
+                constexpr int64_t MAX_SAFE_VALUE = 100000000LL;  // 10^8
+                if (p.second > MAX_SAFE_VALUE) return false;
+                
                 // Also check that the log values won't be too extreme (avoid overflow in exp later)
                 // log(x) > 700 would cause exp(log(x)) to overflow for double
                 auto log_lower = std::log(static_cast<double>(lower_arg));
@@ -484,8 +491,14 @@ namespace pfa {
 
                 inline exponential copy(x_t s1) const {
                     auto z = static_cast<T2>(s1 - starting_position);
-                    auto exp_az = std::exp(a * z);
-                    // Guard: if exp overflows/underflows, return degenerate constant model
+                    // Guard: limit exp argument to prevent overflow/underflow
+                    // |a * z| > 30 would cause exp() to change b by factor > 10^13
+                    auto exp_arg = a * z;
+                    if (std::abs(exp_arg) > 30.0) {
+                        // Fall back to constant model to prevent numerical instability
+                        return exponential{s1, static_cast<T1>(0.0), b};
+                    }
+                    auto exp_az = std::exp(exp_arg);
                     if (!std::isfinite(exp_az) || exp_az == 0.0) {
                         return exponential{s1, static_cast<T1>(0.0), b};
                     }

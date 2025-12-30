@@ -180,7 +180,14 @@ namespace pfa::neats {
             };
 
             auto apply_simd_exponential = [](auto x, auto s, floatv_simd_t t0, floatv_simd_t t1, floatv_simd_t t2) -> intv_simd_t {
-                return stdx::static_simd_cast<intv_simd_t>(stdx::round(t2 * stdx::exp(t1 * x)));
+                auto result = t2 * stdx::exp(t1 * x);
+                // Guard: replace NaN/Inf with constant t2 prediction
+                for (size_t i = 0; i < floatv_simd_t::size(); ++i) {
+                    if (!std::isfinite(result[i])) {
+                        result[i] = t2[i];
+                    }
+                }
+                return stdx::static_simd_cast<intv_simd_t>(stdx::round(result));
             };
 
             auto apply_linear = [](auto x, auto s, float_scalar_t t0, float_scalar_t t1, float_scalar_t t2) -> int_scalar_t {
@@ -197,7 +204,12 @@ namespace pfa::neats {
             };
 
             auto apply_exponential = [](auto x, auto s, float_scalar_t t0, float_scalar_t t1, float_scalar_t t2) -> int_scalar_t {
-                return static_cast<int_scalar_t>(std::round(t2 * std::exp(t1 * x)));
+                auto result = t2 * std::exp(t1 * x);
+                // Guard: replace NaN/Inf with constant t2 prediction
+                if (!std::isfinite(result)) {
+                    result = t2;
+                }
+                return static_cast<int_scalar_t>(std::round(result));
             };
 
             x_t offset_res{0};
@@ -502,7 +514,14 @@ namespace pfa::neats {
             };
 
             auto apply_simd_exponential = [](auto x, floatv_simd_t t1, floatv_simd_t t2) -> intv_simd_t {
-                return stdx::static_simd_cast<intv_simd_t>(stdx::round(t2 * stdx::exp(t1 * x)));
+                auto result = t2 * stdx::exp(t1 * x);
+                // Guard: replace NaN/Inf with constant t2 prediction
+                for (size_t i = 0; i < floatv_simd_t::size(); ++i) {
+                    if (!std::isfinite(result[i])) {
+                        result[i] = t2[i];
+                    }
+                }
+                return stdx::static_simd_cast<intv_simd_t>(stdx::round(result));
             };
 
             auto apply_linear = [](auto x, float_scalar_t t1, float_scalar_t t2) -> int_scalar_t {
@@ -518,7 +537,12 @@ namespace pfa::neats {
             };
 
             auto apply_exponential = [](auto x, float_scalar_t t1, float_scalar_t t2) -> int_scalar_t {
-                return static_cast<int_scalar_t>(std::round(t2 * std::exp(t1 * x)));
+                auto result = t2 * std::exp(t1 * x);
+                // Guard: replace NaN/Inf with constant t2 prediction
+                if (!std::isfinite(result)) {
+                    result = t2;
+                }
+                return static_cast<int_scalar_t>(std::round(result));
             };
 
             const floatv_simd_t startv([](int i) { return i + 1; });
@@ -709,7 +733,14 @@ namespace pfa::neats {
             };
 
             auto apply_simd_exponential = [](auto x, floatv_simd_t t1, floatv_simd_t t2) -> intv_simd_t {
-                return stdx::static_simd_cast<intv_simd_t>(stdx::round(t2 * stdx::exp(t1 * x)));
+                auto result = t2 * stdx::exp(t1 * x);
+                // Guard: replace NaN/Inf with constant t2 prediction
+                for (size_t i = 0; i < floatv_simd_t::size(); ++i) {
+                    if (!std::isfinite(result[i])) {
+                        result[i] = t2[i];
+                    }
+                }
+                return stdx::static_simd_cast<intv_simd_t>(stdx::round(result));
             };
 
             auto apply_linear = [](auto x, float_scalar_t t1, float_scalar_t t2) -> int_scalar_t {
@@ -725,7 +756,12 @@ namespace pfa::neats {
             };
 
             auto apply_exponential = [](auto x, float_scalar_t t1, float_scalar_t t2) -> int_scalar_t {
-                return static_cast<int_scalar_t>(std::round(t2 * std::exp(t1 * x)));
+                auto result = t2 * std::exp(t1 * x);
+                // Guard: replace NaN/Inf with constant t2 prediction
+                if (!std::isfinite(result)) {
+                    result = t2;
+                }
+                return static_cast<int_scalar_t>(std::round(result));
             };
 
             const floatv_simd_t startv([](int i) { return i + 1; });
