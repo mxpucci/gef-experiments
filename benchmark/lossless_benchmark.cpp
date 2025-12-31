@@ -244,6 +244,7 @@ BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
     
     auto t1 = std::chrono::high_resolution_clock::now();
     compressor.partitioning(processed_data.begin(), processed_data.end());
+    asm volatile("" ::: "memory");
     auto t2 = std::chrono::high_resolution_clock::now();
     auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
@@ -253,11 +254,16 @@ BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
     
     // Full decompression
     std::vector<T> decompressed(processed_data.size());
+    volatile T decomp_checksum = 0;
     t1 = std::chrono::high_resolution_clock::now();
     compressor.simd_decompress(decompressed.data());
+    decomp_checksum += decompressed[0];
+    asm volatile("" ::: "memory");
     t2 = std::chrono::high_resolution_clock::now();
-    auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     do_not_optimize(decompressed);
+    do_not_optimize(decomp_checksum);
+    
+    auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
     result.decompression_throughput_mbs = (processed_data.size() * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
@@ -272,12 +278,13 @@ BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
     const size_t num_ra_queries = random_indices.size();
     
     t1 = std::chrono::high_resolution_clock::now();
-    T sum = 0;
+    volatile T ra_sum = 0;
     for (auto idx : random_indices) {
-        sum += compressor[idx];
+        ra_sum += compressor[idx];
     }
+    asm volatile("" ::: "memory");
     t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(sum);
+    do_not_optimize(ra_sum);
     auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
@@ -289,13 +296,17 @@ BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
         
         const auto& range_indices = range_query_indices.at(range);
         std::vector<T> out_buffer(range);
+        volatile T range_checksum = 0;
         
         t1 = std::chrono::high_resolution_clock::now();
         for (auto start_idx : range_indices) {
             compressor.simd_scan(start_idx, start_idx + range, out_buffer.data());
+            range_checksum += out_buffer[0];
             do_not_optimize(out_buffer);
         }
+        asm volatile("" ::: "memory");
         t2 = std::chrono::high_resolution_clock::now();
+        do_not_optimize(range_checksum);
         
         auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
         double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
@@ -396,6 +407,7 @@ BenchmarkResult benchmark_gef(const std::string &compressor_name,
     auto t1 = std::chrono::high_resolution_clock::now();
     // UniformedPartitioner(data, k, args...) -> Wrapper(view, factory)
     GEFType compressor(data, block_size, factory);
+    asm volatile("" ::: "memory");
     auto t2 = std::chrono::high_resolution_clock::now();
     auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
@@ -405,10 +417,14 @@ BenchmarkResult benchmark_gef(const std::string &compressor_name,
     
     // Full decompression
     std::vector<T> decompressed(data.size());
+    volatile T decomp_checksum = 0;
     t1 = std::chrono::high_resolution_clock::now();
     compressor.get_elements(0, data.size(), decompressed);
+    decomp_checksum += decompressed[0];
+    asm volatile("" ::: "memory");
     t2 = std::chrono::high_resolution_clock::now();
     do_not_optimize(decompressed);
+    do_not_optimize(decomp_checksum);
     
     auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.decompression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
@@ -424,12 +440,13 @@ BenchmarkResult benchmark_gef(const std::string &compressor_name,
     const size_t num_ra_queries = bench_data.random_indices.size();
     
     t1 = std::chrono::high_resolution_clock::now();
-    T sum = 0;
+    volatile T ra_sum = 0;
     for (auto idx : bench_data.random_indices) {
-        sum += compressor[idx];
+        ra_sum += compressor[idx];
     }
+    asm volatile("" ::: "memory");
     t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(sum);
+    do_not_optimize(ra_sum);
     auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
@@ -441,13 +458,17 @@ BenchmarkResult benchmark_gef(const std::string &compressor_name,
         
         const auto& range_indices = bench_data.range_query_indices.at(range);
         std::vector<T> out_buffer(range);
+        volatile T range_checksum = 0;
         
         t1 = std::chrono::high_resolution_clock::now();
         for (auto start_idx : range_indices) {
             compressor.get_elements(start_idx, range, out_buffer);
+            range_checksum += out_buffer[0];
             do_not_optimize(out_buffer);
         }
+        asm volatile("" ::: "memory");
         t2 = std::chrono::high_resolution_clock::now();
+        do_not_optimize(range_checksum);
         
         auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
         double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
@@ -481,6 +502,7 @@ BenchmarkResult benchmark_dac(const BenchmarkData &bench_data,
     // Compression
     auto t1 = std::chrono::high_resolution_clock::now();
     sdsl::dac_vector_dp<> dac_vector(u_data);
+    asm volatile("" ::: "memory");
     auto t2 = std::chrono::high_resolution_clock::now();
     do_not_optimize(dac_vector);
     auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
@@ -491,12 +513,16 @@ BenchmarkResult benchmark_dac(const BenchmarkData &bench_data,
     
     // Full decompression
     std::vector<uint64_t> decompressed(data.size());
+    volatile uint64_t decomp_checksum = 0;
     t1 = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < data.size(); ++i) {
         decompressed[i] = dac_vector[i];
     }
+    decomp_checksum += decompressed[0];
+    asm volatile("" ::: "memory");
     t2 = std::chrono::high_resolution_clock::now();
     do_not_optimize(decompressed);
+    do_not_optimize(decomp_checksum);
     auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
     result.decompression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
@@ -512,12 +538,13 @@ BenchmarkResult benchmark_dac(const BenchmarkData &bench_data,
     const size_t num_ra_queries = bench_data.random_indices.size();
     
     t1 = std::chrono::high_resolution_clock::now();
-    uint64_t sum = 0;
+    volatile uint64_t ra_sum = 0;
     for (auto idx : bench_data.random_indices) {
-        sum += dac_vector[idx];
+        ra_sum += dac_vector[idx];
     }
+    asm volatile("" ::: "memory");
     t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(sum);
+    do_not_optimize(ra_sum);
     auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
@@ -529,15 +556,19 @@ BenchmarkResult benchmark_dac(const BenchmarkData &bench_data,
         
         const auto& range_indices = bench_data.range_query_indices.at(range);
         std::vector<uint64_t> out_buffer(range);
+        volatile uint64_t range_checksum = 0;
         
         t1 = std::chrono::high_resolution_clock::now();
         for (auto start_idx : range_indices) {
             std::copy(dac_vector.begin() + start_idx, 
                       dac_vector.begin() + start_idx + range, 
                       out_buffer.begin());
+            range_checksum += out_buffer[0];
             do_not_optimize(out_buffer);
         }
+        asm volatile("" ::: "memory");
         t2 = std::chrono::high_resolution_clock::now();
+        do_not_optimize(range_checksum);
         
         auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
         double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
@@ -595,6 +626,7 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
         total_compressed_bits += cmpr->getSize();
         compressed_blocks.push_back(std::move(cmpr));
     }
+    asm volatile("" ::: "memory");
     auto t2 = std::chrono::high_resolution_clock::now();
     auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
@@ -604,6 +636,7 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
     
     // Full decompression
     std::vector<T> decompressed(n);
+    volatile T decomp_checksum = 0;
     t1 = std::chrono::high_resolution_clock::now();
     size_t offset = 0;
     for (size_t ib = 0; ib < num_blocks; ++ib) {
@@ -617,9 +650,12 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
                 break;
             }
         }
+        decomp_checksum += decompressed[ib * block_size];
     }
+    asm volatile("" ::: "memory");
     t2 = std::chrono::high_resolution_clock::now();
     do_not_optimize(decompressed);
+    do_not_optimize(decomp_checksum);
     auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
     result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
@@ -643,7 +679,7 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
     // bench_data.random_indices has 1,000,000. We can just take the first 100,000.
     
     t1 = std::chrono::high_resolution_clock::now();
-    T sum = 0;
+    volatile T ra_sum = 0;
     size_t query_count = 0;
     for (auto idx : bench_data.random_indices) {
         if (query_count++ >= num_ra_queries) break;
@@ -657,10 +693,11 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
         while (i < offset_in_block && dcmpr.hasNext()) {
             ++i;
         }
-        sum += dcmpr.storedValue;
+        ra_sum += dcmpr.storedValue;
     }
+    asm volatile("" ::: "memory");
     t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(sum);
+    do_not_optimize(ra_sum);
     auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
@@ -673,6 +710,7 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
         
         const auto& range_indices = bench_data.range_query_indices.at(range);
         std::vector<T> out_buffer(range);
+        volatile T range_checksum = 0;
         
         t1 = std::chrono::high_resolution_clock::now();
         size_t q_count = 0;
@@ -708,9 +746,12 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
                     ++i;
                 }
             }
+            range_checksum += out_buffer[0];
             do_not_optimize(out_buffer);
         }
+        asm volatile("" ::: "memory");
         t2 = std::chrono::high_resolution_clock::now();
+        do_not_optimize(range_checksum);
         
         auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
         double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
@@ -760,6 +801,7 @@ BenchmarkResult benchmark_tsxor(const BenchmarkData &bench_data,
         total_compressed_bits += cmpr.getSize();
         compressed_blocks[ib] = cmpr.bytes; // TSXor uses bytes member
     }
+    asm volatile("" ::: "memory");
     auto t2 = std::chrono::high_resolution_clock::now();
     auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
 
@@ -769,6 +811,7 @@ BenchmarkResult benchmark_tsxor(const BenchmarkData &bench_data,
     
     // Full decompression
     std::vector<T> decompressed(n);
+    volatile T decomp_checksum = 0;
     t1 = std::chrono::high_resolution_clock::now();
     size_t offset = 0;
     for (size_t ib = 0; ib < num_blocks; ++ib) {
@@ -782,9 +825,12 @@ BenchmarkResult benchmark_tsxor(const BenchmarkData &bench_data,
                 break;
             }
         }
+        decomp_checksum += decompressed[ib * block_size];
     }
+    asm volatile("" ::: "memory");
     t2 = std::chrono::high_resolution_clock::now();
     do_not_optimize(decompressed);
+    do_not_optimize(decomp_checksum);
     auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
     result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
@@ -800,7 +846,7 @@ BenchmarkResult benchmark_tsxor(const BenchmarkData &bench_data,
     const size_t num_ra_queries = 100000;
     
     t1 = std::chrono::high_resolution_clock::now();
-    T sum = 0;
+    volatile T ra_sum = 0;
     size_t q_count = 0;
     for (auto idx : bench_data.random_indices) {
         if (q_count++ >= num_ra_queries) break;
@@ -814,10 +860,11 @@ BenchmarkResult benchmark_tsxor(const BenchmarkData &bench_data,
         while (i < offset_in_block && dcmpr.hasNext()) {
             ++i;
         }
-        sum += dcmpr.storedValue;
+        ra_sum += dcmpr.storedValue;
     }
+    asm volatile("" ::: "memory");
     t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(sum);
+    do_not_optimize(ra_sum);
     auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
@@ -829,6 +876,7 @@ BenchmarkResult benchmark_tsxor(const BenchmarkData &bench_data,
         
         const auto& range_indices = bench_data.range_query_indices.at(range);
         std::vector<T> out_buffer(range);
+        volatile T range_checksum = 0;
         
         t1 = std::chrono::high_resolution_clock::now();
         size_t q_count_range = 0;
@@ -862,9 +910,12 @@ BenchmarkResult benchmark_tsxor(const BenchmarkData &bench_data,
                     ++i;
                 }
             }
+            range_checksum += out_buffer[0];
             do_not_optimize(out_buffer);
         }
+        asm volatile("" ::: "memory");
         t2 = std::chrono::high_resolution_clock::now();
+        do_not_optimize(range_checksum);
         
         auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
         double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
@@ -921,7 +972,7 @@ BenchmarkResult benchmark_falcon(const BenchmarkData &bench_data,
         total_compressed_bits += cmpr.getSize();
         compressed_blocks[ib] = cmpr.getOut(); 
     }
-    
+    asm volatile("" ::: "memory");
     auto t2 = std::chrono::high_resolution_clock::now();
     auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
@@ -933,6 +984,7 @@ BenchmarkResult benchmark_falcon(const BenchmarkData &bench_data,
     // 3. Full Decompression (Sanity Check & Throughput)
     // -------------------------------------------------------------------------
     std::vector<T> decompressed(n);
+    volatile T decomp_checksum = 0;
     t1 = std::chrono::high_resolution_clock::now();
     
     size_t output_offset = 0;
@@ -952,10 +1004,12 @@ BenchmarkResult benchmark_falcon(const BenchmarkData &bench_data,
                 break;
             }
         }
+        decomp_checksum += decompressed[ib * block_size];
     }
-    
+    asm volatile("" ::: "memory");
     t2 = std::chrono::high_resolution_clock::now();
     do_not_optimize(decompressed);
+    do_not_optimize(decomp_checksum);
     auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
@@ -973,7 +1027,7 @@ BenchmarkResult benchmark_falcon(const BenchmarkData &bench_data,
     const size_t num_ra_queries = 10000;
     
     t1 = std::chrono::high_resolution_clock::now();
-    T sum = 0;
+    volatile T ra_sum = 0;
     size_t q_count = 0;
     
     for (auto idx : bench_data.random_indices) {
@@ -989,18 +1043,18 @@ BenchmarkResult benchmark_falcon(const BenchmarkData &bench_data,
         // Scan to the specific offset
         size_t current_pos = 0;
         if (offset_in_block == 0) {
-            sum += dcmpr.storedValue;
+            ra_sum += dcmpr.storedValue;
         } else {
             // hasNext() advances to the next value and updates storedValue
             while (current_pos < offset_in_block && dcmpr.hasNext()) {
                 current_pos++;
             }
-            sum += dcmpr.storedValue;
+            ra_sum += dcmpr.storedValue;
         }
     }
-    
+    asm volatile("" ::: "memory");
     t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(sum);
+    do_not_optimize(ra_sum);
     
     auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
@@ -1015,6 +1069,7 @@ BenchmarkResult benchmark_falcon(const BenchmarkData &bench_data,
         
         const auto& range_indices = bench_data.range_query_indices.at(range);
         std::vector<T> out_buffer(range);
+        volatile T range_checksum = 0;
         
         t1 = std::chrono::high_resolution_clock::now();
         size_t q_count_range = 0;
@@ -1055,9 +1110,12 @@ BenchmarkResult benchmark_falcon(const BenchmarkData &bench_data,
                     if (!dcmpr.hasNext()) break; 
                 }
             }
+            range_checksum += out_buffer[0];
             do_not_optimize(out_buffer);
         }
+        asm volatile("" ::: "memory");
         t2 = std::chrono::high_resolution_clock::now();
+        do_not_optimize(range_checksum);
         
         auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
         double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
@@ -1138,6 +1196,7 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
         compressed_blocks[ib] = {compressed_data, compressed_size};
         total_compressed_bits += compressed_size * CHAR_BIT;
     }
+    asm volatile("" ::: "memory");
     auto t2 = std::chrono::high_resolution_clock::now();
     auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
@@ -1147,6 +1206,7 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     
     // Full decompression
     std::vector<T> decompressed(n);
+    volatile T decomp_checksum = 0;
     t1 = std::chrono::high_resolution_clock::now();
     for (size_t ib = 0; ib < num_blocks; ++ib) {
         const size_t bs = std::min(block_size, n - ib * block_size);
@@ -1163,10 +1223,13 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
             }
             decompressed[ib * block_size + i] = value;
         }
+        decomp_checksum += decompressed[ib * block_size];
         free(decompressed_bytes);
     }
+    asm volatile("" ::: "memory");
     t2 = std::chrono::high_resolution_clock::now();
     do_not_optimize(decompressed);
+    do_not_optimize(decomp_checksum);
     auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
     result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
@@ -1182,7 +1245,7 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     const size_t num_ra_queries = 100000;
     
     t1 = std::chrono::high_resolution_clock::now();
-    T sum = 0;
+    volatile T ra_sum = 0;
     size_t q_count = 0;
     for (auto idx : bench_data.random_indices) {
         if (q_count++ >= num_ra_queries) break;
@@ -1201,11 +1264,12 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
         for (size_t j = 0; j < sizeof(T); ++j) {
             value = (value << 8) + decompressed_bytes[offset * sizeof(T) + j];
         }
-        sum += value;
+        ra_sum += value;
         free(decompressed_bytes);
     }
+    asm volatile("" ::: "memory");
     t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(sum);
+    do_not_optimize(ra_sum);
     auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
@@ -1248,9 +1312,12 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
                 }
                 out_buffer[i] = value;
             }
+            range_checksum += out_buffer[0];
             do_not_optimize(out_buffer);
         }
+        asm volatile("" ::: "memory");
         t2 = std::chrono::high_resolution_clock::now();
+        do_not_optimize(range_checksum);
         
         auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
         double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
