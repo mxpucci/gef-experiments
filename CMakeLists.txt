@@ -110,6 +110,11 @@ if(NEATS_ALP_HYBRID_CLANG)
     endif()
 
     if(ALP_CLANGXX)
+        # ARCH_FLAGS / COMMON_OPT_FLAGS are space-separated strings. Convert them into proper argument lists
+        # so clang++ receives each flag as a separate argv entry.
+        string(REPLACE " " ";" NEATS_ALP_ARCH_FLAGS_LIST "${ARCH_FLAGS}")
+        string(REPLACE " " ";" NEATS_ALP_COMMON_OPT_FLAGS_LIST "${COMMON_OPT_FLAGS}")
+
         add_custom_command(
             OUTPUT "${NEATS_ALP_BENCH_OBJ}"
             COMMAND "${ALP_CLANGXX}"
@@ -117,8 +122,8 @@ if(NEATS_ALP_HYBRID_CLANG)
                 -o "${NEATS_ALP_BENCH_OBJ}"
                 -I"${CMAKE_CURRENT_SOURCE_DIR}/benchmark"
                 -I"${CMAKE_CURRENT_SOURCE_DIR}/lib/ALP/include"
-                ${ARCH_FLAGS}
-                ${COMMON_OPT_FLAGS}
+                ${NEATS_ALP_ARCH_FLAGS_LIST}
+                ${NEATS_ALP_COMMON_OPT_FLAGS_LIST}
                 -std=gnu++23
                 -fPIC
             DEPENDS "${NEATS_ALP_BENCH_SRC}" "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/benchmark_common.hpp"
