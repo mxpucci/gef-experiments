@@ -108,7 +108,7 @@ option(NEATS_WITH_LECO "Build LeCo support (requires Boost headers + Eigen; comp
 option(NEATS_ALP_HYBRID_CLANG "Compile ALP benchmark TU with clang++ for AVX-512 while keeping GCC for the rest" ON)
 set(NEATS_ALP_CLANGXX "" CACHE FILEPATH "Path to clang++ used for NEATS_ALP_HYBRID_CLANG (if empty, auto-detect)")
 set(NEATS_LECO_GXX "" CACHE FILEPATH "Path to g++ (GCC 11) used for LeCo (if empty, auto-detect)")
-set(NEATS_LECO_EXTRA_INCLUDES "" CACHE PATH "Extra include path for LeCo GCC 11 build (e.g., for Boost/GMP headers)")
+set(NEATS_LECO_EXTRA_INCLUDES "" CACHE STRING "Semicolon-separated extra include paths for LeCo GCC 11 build")
 
 if(NEATS_ALP_HYBRID_CLANG)
     if(NEATS_ALP_CLANGXX)
@@ -167,7 +167,9 @@ if(NEATS_WITH_LECO)
             "-I${CMAKE_CURRENT_SOURCE_DIR}/lib/Learn-to-Compress/headers"
         )
         if(NEATS_LECO_EXTRA_INCLUDES)
-            list(APPEND NEATS_LECO_INCLUDE_FLAGS "-isystem${NEATS_LECO_EXTRA_INCLUDES}")
+            foreach(inc_path IN LISTS NEATS_LECO_EXTRA_INCLUDES)
+                list(APPEND NEATS_LECO_INCLUDE_FLAGS "-isystem${inc_path}")
+            endforeach()
         endif()
 
         add_custom_command(

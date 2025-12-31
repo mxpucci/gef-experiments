@@ -120,7 +120,7 @@ jobs:
             -DNEATS_WITH_SQUASH=ON \
             -DNEATS_WITH_LECO=ON \
             -DNEATS_LECO_GXX="$GCC11_PATH/bin/x86_64-conda-linux-gnu-g++" \
-            -DNEATS_LECO_EXTRA_INCLUDES="$ENV_PATH/include" \
+            -DNEATS_LECO_EXTRA_INCLUDES="$ENV_PATH/include;$ENV_PATH/include/eigen3" \
             -DNEATS_ALP_HYBRID_CLANG=ON \
             -DNEATS_ALP_CLANGXX="$ENV_PATH/bin/clang++" \
             -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE
