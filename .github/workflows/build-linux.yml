@@ -58,8 +58,8 @@ jobs:
 
           # --- CONFIGURE COMPILER PATHS ---
           ENV_PATH="/opt/conda/envs/build-env"
-          export CFLAGS="-I$ENV_PATH/include $CFLAGS"
-          export CXXFLAGS="-I$ENV_PATH/include $CXXFLAGS"
+          export CFLAGS="-I$ENV_PATH/include -fno-openmp $CFLAGS"
+          export CXXFLAGS="-I$ENV_PATH/include -fno-openmp $CXXFLAGS"
           export LDFLAGS="-L$ENV_PATH/lib -Wl,-rpath,$ENV_PATH/lib $LDFLAGS"
           export PKG_CONFIG_PATH="$ENV_PATH/lib/pkgconfig:$PKG_CONFIG_PATH"
           
