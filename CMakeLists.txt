@@ -104,9 +104,10 @@ set(NEATS_ALP_BENCH_SRC "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/alp_benchmark.cpp
 
 # Comprehensive lossless compressor benchmark (with squash - optional)
 option(NEATS_WITH_SQUASH "Build LosslessBenchmarkFull with Squash" ON)
-option(NEATS_WITH_LECO "Build LeCo support (requires Boost headers + Eigen; LeCo headers are heavy)" OFF)
+option(NEATS_WITH_LECO "Build LeCo support (requires Boost headers + Eigen; compiled with GCC 11)" OFF)
 option(NEATS_ALP_HYBRID_CLANG "Compile ALP benchmark TU with clang++ for AVX-512 while keeping GCC for the rest" ON)
 set(NEATS_ALP_CLANGXX "" CACHE FILEPATH "Path to clang++ used for NEATS_ALP_HYBRID_CLANG (if empty, auto-detect)")
+set(NEATS_LECO_GXX "" CACHE FILEPATH "Path to g++ (GCC 11) used for LeCo (if empty, auto-detect)")
 
 if(NEATS_ALP_HYBRID_CLANG)
     if(NEATS_ALP_CLANGXX)
@@ -139,6 +140,44 @@ if(NEATS_ALP_HYBRID_CLANG)
         set_source_files_properties("${NEATS_ALP_BENCH_OBJ}" PROPERTIES GENERATED TRUE)
     else()
         message(WARNING "NEATS_ALP_HYBRID_CLANG=ON but clang++ was not found; ALP benchmark will be compiled with the main compiler (AVX-512 may be disabled on GCC).")
+    endif()
+endif()
+
+# --- LeCo benchmark TU (compiled with GCC 11 due to GCC 13 compatibility issues) ---
+set(NEATS_LECO_BENCH_OBJ "${CMAKE_CURRENT_BINARY_DIR}/leco_benchmark_gcc11.o")
+set(NEATS_LECO_BENCH_SRC "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/leco_benchmark.cpp")
+
+if(NEATS_WITH_LECO)
+    if(NEATS_LECO_GXX)
+        set(LECO_GXX "${NEATS_LECO_GXX}")
+    else()
+        find_program(LECO_GXX NAMES g++-11 g++11)
+    endif()
+
+    if(LECO_GXX)
+        message(STATUS "LeCo will be compiled with: ${LECO_GXX}")
+        
+        string(REPLACE " " ";" NEATS_LECO_ARCH_FLAGS_LIST "${ARCH_FLAGS}")
+        string(REPLACE " " ";" NEATS_LECO_COMMON_OPT_FLAGS_LIST "${COMMON_OPT_FLAGS}")
+
+        add_custom_command(
+            OUTPUT "${NEATS_LECO_BENCH_OBJ}"
+            COMMAND "${LECO_GXX}"
+                -c "${NEATS_LECO_BENCH_SRC}"
+                -o "${NEATS_LECO_BENCH_OBJ}"
+                "-I${CMAKE_CURRENT_SOURCE_DIR}/benchmark"
+                "-I${CMAKE_CURRENT_SOURCE_DIR}/lib/Learn-to-Compress/headers"
+                ${NEATS_LECO_ARCH_FLAGS_LIST}
+                ${NEATS_LECO_COMMON_OPT_FLAGS_LIST}
+                -std=gnu++17
+                -fPIC
+            DEPENDS "${NEATS_LECO_BENCH_SRC}" "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/benchmark_common.hpp"
+            VERBATIM
+        )
+        add_custom_target(neats_leco_bench_obj DEPENDS "${NEATS_LECO_BENCH_OBJ}")
+        set_source_files_properties("${NEATS_LECO_BENCH_OBJ}" PROPERTIES GENERATED TRUE)
+    else()
+        message(FATAL_ERROR "NEATS_WITH_LECO=ON but GCC 11 (g++-11) was not found. Set NEATS_LECO_GXX to the path of g++ 11.")
     endif()
 endif()
 
@@ -228,30 +267,13 @@ if(NEATS_WITH_SQUASH)
             target_sources(LosslessBenchmarkFull PRIVATE benchmark/alp_benchmark.cpp)
         endif()
         
-        # --- Optional LeCo integration ---
+        # --- Optional LeCo integration (compiled with GCC 11 in separate TU) ---
         if(NEATS_WITH_LECO)
-            include(CheckIncludeFileCXX)
-            check_include_file_cxx("boost/multiprecision/gmp.hpp" NEATS_HAS_BOOST_GMP_HPP)
-            if(NOT NEATS_HAS_BOOST_GMP_HPP)
-                message(FATAL_ERROR "NEATS_WITH_LECO=ON but Boost headers with multiprecision/gmp.hpp were not found. Install Boost headers or disable NEATS_WITH_LECO.")
-            endif()
-
-            # Find Eigen3 for LeCo, or fetch if not found
-            find_package(Eigen3 QUIET)
-            if(NOT Eigen3_FOUND)
-                message(STATUS "Eigen3 not found locally, fetching via FetchContent...")
-                FetchContent_Declare(
-                    Eigen3
-                    GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-                    GIT_TAG        3.4.0
-                    GIT_SHALLOW    TRUE
-                )
-                FetchContent_MakeAvailable(Eigen3)
-            endif()
-
             target_compile_definitions(LosslessBenchmarkFull PRIVATE NEATS_ENABLE_LECO=1)
-            target_include_directories(LosslessBenchmarkFull PRIVATE lib/Learn-to-Compress/headers)
-            target_link_libraries(LosslessBenchmarkFull PRIVATE Eigen3::Eigen)
+            if(TARGET neats_leco_bench_obj)
+                add_dependencies(LosslessBenchmarkFull neats_leco_bench_obj)
+                target_sources(LosslessBenchmarkFull PRIVATE "${NEATS_LECO_BENCH_OBJ}")
+            endif()
         endif()
         # Add RPATH so it looks in ./lib relative to binary
         target_link_options(LosslessBenchmarkFull PRIVATE "-Wl,-rpath,\$ORIGIN/lib")
@@ -300,19 +322,10 @@ if(NEATS_WITH_SQUASH)
 
         if(NEATS_WITH_LECO)
             target_compile_definitions(LosslessBenchmarkFullNoSIMD PRIVATE NEATS_ENABLE_LECO=1)
-            target_include_directories(LosslessBenchmarkFullNoSIMD PRIVATE lib/Learn-to-Compress/headers)
-            # Eigen is header-only; link the target for correct include propagation
-            find_package(Eigen3 QUIET)
-            if(NOT Eigen3_FOUND)
-                FetchContent_Declare(
-                    Eigen3
-                    GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-                    GIT_TAG        3.4.0
-                    GIT_SHALLOW    TRUE
-                )
-                FetchContent_MakeAvailable(Eigen3)
+            if(TARGET neats_leco_bench_obj)
+                add_dependencies(LosslessBenchmarkFullNoSIMD neats_leco_bench_obj)
+                target_sources(LosslessBenchmarkFullNoSIMD PRIVATE "${NEATS_LECO_BENCH_OBJ}")
             endif()
-            target_link_libraries(LosslessBenchmarkFullNoSIMD PRIVATE Eigen3::Eigen)
         endif()
         
     endif()

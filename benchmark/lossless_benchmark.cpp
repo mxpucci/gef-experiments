@@ -57,15 +57,8 @@
 #include "Falcon/CompressorFalcon.hpp"
 #include "Falcon/DecompressorFalcon.hpp"
 
-// LeCo headers
-#if defined(USE_SQUASH) && defined(NEATS_ENABLE_LECO)
-// LeCo requires Eigen and other dependencies which we assume are available when SQUASH/Full benchmark is built
-#include "piecewise_fix_integer_template.h"
-#endif
-
-// ALP benchmark is implemented in `benchmark/alp_benchmark.cpp` (optionally compiled with clang++).
-BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
-                              const std::vector<size_t> &range_sizes);
+// ALP and LeCo benchmarks are in separate translation units (alp_benchmark.cpp, leco_benchmark.cpp)
+// compiled with different compilers for compatibility. Declarations are in benchmark_common.hpp.
 
 // GEF includes
 // NOTE: When running multiple GEF compressors sequentially with SIMD and OpenMP enabled,
@@ -1074,185 +1067,8 @@ BenchmarkResult benchmark_falcon(const BenchmarkData &bench_data,
     return result;
 }
 
-// ============================================================================
-// LeCo Benchmark
-// ============================================================================
-
-#if defined(USE_SQUASH) && defined(NEATS_ENABLE_LECO)
-template<typename T = int64_t>
-BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
-                               const std::vector<size_t> &range_sizes,
-                               size_t block_size = 1000) {
-    BenchmarkResult result;
-    result.compressor = "LeCo";
-    result.dataset = bench_data.filename;
-    
-    // Use shifted data for integer compression
-    const auto& data = bench_data.shifted_data;
-    
-    result.num_values = data.size();
-    result.uncompressed_bits = bench_data.uncompressed_bits;
-    
-    const size_t n = data.size();
-    const size_t num_blocks = (n / block_size) + (n % block_size != 0);
-    
-    // Convert data to type T for LeCo (assumes T matches template)
-    // Note: LeCo seems to take pointer to data
-    
-    Codecset::Leco_int<T> codec;
-    codec.init(num_blocks, block_size);
-    
-    std::vector<uint8_t*> block_start_vec;
-    size_t total_compressed_bits = 0;
-    
-    auto t1 = std::chrono::high_resolution_clock::now();
-    for (size_t i = 0; i < num_blocks; i++) {
-        int block_length = block_size;
-        if (i == num_blocks - 1) {
-            block_length = n - (num_blocks - 1) * block_size;
-        }
-
-        uint8_t* descriptor = (uint8_t*)malloc(block_length * sizeof(T) * 4);
-        uint8_t* res = descriptor;
-        
-        // Cast data to expected type. T should be int64_t or uint64_t based on usage
-        res = codec.encodeArray8_int(reinterpret_cast<const T*>(data.data() + (i * block_size)), block_length, descriptor, i);
-        
-        uint32_t segment_size = res - descriptor;
-        // Realloc to fit exact size
-        uint8_t* exact_buf = (uint8_t*)realloc(descriptor, segment_size);
-        // If realloc moved it, fine. If it failed (unlikely for shrink), we handle it.
-        // Actually realloc might fail if size is 0, but segment_size >= 1 usually.
-        if (exact_buf) descriptor = exact_buf;
-        
-        block_start_vec.push_back(descriptor);
-        total_compressed_bits += segment_size * 8;
-    }
-    auto t2 = std::chrono::high_resolution_clock::now();
-    auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-    
-    result.compressed_bits = total_compressed_bits;
-    result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
-    result.compression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
-    
-    // Full decompression
-    std::vector<T> decompressed(n);
-    t1 = std::chrono::high_resolution_clock::now();
-    for (size_t i = 0; i < num_blocks; i++) {
-        int block_length = block_size;
-        if (i == num_blocks - 1) {
-            block_length = n - (num_blocks - 1) * block_size;
-        }
-        codec.decodeArray8(block_start_vec[i], block_length, decompressed.data() + i * block_size, i);
-    }
-    // Apply patches
-    for (auto index : codec.mul_add_diff_set) {
-        decompressed[index.first] += index.second;
-    }
-    
-    t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(decompressed);
-    auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-    
-    result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
-    
-    for (size_t i = 0; i < n; ++i) {
-        if (data[i] != decompressed[i]) {
-            std::cerr << "LeCo decompression error at " << i << std::endl;
-            break;
-        }
-    }
-    
-    // Random access
-    const size_t num_ra_queries = 10000;
-    t1 = std::chrono::high_resolution_clock::now();
-    T sum = 0;
-    size_t q_count = 0;
-    for (auto idx : bench_data.random_indices) {
-        if (q_count++ >= num_ra_queries) break;
-        
-        size_t ib = idx / block_size;
-        size_t offset_in_block = idx % block_size;
-        
-        // randomdecodeArray8 expects in, to_find (offset), out (unused?), nvalue (total size?)
-        // Signature: T randomdecodeArray8(const uint8_t *in, int to_find, uint32_t *out, size_t nvalue)
-        // nvalue parameter in decodeArray8 seems unused or used for patching?
-        // In randomdecodeArray8, nvalue is used as argument name but not used in body in the version I read?
-        // Wait, in the file I read:
-        // T randomdecodeArray8(..., size_t nvalue) { ... }
-        // It seems nvalue is not used in the body I saw (maybe used in comments).
-        // Let's pass n just in case.
-        
-        T val = codec.randomdecodeArray8(block_start_vec[ib], offset_in_block, nullptr, n);
-        sum += val;
-    }
-    t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(sum);
-    auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-    result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
-    result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
-    
-    // Range queries
-    const size_t num_range_queries = 1000;
-    for (auto range : range_sizes) {
-        if (range >= n) continue;
-        
-        const auto& range_indices = bench_data.range_query_indices.at(range);
-        std::vector<T> out_buffer(range);
-        
-        t1 = std::chrono::high_resolution_clock::now();
-        size_t q_count_range = 0;
-        for (auto start_idx : range_indices) {
-            if (q_count_range++ >= num_range_queries) break;
-            
-            size_t start_block = start_idx / block_size;
-            size_t end_block = (start_idx + range - 1) / block_size;
-            
-            // LeCo doesn't have a specific range decode function exposed clearly in the template,
-            // but we can use full decode of blocks or random access.
-            // Since we want throughput, let's simulate by decoding blocks and copying.
-            // Optimized range query might be possible but for now we do block decoding.
-            
-            size_t out_pos = 0;
-            for (size_t ib = start_block; ib <= end_block; ++ib) {
-                int block_length = block_size;
-                if (ib == num_blocks - 1) {
-                    block_length = n - (num_blocks - 1) * block_size;
-                }
-                
-                // We have to decode the whole block because LeCo is delta/linear regression based
-                // and might not support partial decode easily without seeking.
-                // The filter_range functions exist but they are for filtering, not range extraction.
-                // So we allocate a buffer for the block.
-                std::vector<T> block_buffer(block_length);
-                codec.decodeArray8(block_start_vec[ib], block_length, block_buffer.data(), ib);
-                
-                // Copy relevant part
-                size_t block_start_global = ib * block_size;
-                size_t skip = (ib == start_block) ? (start_idx - block_start_global) : 0;
-                size_t take = std::min((size_t)block_length - skip, range - out_pos);
-                
-                memcpy(out_buffer.data() + out_pos, block_buffer.data() + skip, take * sizeof(T));
-                out_pos += take;
-            }
-            do_not_optimize(out_buffer);
-        }
-        t2 = std::chrono::high_resolution_clock::now();
-        
-        auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
-        result.range_query_throughputs.emplace_back(range, throughput);
-    }
-    
-    // Cleanup
-    for(auto* ptr : block_start_vec) {
-        free(ptr);
-    }
-    
-    return result;
-}
-#endif
-
+// LeCo benchmark is in leco_benchmark.cpp (compiled with GCC 11)
+// Declaration is in benchmark_common.hpp
 
 // ============================================================================
 // Squash-based Compressor Benchmark (LZ4, ZSTD, Brotli, XZ, Snappy)
@@ -1685,7 +1501,7 @@ int main(int argc, char *argv[]) {
                 }
 #if defined(NEATS_ENABLE_LECO)
                 else if (comp == "leco") {
-                    result = benchmark_leco<int64_t>(bench_data, range_sizes, block_size);
+                    result = benchmark_leco(bench_data, range_sizes, block_size);
                 } else if (comp == "rle_gef") {
 #else
                 else if (comp == "rle_gef") {

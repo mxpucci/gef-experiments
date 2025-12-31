@@ -69,4 +69,12 @@ inline void do_not_optimize(T const &value) {
     asm volatile("" : : "r,m"(value) : "memory");
 }
 
+// External benchmark functions (compiled with different compilers for compatibility)
+// ALP: compiled with clang++ for AVX-512 support
+BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
+                              const std::vector<size_t> &range_sizes);
 
+// LeCo: compiled with GCC 11 due to GCC 13 std::is_integral<__uint128_t> conflict
+BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
+                               const std::vector<size_t> &range_sizes,
+                               size_t block_size = 1000);
