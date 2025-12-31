@@ -72,7 +72,7 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
     for (auto index : codec.mul_add_diff_set) {
         decompressed[index.first] += index.second;
     }
-    asm volatile("" ::: "memory");  // Compiler barrier before timing ends
+    compiler_barrier();  // Compiler barrier before timing ends
     t2 = std::chrono::high_resolution_clock::now();
     do_not_optimize(decompressed);
     do_not_optimize(decomp_checksum);
@@ -101,7 +101,7 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
         T val = codec.randomdecodeArray8(block_start_vec[ib], offset_in_block, nullptr, n);
         ra_sum += val;
     }
-    asm volatile("" ::: "memory");  // Compiler barrier before timing ends
+    compiler_barrier();  // Compiler barrier before timing ends
     t2 = std::chrono::high_resolution_clock::now();
     do_not_optimize(ra_sum);
     auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
@@ -145,7 +145,7 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
             range_checksum += out_buffer[0];  // Force computation
             do_not_optimize(out_buffer);
         }
-        asm volatile("" ::: "memory");  // Compiler barrier before timing ends
+        compiler_barrier();  // Compiler barrier before timing ends
         t2 = std::chrono::high_resolution_clock::now();
         do_not_optimize(range_checksum);
         

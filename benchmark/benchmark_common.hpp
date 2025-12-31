@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <atomic>
 #include <map>
 #include <ostream>
 #include <string>
@@ -67,6 +68,13 @@ struct BenchmarkData {
 template<class T>
 inline void do_not_optimize(T const &value) {
     asm volatile("" : : "r,m"(value) : "memory");
+}
+
+// Portable compiler-only barrier to prevent reordering across timing points.
+// Prefer this over inline `asm volatile("" ::: "memory")` in benchmarks to reduce
+// toolchain-specific build issues (e.g., -Werror/-pedantic).
+inline void compiler_barrier() {
+    std::atomic_signal_fence(std::memory_order_seq_cst);
 }
 
 // External benchmark functions (compiled with different compilers for compatibility)

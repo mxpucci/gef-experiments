@@ -210,7 +210,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
         // Force actual computation by reading result
         decomp_checksum += decompressed[v * VEC];
     }
-    asm volatile("" ::: "memory");  // Compiler barrier before timing ends
+    compiler_barrier();  // Compiler barrier before timing ends
     t2 = std::chrono::high_resolution_clock::now();
     do_not_optimize(decompressed);
     do_not_optimize(decomp_checksum);
@@ -260,7 +260,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
         );
         ra_sum += vec_buf[offset];
     }
-    asm volatile("" ::: "memory");  // Compiler barrier before timing ends
+    compiler_barrier();  // Compiler barrier before timing ends
     t2 = std::chrono::high_resolution_clock::now();
     do_not_optimize(ra_sum);
     auto ra_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
@@ -309,7 +309,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
             range_checksum += range_buf[0];  // Force computation
             do_not_optimize(range_buf);
         }
-        asm volatile("" ::: "memory");  // Compiler barrier before timing ends
+        compiler_barrier();  // Compiler barrier before timing ends
         t2 = std::chrono::high_resolution_clock::now();
         do_not_optimize(range_checksum);
         
