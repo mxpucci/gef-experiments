@@ -57,10 +57,13 @@
 #include "Falcon/DecompressorFalcon.hpp"
 
 // GEF includes
-// Disable OpenMP for GEF benchmarks to ensure consistent single-threaded performance
-#ifdef _OPENMP
-  #undef _OPENMP
-#endif
+// NOTE: When running multiple GEF compressors sequentially with SIMD and OpenMP enabled,
+// you may encounter a bug where subsequent compressors produce astronomically large 
+// compressed sizes (compression ratio > 100x). This manifests on Linux with AVX-512.
+//
+// WORKAROUND: Use LosslessBenchmarkFullNoSIMD which is compiled with:
+//   -DGEF_DISABLE_SIMD=1 -DGEF_DISABLE_OPENMP=1
+// These flags force sequential partition construction and scalar gap computation.
 #include "gef/UniformedPartitioner.hpp"
 #include "gef/RLE_GEF.hpp"
 #include "gef/U_GEF.hpp"
@@ -282,19 +285,14 @@ BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
     result.num_values = processed_data.size();
     result.uncompressed_bits = uncompressed_bits;
     
-    std::cerr << "[benchmark_neats_impl] Starting with processed_data.size()=" << processed_data.size() 
-              << ", max_bpc=" << (int)max_bpc << std::endl;
     
     // Use uint64_t for x_t to prevent overflow of bit offsets for large datasets
     // T1_coeff is either float (for small values) or double (for large values)
-    std::cerr << "[benchmark_neats_impl] Creating compressor..." << std::endl;
     pfa::neats::compressor<uint64_t, T, double, T1_coeff, double> compressor(max_bpc);
     
-    std::cerr << "[benchmark_neats_impl] Calling partitioning..." << std::endl;
     auto t1 = std::chrono::high_resolution_clock::now();
     compressor.partitioning(processed_data.begin(), processed_data.end());
     auto t2 = std::chrono::high_resolution_clock::now();
-    std::cerr << "[benchmark_neats_impl] Partitioning completed" << std::endl;
     auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
     result.compressed_bits = compressor.size_in_bits();
@@ -452,6 +450,14 @@ BenchmarkResult benchmark_gef(const std::string &compressor_name,
     result.compressed_bits = compressor.size_in_bytes() * 8;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
     result.compression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
+    
+    // Sanity check: compression ratio > 10 is extremely suspicious for lossless compression
+    if (result.compression_ratio > 10.0) {
+        std::cerr << "\n  WARNING: " << compressor_name << " has suspicious compression ratio " 
+                  << result.compression_ratio << " (compressed_bits=" << result.compressed_bits 
+                  << ", uncompressed_bits=" << result.uncompressed_bits << ")" << std::endl;
+        std::cerr << "    This may indicate memory corruption. Consider rebuilding with -DGEF_DISABLE_OPENMP=1" << std::endl;
+    }
     
     // Full decompression
     std::vector<T> decompressed(data.size());

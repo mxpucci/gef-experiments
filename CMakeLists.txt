@@ -165,5 +165,34 @@ if(NEATS_WITH_SQUASH)
         # Add RPATH so it looks in ./lib relative to binary
         target_link_options(LosslessBenchmarkFull PRIVATE "-Wl,-rpath,\$ORIGIN/lib")
         
+        # --- LosslessBenchmarkFullNoSIMD: Same as Full but with SIMD and OpenMP disabled ---
+        # This is a fallback for systems where AVX-512/OpenMP causes issues with GEF
+        add_executable(LosslessBenchmarkFullNoSIMD
+            benchmark/lossless_benchmark.cpp
+            benchmark/NeaTS/NeaTS.hpp
+            benchmark/NeaTS/algorithms.hpp
+        )
+        target_compile_definitions(LosslessBenchmarkFullNoSIMD PRIVATE 
+            USE_SQUASH 
+            GEF_DISABLE_SIMD=1 
+            GEF_DISABLE_OPENMP=1
+        )
+        target_link_libraries(LosslessBenchmarkFullNoSIMD
+            PRIVATE
+                sdsl
+                sux
+                gef
+                Squash::Lib
+                PkgConfig::LZ4
+                PkgConfig::ZSTD
+                PkgConfig::SNAPPY
+                PkgConfig::BROTLI
+                ZLIB::ZLIB
+                BZip2::BZip2
+                LibLZMA::LibLZMA
+                dl
+        )
+        target_link_options(LosslessBenchmarkFullNoSIMD PRIVATE "-Wl,-rpath,\$ORIGIN/lib")
+        
     endif()
 endif()

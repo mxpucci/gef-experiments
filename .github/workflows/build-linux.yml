@@ -110,15 +110,21 @@ jobs:
           cmake --build build-skylake -j
 
           # --- BUNDLE (CRITICAL FIXES HERE) ---
-          BIN="build-skylake/LosslessBenchmarkFull"
+          BIN_FULL="build-skylake/LosslessBenchmarkFull"
+          BIN_NOSIMD="build-skylake/LosslessBenchmarkFullNoSIMD"
           OUT="NeaTS-CentOS7-Skylake"
           
-          if [ ! -f "$BIN" ]; then echo "Binary not found!"; exit 1; fi
+          if [ ! -f "$BIN_FULL" ]; then echo "LosslessBenchmarkFull binary not found!"; exit 1; fi
+          if [ ! -f "$BIN_NOSIMD" ]; then echo "LosslessBenchmarkFullNoSIMD binary not found!"; exit 1; fi
           
           rm -rf "$OUT"
           mkdir -p "$OUT/lib"
-          cp -v "$BIN" "$OUT/LosslessBenchmarkFull"
+          
+          # Copy both binaries
+          cp -v "$BIN_FULL" "$OUT/LosslessBenchmarkFull"
+          cp -v "$BIN_NOSIMD" "$OUT/LosslessBenchmarkFullNoSIMD"
           patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFull"
+          patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFullNoSIMD"
 
           # 1. FLATTEN SQUASH PLUGINS
           # We copy plugins to a simple 'lib/plugins' folder to avoid path confusion
@@ -146,8 +152,8 @@ jobs:
 
           # 2. RESOLVE DEPENDENCIES (Recursive)
           echo "Resolving dependencies..."
-          # Find dependencies for the binary AND all the plugin .so files we just copied
-          find "$OUT" -type f \( -name "LosslessBenchmarkFull" -o -name "*.so" \) > binaries.txt
+          # Find dependencies for both binaries AND all the plugin .so files we just copied
+          find "$OUT" -type f \( -name "LosslessBenchmarkFull" -o -name "LosslessBenchmarkFullNoSIMD" -o -name "*.so" \) > binaries.txt
           
           cat binaries.txt | xargs ldd | awk '{print $3}' | grep -E '^/' | sort -u > libs_to_copy.txt
           
@@ -179,7 +185,8 @@ jobs:
           echo "Generating library symlinks..."
           /sbin/ldconfig -n "$OUT/lib"
 
-          # 4. CREATE RUN SCRIPT
+          # 4. CREATE RUN SCRIPTS
+          # Main run script (SIMD enabled, high performance)
           cat << 'WRAPPER' > "$OUT/run.sh"
           #!/bin/bash
           HERE="$(dirname "$(readlink -f "$0")")"
@@ -194,19 +201,27 @@ jobs:
           # Add lib to path so plugins can find dependencies (libbrotlienc.so.1)
           export LD_LIBRARY_PATH="$HERE/lib:$LD_LIBRARY_PATH"
           
-          # Debugging info
-          echo "--- DEBUG: SQUASH CONFIGURATION ---"
-          echo "Plugin path: $SQUASH_PLUGIN_PATH"
-          echo "Listing plugins:"
-          ls -R "$HERE/lib/plugins"
-          echo "Checking dependencies for brotli plugin (if found):"
-          find "$HERE/lib/plugins" -name "*brotli*" -exec ldd {} \; || true
-          echo "-----------------------------------"
-          
           exec "$HERE/LosslessBenchmarkFull" "$@"
           WRAPPER
           
+          # NoSIMD run script (fallback for GEF issues with AVX-512/OpenMP)
+          cat << 'WRAPPER' > "$OUT/run_nosimd.sh"
+          #!/bin/bash
+          # Use this script if you encounter GEF compression ratio > 100x bugs
+          # when running multiple GEF compressors sequentially.
+          HERE="$(dirname "$(readlink -f "$0")")"
+          
+          export SQUASH_PLUGIN_PATH="$HERE/lib/plugins"
+          export SQUASH_PLUGINS_PATH="$HERE/lib/plugins"
+          export SQUASH_PLUGINS="$HERE/lib/plugins"
+          export SQUASH_PLUGIN_DIR="$HERE/lib/plugins"
+          export LD_LIBRARY_PATH="$HERE/lib:$LD_LIBRARY_PATH"
+          
+          exec "$HERE/LosslessBenchmarkFullNoSIMD" "$@"
+          WRAPPER
+          
           chmod +x "$OUT/run.sh"
+          chmod +x "$OUT/run_nosimd.sh"
           chown -R $(id -u):$(id -g) "$OUT"
           EOF
           
