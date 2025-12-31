@@ -105,11 +105,13 @@ jobs:
           cd /workspace
 
           # --- BUILD PROJECT ---
+          # NOTE: NEATS_WITH_LECO=OFF because LeCo has GCC 13 compatibility bugs
+          # (redefinition of std::is_integral<__uint128_t>, popcount issues)
           cmake -S . -B build-skylake -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DARCH_FLAGS="${TARGET_ARCH}" \
             -DNEATS_WITH_SQUASH=ON \
-            -DNEATS_WITH_LECO=ON \
+            -DNEATS_WITH_LECO=OFF \
             -DNEATS_ALP_HYBRID_CLANG=ON \
             -DNEATS_ALP_CLANGXX="$ENV_PATH/bin/clang++" \
             -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE
