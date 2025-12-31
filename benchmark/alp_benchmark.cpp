@@ -27,6 +27,8 @@ struct VectorMetadata {
 };
 
 // Helper to decode a single vector using separate data streams
+// Uses the fused FALP function as per official ALP end-to-end benchmark
+// See: lib/ALP/publication/source_code/bench_end_to_end/src/benchmarks/alp/queries/q1.cpp
 inline void decode_vector(
     const VectorMetadata& meta,
     const uint64_t* ffor_stream,
@@ -34,18 +36,20 @@ inline void decode_vector(
     const uint16_t* exc_pos_stream,
     double* out_vec)
 {
-    // 1. Unpack bits to integers
-    // We point to the correct offset in the FFOR stream
-    const int64_t* packed_ptr = reinterpret_cast<const int64_t*>(ffor_stream + meta.ffor_offset);
+    // 1. FALP: Fused bit-unpacking + ALP decode in one pass (as per official implementation)
+    const uint64_t* packed_ptr = ffor_stream + meta.ffor_offset;
+    uint64_t base_u64 = static_cast<uint64_t>(meta.ffor_base);
     
-    alignas(64) int64_t temp_encoded[1024];
-    int64_t base = meta.ffor_base;
-    unffor::unffor(packed_ptr, temp_encoded, meta.bit_width, &base);
+    generated::falp::fallback::scalar::falp(
+        packed_ptr,
+        out_vec,
+        meta.bit_width,
+        &base_u64,
+        meta.factor,
+        meta.exponent
+    );
     
-    // 2. Decode integers to doubles
-    alp::decoder<double>::decode(temp_encoded, meta.factor, meta.exponent, out_vec);
-    
-    // 3. Patch Exceptions
+    // 2. Patch Exceptions (as per official implementation)
     if (meta.exc_count > 0) {
         const double* exceptions = exc_val_stream + meta.exc_val_offset;
         const uint16_t* positions = exc_pos_stream + meta.exc_pos_offset;
@@ -191,8 +195,9 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
     result.compression_throughput_mbs = (n * sizeof(double) / 1024.0 / 1024.0) / (comp_ns / 1e9);
 
-    // Full decompression
+    // Full decompression - with checksum to prevent optimization
     std::vector<double> decompressed(n_full);
+    volatile double decomp_checksum = 0;  // volatile prevents optimization
     t1 = std::chrono::high_resolution_clock::now();
     for (size_t v = 0; v < num_vecs; ++v) {
         decode_vector(
@@ -202,9 +207,13 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
             exc_pos_stream.data(),
             decompressed.data() + v * VEC
         );
+        // Force actual computation by reading result
+        decomp_checksum += decompressed[v * VEC];
     }
+    asm volatile("" ::: "memory");  // Compiler barrier before timing ends
     t2 = std::chrono::high_resolution_clock::now();
     do_not_optimize(decompressed);
+    do_not_optimize(decomp_checksum);
     auto decomp_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.decompression_throughput_mbs = (n * sizeof(double) / 1024.0 / 1024.0) / (decomp_ns / 1e9);
 
@@ -215,11 +224,24 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
             break;
         }
     }
+    
+    // Debug statistics
+    double total_bw = 0;
+    size_t zero_bw_count = 0;
+    double total_exc = 0;
+    for(const auto& m : metadata_stream) {
+        total_bw += m.bit_width;
+        if (m.bit_width == 0) zero_bw_count++;
+        total_exc += m.exc_count;
+    }
+    std::cout << "[ALP Stats] Avg BitWidth: " << total_bw / num_vecs << std::endl;
+    std::cout << "[ALP Stats] Zero BitWidth Vectors: " << zero_bw_count << "/" << num_vecs << " (" << (100.0 * zero_bw_count / num_vecs) << "%)" << std::endl;
+    std::cout << "[ALP Stats] Avg Exceptions: " << total_exc / num_vecs << std::endl;
 
-    // Random access
+    // Random access - with volatile checksum to prevent optimization
     const size_t num_ra_queries = std::min(size_t(10000), bench_data.random_indices.size());
     alignas(64) double vec_buf[VEC];
-    double sum = 0;
+    volatile double ra_sum = 0;  // volatile prevents optimization
     
     t1 = std::chrono::high_resolution_clock::now();
     for (size_t q = 0; q < num_ra_queries; ++q) {
@@ -236,16 +258,17 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
             exc_pos_stream.data(),
             vec_buf
         );
-        sum += vec_buf[offset];
+        ra_sum += vec_buf[offset];
     }
+    asm volatile("" ::: "memory");  // Compiler barrier before timing ends
     t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(sum);
+    do_not_optimize(ra_sum);
     auto ra_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
     result.random_access_ns = static_cast<double>(ra_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(double) / 1024.0 / 1024.0) / (ra_ns / 1e9);
 
-    // Range queries
+    // Range queries - with volatile checksum to prevent optimization
     const size_t num_range_queries = 1000;
     for (auto range : range_sizes) {
         if (range >= n_full) {
@@ -255,6 +278,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
         
         const auto& range_indices = bench_data.range_query_indices.at(range);
         std::vector<double> range_buf(range);
+        volatile double range_checksum = 0;  // volatile prevents optimization
         
         t1 = std::chrono::high_resolution_clock::now();
         size_t q_count = 0;
@@ -282,9 +306,12 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
                 memcpy(range_buf.data() + out_pos, vec_buf + skip, take * sizeof(double));
                 out_pos += take;
             }
+            range_checksum += range_buf[0];  // Force computation
             do_not_optimize(range_buf);
         }
+        asm volatile("" ::: "memory");  // Compiler barrier before timing ends
         t2 = std::chrono::high_resolution_clock::now();
+        do_not_optimize(range_checksum);
         
         auto range_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
         double throughput = (range * sizeof(double) * q_count / 1024.0 / 1024.0) / (range_ns / 1e9);

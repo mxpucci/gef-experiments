@@ -57,8 +57,9 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
     result.compression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
-    // Full decompression
+    // Full decompression - with checksum to prevent optimization
     std::vector<T> decompressed(n);
+    volatile T decomp_checksum = 0;  // volatile prevents optimization
     t1 = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < num_blocks; i++) {
         int block_length = block_size;
@@ -66,13 +67,15 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
             block_length = n - (num_blocks - 1) * block_size;
         }
         codec.decodeArray8(block_start_vec[i], block_length, decompressed.data() + i * block_size, i);
+        decomp_checksum += decompressed[i * block_size];  // Force computation
     }
     for (auto index : codec.mul_add_diff_set) {
         decompressed[index.first] += index.second;
     }
-    
+    asm volatile("" ::: "memory");  // Compiler barrier before timing ends
     t2 = std::chrono::high_resolution_clock::now();
     do_not_optimize(decompressed);
+    do_not_optimize(decomp_checksum);
     auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
     result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
@@ -84,10 +87,10 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
         }
     }
     
-    // Random access
+    // Random access - with volatile checksum to prevent optimization
     const size_t num_ra_queries = 10000;
+    volatile T ra_sum = 0;  // volatile prevents optimization
     t1 = std::chrono::high_resolution_clock::now();
-    T sum = 0;
     size_t q_count = 0;
     for (auto idx : bench_data.random_indices) {
         if (q_count++ >= num_ra_queries) break;
@@ -96,21 +99,23 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
         size_t offset_in_block = idx % block_size;
         
         T val = codec.randomdecodeArray8(block_start_vec[ib], offset_in_block, nullptr, n);
-        sum += val;
+        ra_sum += val;
     }
+    asm volatile("" ::: "memory");  // Compiler barrier before timing ends
     t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(sum);
+    do_not_optimize(ra_sum);
     auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
-    // Range queries
+    // Range queries - with volatile checksum to prevent optimization
     const size_t num_range_queries = 1000;
     for (auto range : range_sizes) {
         if (range >= n) continue;
         
         const auto& range_indices = bench_data.range_query_indices.at(range);
         std::vector<T> out_buffer(range);
+        volatile T range_checksum = 0;  // volatile prevents optimization
         
         t1 = std::chrono::high_resolution_clock::now();
         size_t q_count_range = 0;
@@ -137,9 +142,12 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
                 memcpy(out_buffer.data() + out_pos, block_buffer.data() + skip, take * sizeof(T));
                 out_pos += take;
             }
+            range_checksum += out_buffer[0];  // Force computation
             do_not_optimize(out_buffer);
         }
+        asm volatile("" ::: "memory");  // Compiler barrier before timing ends
         t2 = std::chrono::high_resolution_clock::now();
+        do_not_optimize(range_checksum);
         
         auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
         double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
