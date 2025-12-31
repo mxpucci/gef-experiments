@@ -112,10 +112,9 @@ jobs:
           #                2) uses deprecated 'register' keyword
           # We patch these in-place since LeCo is a submodule
           
-          # Patch 1: Wrap type_traits specializations in version guard
-          sed -i 's/^namespace std$/\n#if !defined(__GLIBCXX__) || __GLIBCXX__ < 20110325\nnamespace std/' \
-            lib/Learn-to-Compress/headers/string/leco_uint256.h
-          sed -i '/^}$/a #endif' lib/Learn-to-Compress/headers/string/leco_uint256.h
+          # Patch 1: Comment out the type_traits specializations (lines 11-25 in leco_uint256.h)
+          # These are already defined in modern libstdc++ (GCC 4.6+)
+          sed -i '11,25s/^/\/\/ PATCHED: /' lib/Learn-to-Compress/headers/string/leco_uint256.h
           
           # Patch 2: Remove deprecated 'register' keyword
           sed -i 's/register uint64_t/uint64_t/g' lib/Learn-to-Compress/headers/popcount.h
