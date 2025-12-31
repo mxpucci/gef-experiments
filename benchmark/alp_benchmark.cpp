@@ -57,6 +57,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     std::vector<int64_t> encoded(n_full);
     std::vector<uint8_t> factors(num_vecs);
     std::vector<uint8_t> exponents(num_vecs);
+    std::vector<uint8_t> bit_widths(num_vecs);  // Actual bits per value after FFOR
     std::vector<uint16_t> exc_counts(num_vecs);
     std::vector<std::vector<double>> exceptions(num_vecs);
     std::vector<std::vector<uint16_t>> exc_positions(num_vecs);
@@ -81,7 +82,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
             const size_t rg_vec_start = rg_start / VEC;
             const size_t rg_vec_end = rg_end / VEC;
             
-            // Fallback for ALP_RD or no valid combinations
+            // Fallback for ALP_RD or no valid combinations - store as exceptions
             if (stt.scheme == alp::Scheme::ALP_RD || stt.best_k_combinations.empty()) {
                 for (size_t v = rg_vec_start; v < rg_vec_end; ++v) {
                     const double* vec_in = data.data() + v * VEC;
@@ -89,6 +90,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
                     
                     factors[v] = 0;
                     exponents[v] = 0;
+                    bit_widths[v] = 0;  // No encoded values, all exceptions
                     exc_counts[v] = static_cast<uint16_t>(VEC);
                     exceptions[v].assign(vec_in, vec_in + VEC);
                     exc_positions[v].resize(VEC);
@@ -109,9 +111,15 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
                 uint16_t exc_cnt = 0;
 
                 alp::encoder<double>::encode(vec_in, exc_buf, pos_buf, &exc_cnt, vec_out, stt);
+                
+                // Analyze FFOR to get actual bit width for this vector
+                alp::bw_t bw = 0;
+                int64_t for_base = 0;
+                alp::encoder<double>::analyze_ffor(vec_out, bw, &for_base);
 
                 factors[v] = stt.fac;
                 exponents[v] = stt.exp;
+                bit_widths[v] = bw;
                 exc_counts[v] = exc_cnt;
                 if (exc_cnt > 0) {
                     exceptions[v].assign(exc_buf, exc_buf + exc_cnt);
@@ -123,16 +131,21 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     auto t2 = std::chrono::high_resolution_clock::now();
     auto comp_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
 
-    // Estimate compressed size
-    size_t comp_bytes = n_full * sizeof(int64_t);
-    comp_bytes += num_vecs * 2;  // factors + exponents
+    // Estimate compressed size using actual bit widths from FFOR
+    // Per vector: bit_width bits * VEC values + metadata
+    size_t comp_bits = 0;
     for (size_t v = 0; v < num_vecs; ++v) {
-        comp_bytes += 2;  // exc_count
-        comp_bytes += exceptions[v].size() * sizeof(double);
-        comp_bytes += exc_positions[v].size() * sizeof(uint16_t);
+        // Encoded values: bit_width bits per value
+        comp_bits += static_cast<size_t>(bit_widths[v]) * VEC;
+        // Metadata per vector: factor (8) + exponent (8) + bit_width (8) + for_base (64) + exc_count (16)
+        comp_bits += 8 + 8 + 8 + 64 + 16;
+        // Exceptions: 64 bits per exception value + 16 bits per position
+        comp_bits += exceptions[v].size() * 64;
+        comp_bits += exc_positions[v].size() * 16;
     }
+    size_t comp_bytes = (comp_bits + 7) / 8;
 
-    result.compressed_bits = comp_bytes * 8;
+    result.compressed_bits = comp_bits;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
     result.compression_throughput_mbs = (n * sizeof(double) / 1024.0 / 1024.0) / (comp_ns / 1e9);
 
