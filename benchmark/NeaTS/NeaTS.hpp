@@ -11,7 +11,7 @@
 #include <experimental/simd>
 #include <execution>
 #include <functional>
-#include <stdfloat>
+// #include <stdfloat>
 
 // Portability guard for BMI instructions
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
@@ -321,7 +321,7 @@ namespace pfa::neats {
 
             _n = n;
             std::vector<int64_t> distance(n + 1, std::numeric_limits<int64_t>::max());
-            auto nrows = std::to_underlying(poa_t::approx_fun_t::COUNT); // cols
+            auto nrows = static_cast<size_t>(poa_t::approx_fun_t::COUNT); // cols
             auto ncols = max_bpc <= 1 ? size_t{1} : size_t{max_bpc}; // rows
             auto nmodels = ncols * nrows;
             std::vector<std::pair<std::make_signed_t<x_t>, std::make_signed_t<x_t>>> frontier(nmodels, {0, 0});
@@ -1046,11 +1046,11 @@ namespace pfa::neats {
                     ostream << (uint64_t) (s.value()) << ",";
                 } else if ((typename poa_t::approx_fun_t) (mt) == poa_t::approx_fun_t::Quadratic) {
                     t0 = coefficients_t0[offset_coefficients_t0++];
-                    ostream << "," << (std::float64_t) (t0.value());
+                    ostream << "," << (double) (t0.value());
                 } else {
                     ostream << ",";
                 }
-                ostream << "," << (std::float64_t) (t1) << "," << (std::float64_t) (t2) << ",";
+                ostream << "," << (double) (t1) << "," << (double) (t2) << ",";
                 ostream << (end - start) << ",";
                 auto model = poa_t::piecewise_non_linear_approximation::make_fun((typename poa_t::approx_fun_t) (mt),
                                                                                  start, s, t0, t1, t2);
