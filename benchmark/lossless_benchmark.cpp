@@ -63,6 +63,20 @@
 #endif
 
 // ALP headers (does not depend on Squash)
+//
+// NOTE: ALP's headers enable AVX-512-specific paths when __AVX512F__ is defined.
+// In our CI toolchain (GCC), those AVX-512 paths currently fail to compile.
+// We force ALP to use its scalar fallbacks by undefining AVX-512 macros for this TU.
+// This keeps ALP functional/portable, at the cost of disabling AVX-512-accelerated paths.
+#ifdef __AVX512F__
+#undef __AVX512F__
+#endif
+#ifdef __AVX512BW__
+#undef __AVX512BW__
+#endif
+#ifdef __AVX512DQ__
+#undef __AVX512DQ__
+#endif
 #include "alp.hpp"
 
 // GEF includes
@@ -1417,10 +1431,10 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
                     const size_t w64 = words_u64_for_bw(blk.bit_width);
                     blk.packed_digits.assign(w64, 0);
                     if (w64 > 0) {
-                        fastlanes::ffor(reinterpret_cast<const uint64_t*>(encoded.data()),
-                                        blk.packed_digits.data(),
-                                        blk.bit_width,
-                                        reinterpret_cast<const uint64_t*>(&blk.base));
+                        ffor::ffor(reinterpret_cast<const uint64_t*>(encoded.data()),
+                                   blk.packed_digits.data(),
+                                   blk.bit_width,
+                                   reinterpret_cast<const uint64_t*>(&blk.base));
                     }
                 } else {
                     // ALP_RD
@@ -1449,13 +1463,13 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
                     const size_t wr = words_u64_for_bw(blk.right_bit_width);
                     blk.packed_right.assign(wr, 0);
                     if (wr > 0) {
-                        fastlanes::ffor(right_parts.data(), blk.packed_right.data(), blk.right_bit_width, &zero64);
+                        ffor::ffor(right_parts.data(), blk.packed_right.data(), blk.right_bit_width, &zero64);
                     }
 
                     const size_t wl = words_u16_for_bw(blk.left_bit_width);
                     blk.packed_left.assign(wl, 0);
                     if (wl > 0) {
-                        fastlanes::ffor(left_parts.data(), blk.packed_left.data(), blk.left_bit_width, &zero16);
+                        ffor::ffor(left_parts.data(), blk.packed_left.data(), blk.left_bit_width, &zero16);
                     }
                 }
 
@@ -1534,10 +1548,10 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
                 const uint64_t zero64 = 0;
                 const uint16_t zero16 = 0;
                 if (!blk.packed_right.empty()) {
-                    fastlanes::unffor(blk.packed_right.data(), right_out.data(), blk.right_bit_width, &zero64);
+                    unffor::unffor(blk.packed_right.data(), right_out.data(), blk.right_bit_width, &zero64);
                 }
                 if (!blk.packed_left.empty()) {
-                    fastlanes::unffor(blk.packed_left.data(), left_out.data(), blk.left_bit_width, &zero16);
+                    unffor::unffor(blk.packed_left.data(), left_out.data(), blk.left_bit_width, &zero16);
                 }
                 alp::state<double> stt;
                 stt.scheme = alp::Scheme::ALP_RD;
@@ -1613,10 +1627,10 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
             const uint64_t zero64 = 0;
             const uint16_t zero16 = 0;
             if (!blk.packed_right.empty()) {
-                fastlanes::unffor(blk.packed_right.data(), right_out.data(), blk.right_bit_width, &zero64);
+                    unffor::unffor(blk.packed_right.data(), right_out.data(), blk.right_bit_width, &zero64);
             }
             if (!blk.packed_left.empty()) {
-                fastlanes::unffor(blk.packed_left.data(), left_out.data(), blk.left_bit_width, &zero16);
+                    unffor::unffor(blk.packed_left.data(), left_out.data(), blk.left_bit_width, &zero16);
             }
             alp::state<double> stt;
             stt.scheme = alp::Scheme::ALP_RD;
@@ -1690,10 +1704,10 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
                     const uint64_t zero64 = 0;
                     const uint16_t zero16 = 0;
                     if (!blk.packed_right.empty()) {
-                        fastlanes::unffor(blk.packed_right.data(), right_out.data(), blk.right_bit_width, &zero64);
+                        unffor::unffor(blk.packed_right.data(), right_out.data(), blk.right_bit_width, &zero64);
                     }
                     if (!blk.packed_left.empty()) {
-                        fastlanes::unffor(blk.packed_left.data(), left_out.data(), blk.left_bit_width, &zero16);
+                        unffor::unffor(blk.packed_left.data(), left_out.data(), blk.left_bit_width, &zero16);
                     }
                     alp::state<double> stt;
                     stt.scheme = alp::Scheme::ALP_RD;
