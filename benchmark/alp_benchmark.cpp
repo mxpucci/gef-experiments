@@ -6,25 +6,52 @@
 #include <chrono>
 #include <cstring>
 #include <iostream>
+#include <vector>
+#include <cstdint>
 
 namespace {
 
-// Helper to decode a single vector
-inline void decode_vector(
-    const int64_t* encoded_vec,
-    uint8_t factor,
-    uint8_t exponent,
-    uint16_t exc_count,
-    const double* exceptions,
-    const uint16_t* exc_positions,
-    double* out_vec,
-    size_t VEC)
-{
-    alp::decoder<double>::decode(encoded_vec, factor, exponent, out_vec);
+// Metadata structure mirroring the authors' alp_m struct (but adapted for in-memory)
+// See: lib/ALP/publication/source_code/bench_end_to_end/src/common/runtime/Import.cpp
+struct VectorMetadata {
+    uint8_t bit_width;
+    uint8_t factor;
+    uint8_t exponent;
+    int64_t ffor_base;
+    uint16_t exc_count;
     
-    if (exc_count > 0 && exceptions != nullptr) {
-        alp::exp_c_t ec = exc_count;
-        alp::decoder<double>::patch_exceptions(out_vec, exceptions, exc_positions, &ec);
+    // Offsets into the respective data vectors
+    size_t ffor_offset;
+    size_t exc_val_offset;
+    size_t exc_pos_offset;
+};
+
+// Helper to decode a single vector using separate data streams
+inline void decode_vector(
+    const VectorMetadata& meta,
+    const uint64_t* ffor_stream,
+    const double* exc_val_stream,
+    const uint16_t* exc_pos_stream,
+    double* out_vec)
+{
+    // 1. Unpack bits to integers
+    // We point to the correct offset in the FFOR stream
+    const int64_t* packed_ptr = reinterpret_cast<const int64_t*>(ffor_stream + meta.ffor_offset);
+    
+    alignas(64) int64_t temp_encoded[1024];
+    int64_t base = meta.ffor_base;
+    unffor::unffor(packed_ptr, temp_encoded, meta.bit_width, &base);
+    
+    // 2. Decode integers to doubles
+    alp::decoder<double>::decode(temp_encoded, meta.factor, meta.exponent, out_vec);
+    
+    // 3. Patch Exceptions
+    if (meta.exc_count > 0) {
+        const double* exceptions = exc_val_stream + meta.exc_val_offset;
+        const uint16_t* positions = exc_pos_stream + meta.exc_pos_offset;
+        
+        alp::exp_c_t ec = meta.exc_count;
+        alp::decoder<double>::patch_exceptions(out_vec, exceptions, positions, &ec);
     }
 }
 
@@ -42,7 +69,6 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     result.num_values = n;
     result.uncompressed_bits = bench_data.uncompressed_bits;
 
-    // ALP works on vectors of 1024 doubles. We'll process full vectors only.
     constexpr size_t VEC = alp::config::VECTOR_SIZE;
     const size_t n_full = (n / VEC) * VEC;
     const size_t num_vecs = n_full / VEC;
@@ -53,16 +79,24 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
         return result;
     }
 
-    // Compressed storage: encoded integers + minimal metadata per vector
-    std::vector<int64_t> encoded(n_full);
-    std::vector<uint8_t> factors(num_vecs);
-    std::vector<uint8_t> exponents(num_vecs);
-    std::vector<uint8_t> bit_widths(num_vecs);  // Actual bits per value after FFOR
-    std::vector<uint16_t> exc_counts(num_vecs);
-    std::vector<std::vector<double>> exceptions(num_vecs);
-    std::vector<std::vector<uint16_t>> exc_positions(num_vecs);
+    // Faithful implementation: Split data into 4 components (Streams)
+    // 1. Metadata Stream
+    std::vector<VectorMetadata> metadata_stream;
+    metadata_stream.reserve(num_vecs);
 
-    // Sample buffer - sized for full rowgroup
+    // 2. FFOR Bitstream (Packed Integers)
+    std::vector<uint64_t> ffor_stream;
+    ffor_stream.reserve(n); // Conservative estimate
+
+    // 3. Exception Values Stream
+    std::vector<double> exc_val_stream;
+    exc_val_stream.reserve(n / 10); 
+
+    // 4. Exception Positions Stream
+    std::vector<uint16_t> exc_pos_stream;
+    exc_pos_stream.reserve(n / 10);
+
+    // Sample buffer
     constexpr size_t SAMPLE_BUF_SIZE = alp::config::ROWGROUP_SIZE;
     std::vector<double> sample_buf(SAMPLE_BUF_SIZE);
 
@@ -82,48 +116,59 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
             const size_t rg_vec_start = rg_start / VEC;
             const size_t rg_vec_end = rg_end / VEC;
             
-            // Fallback for ALP_RD or no valid combinations - store as exceptions
-            if (stt.scheme == alp::Scheme::ALP_RD || stt.best_k_combinations.empty()) {
-                for (size_t v = rg_vec_start; v < rg_vec_end; ++v) {
-                    const double* vec_in = data.data() + v * VEC;
-                    int64_t* vec_out = encoded.data() + v * VEC;
-                    
-                    factors[v] = 0;
-                    exponents[v] = 0;
-                    bit_widths[v] = 0;  // No encoded values, all exceptions
-                    exc_counts[v] = static_cast<uint16_t>(VEC);
-                    exceptions[v].assign(vec_in, vec_in + VEC);
-                    exc_positions[v].resize(VEC);
-                    for (size_t i = 0; i < VEC; ++i) {
-                        exc_positions[v][i] = static_cast<uint16_t>(i);
-                        vec_out[i] = 0;
-                    }
-                }
-                continue;
-            }
-            
             for (size_t v = rg_vec_start; v < rg_vec_end; ++v) {
                 const double* vec_in = data.data() + v * VEC;
-                int64_t* vec_out = encoded.data() + v * VEC;
                 
+                alignas(64) int64_t temp_encoded[VEC]; 
                 alignas(64) double exc_buf[VEC] = {};
                 alignas(64) uint16_t pos_buf[VEC] = {};
                 uint16_t exc_cnt = 0;
-
-                alp::encoder<double>::encode(vec_in, exc_buf, pos_buf, &exc_cnt, vec_out, stt);
                 
-                // Analyze FFOR to get actual bit width for this vector
                 alp::bw_t bw = 0;
                 int64_t for_base = 0;
-                alp::encoder<double>::analyze_ffor(vec_out, bw, &for_base);
+                uint8_t fac = 0;
+                uint8_t exp = 0;
 
-                factors[v] = stt.fac;
-                exponents[v] = stt.exp;
-                bit_widths[v] = bw;
-                exc_counts[v] = exc_cnt;
+                if (stt.scheme == alp::Scheme::ALP_RD || stt.best_k_combinations.empty()) {
+                    // Fallback
+                    bw = 0;
+                    for_base = 0;
+                    fac = 0;
+                    exp = 0;
+                    exc_cnt = static_cast<uint16_t>(VEC);
+                    std::copy(vec_in, vec_in + VEC, exc_buf);
+                    for(uint16_t i=0; i<VEC; ++i) pos_buf[i] = i;
+                } else {
+                    alp::encoder<double>::encode(vec_in, exc_buf, pos_buf, &exc_cnt, temp_encoded, stt);
+                    alp::encoder<double>::analyze_ffor(temp_encoded, bw, &for_base);
+                    fac = stt.fac;
+                    exp = stt.exp;
+                }
+
+                // Store Metadata
+                VectorMetadata meta;
+                meta.bit_width = bw;
+                meta.factor = fac;
+                meta.exponent = exp;
+                meta.ffor_base = for_base;
+                meta.exc_count = exc_cnt;
+                meta.ffor_offset = ffor_stream.size(); // Index in 64-bit words
+                meta.exc_val_offset = exc_val_stream.size();
+                meta.exc_pos_offset = exc_pos_stream.size();
+                metadata_stream.push_back(meta);
+
+                // Store FFOR Data
+                if (bw > 0) {
+                    size_t ffor_words = (VEC * bw + 63) / 64;
+                    size_t current_size = ffor_stream.size();
+                    ffor_stream.resize(current_size + ffor_words);
+                    ffor::ffor(temp_encoded, reinterpret_cast<int64_t*>(&ffor_stream[current_size]), bw, &for_base);
+                }
+
+                // Store Exceptions
                 if (exc_cnt > 0) {
-                    exceptions[v].assign(exc_buf, exc_buf + exc_cnt);
-                    exc_positions[v].assign(pos_buf, pos_buf + exc_cnt);
+                    exc_val_stream.insert(exc_val_stream.end(), exc_buf, exc_buf + exc_cnt);
+                    exc_pos_stream.insert(exc_pos_stream.end(), pos_buf, pos_buf + exc_cnt);
                 }
             }
         }
@@ -131,36 +176,31 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     auto t2 = std::chrono::high_resolution_clock::now();
     auto comp_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
 
-    // Estimate compressed size using actual bit widths from FFOR
-    // Per vector: bit_width bits * VEC values + metadata
+    // Calculate compressed size (sum of all 4 streams)
     size_t comp_bits = 0;
-    for (size_t v = 0; v < num_vecs; ++v) {
-        // Encoded values: bit_width bits per value
-        comp_bits += static_cast<size_t>(bit_widths[v]) * VEC;
-        // Metadata per vector: factor (8) + exponent (8) + bit_width (8) + for_base (64) + exc_count (16)
-        comp_bits += 8 + 8 + 8 + 64 + 16;
-        // Exceptions: 64 bits per exception value + 16 bits per position
-        comp_bits += exceptions[v].size() * 64;
-        comp_bits += exc_positions[v].size() * 16;
-    }
-    size_t comp_bytes = (comp_bits + 7) / 8;
-
+    // 1. Metadata: 128 bits per vector (16 bytes conservative struct size)
+    comp_bits += metadata_stream.size() * 128; 
+    // 2. FFOR: 64 bits per word
+    comp_bits += ffor_stream.size() * 64;
+    // 3. Exceptions: 64 bits per value
+    comp_bits += exc_val_stream.size() * 64;
+    // 4. Positions: 16 bits per position
+    comp_bits += exc_pos_stream.size() * 16;
+    
     result.compressed_bits = comp_bits;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
     result.compression_throughput_mbs = (n * sizeof(double) / 1024.0 / 1024.0) / (comp_ns / 1e9);
 
-    // Full decompression (consistent with other compressors: use full buffer)
+    // Full decompression
     std::vector<double> decompressed(n_full);
     t1 = std::chrono::high_resolution_clock::now();
     for (size_t v = 0; v < num_vecs; ++v) {
         decode_vector(
-            encoded.data() + v * VEC,
-            factors[v], exponents[v],
-            exc_counts[v],
-            exceptions[v].empty() ? nullptr : exceptions[v].data(),
-            exc_positions[v].empty() ? nullptr : exc_positions[v].data(),
-            decompressed.data() + v * VEC,
-            VEC
+            metadata_stream[v],
+            ffor_stream.data(),
+            exc_val_stream.data(),
+            exc_pos_stream.data(),
+            decompressed.data() + v * VEC
         );
     }
     t2 = std::chrono::high_resolution_clock::now();
@@ -176,7 +216,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
         }
     }
 
-    // Random access: decode the vector containing the queried index
+    // Random access
     const size_t num_ra_queries = std::min(size_t(10000), bench_data.random_indices.size());
     alignas(64) double vec_buf[VEC];
     double sum = 0;
@@ -190,13 +230,11 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
         size_t offset = idx % VEC;
         
         decode_vector(
-            encoded.data() + vec_idx * VEC,
-            factors[vec_idx], exponents[vec_idx],
-            exc_counts[vec_idx],
-            exceptions[vec_idx].empty() ? nullptr : exceptions[vec_idx].data(),
-            exc_positions[vec_idx].empty() ? nullptr : exc_positions[vec_idx].data(),
-            vec_buf,
-            VEC
+            metadata_stream[vec_idx],
+            ffor_stream.data(),
+            exc_val_stream.data(),
+            exc_pos_stream.data(),
+            vec_buf
         );
         sum += vec_buf[offset];
     }
@@ -207,7 +245,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     result.random_access_ns = static_cast<double>(ra_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(double) / 1024.0 / 1024.0) / (ra_ns / 1e9);
 
-    // Range queries: decode all vectors overlapping the range
+    // Range queries
     const size_t num_range_queries = 1000;
     for (auto range : range_sizes) {
         if (range >= n_full) {
@@ -230,13 +268,11 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
             
             for (size_t v = start_vec; v <= end_vec && v < num_vecs; ++v) {
                 decode_vector(
-                    encoded.data() + v * VEC,
-                    factors[v], exponents[v],
-                    exc_counts[v],
-                    exceptions[v].empty() ? nullptr : exceptions[v].data(),
-                    exc_positions[v].empty() ? nullptr : exc_positions[v].data(),
-                    vec_buf,
-                    VEC
+                    metadata_stream[v],
+                    ffor_stream.data(),
+                    exc_val_stream.data(),
+                    exc_pos_stream.data(),
+                    vec_buf
                 );
                 
                 size_t vec_start_global = v * VEC;
