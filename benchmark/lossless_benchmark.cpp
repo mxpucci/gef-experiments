@@ -64,18 +64,20 @@
 
 // ALP headers (does not depend on Squash)
 //
-// NOTE: ALP's headers enable AVX-512-specific paths when __AVX512F__ is defined.
-// In our CI toolchain (GCC), those AVX-512 paths currently fail to compile.
-// We force ALP to use its scalar fallbacks by undefining AVX-512 macros for this TU.
-// This keeps ALP functional/portable, at the cost of disabling AVX-512-accelerated paths.
-#ifdef __AVX512F__
-#undef __AVX512F__
-#endif
-#ifdef __AVX512BW__
-#undef __AVX512BW__
-#endif
-#ifdef __AVX512DQ__
-#undef __AVX512DQ__
+// NOTE: ALP enables AVX-512-specific code paths when __AVX512F__ is defined.
+// Under GCC (as used in our CentOS7 manylinux CI), those AVX-512 paths currently fail to compile.
+// To keep things **fair** (i.e., still SIMD), we only disable *AVX-512* for GCC builds, but keep AVX2.
+// When compiling with Clang, we keep AVX-512 enabled as intended by ALP.
+#if defined(__GNUC__) && !defined(__clang__)
+  #ifdef __AVX512F__
+    #undef __AVX512F__
+  #endif
+  #ifdef __AVX512BW__
+    #undef __AVX512BW__
+  #endif
+  #ifdef __AVX512DQ__
+    #undef __AVX512DQ__
+  #endif
 #endif
 #include "alp.hpp"
 
