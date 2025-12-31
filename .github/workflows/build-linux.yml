@@ -48,7 +48,8 @@ jobs:
             cmake ninja pkg-config make \
             ragel patchelf \
             brotli zlib lz4-c zstd snappy xz bzip2 \
-            liblzma-devel
+            liblzma-devel \
+            boost-cpp gmp gmpxx
 
           # --- ACTIVATE ENVIRONMENT ---
           set +u
@@ -107,6 +108,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DARCH_FLAGS="${TARGET_ARCH}" \
             -DNEATS_WITH_SQUASH=ON \
+            -DNEATS_WITH_LECO=ON \
             -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE
           cmake --build build-skylake -j
 
