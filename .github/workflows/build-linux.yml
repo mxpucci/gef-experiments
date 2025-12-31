@@ -45,6 +45,7 @@ jobs:
           export MAMBA_ROOT_PREFIX=/opt/conda
           micromamba create -y -n build-env -c conda-forge \
             gcc_linux-64=13 gxx_linux-64=13 \
+            clang clangxx \
             cmake ninja pkg-config make \
             ragel patchelf \
             brotli zlib lz4-c zstd snappy xz bzip2 \
@@ -109,6 +110,8 @@ jobs:
             -DARCH_FLAGS="${TARGET_ARCH}" \
             -DNEATS_WITH_SQUASH=ON \
             -DNEATS_WITH_LECO=ON \
+            -DNEATS_ALP_HYBRID_CLANG=ON \
+            -DNEATS_ALP_CLANGXX="$ENV_PATH/bin/clang++" \
             -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE
           cmake --build build-skylake -j
 

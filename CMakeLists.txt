@@ -98,15 +98,56 @@ add_library(neats_alp STATIC
 target_include_directories(neats_alp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/ALP/include)
 target_compile_options(neats_alp PUBLIC -fPIC)
 
+# --- ALP benchmark TU (optional clang++ hybrid build) ---
+set(NEATS_ALP_BENCH_OBJ "${CMAKE_CURRENT_BINARY_DIR}/alp_benchmark_clang.o")
+set(NEATS_ALP_BENCH_SRC "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/alp_benchmark.cpp")
+
+if(NEATS_ALP_HYBRID_CLANG)
+    if(NEATS_ALP_CLANGXX)
+        set(ALP_CLANGXX "${NEATS_ALP_CLANGXX}")
+    else()
+        find_program(ALP_CLANGXX NAMES clang++ clang++-18 clang++-17 clang++-16)
+    endif()
+
+    if(ALP_CLANGXX)
+        add_custom_command(
+            OUTPUT "${NEATS_ALP_BENCH_OBJ}"
+            COMMAND "${ALP_CLANGXX}"
+                -c "${NEATS_ALP_BENCH_SRC}"
+                -o "${NEATS_ALP_BENCH_OBJ}"
+                -I"${CMAKE_CURRENT_SOURCE_DIR}/benchmark"
+                -I"${CMAKE_CURRENT_SOURCE_DIR}/lib/ALP/include"
+                ${ARCH_FLAGS}
+                ${COMMON_OPT_FLAGS}
+                -std=gnu++23
+                -fPIC
+            DEPENDS "${NEATS_ALP_BENCH_SRC}" "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/benchmark_common.hpp"
+            VERBATIM
+        )
+        add_custom_target(neats_alp_bench_obj DEPENDS "${NEATS_ALP_BENCH_OBJ}")
+        set_source_files_properties("${NEATS_ALP_BENCH_OBJ}" PROPERTIES GENERATED TRUE)
+    else()
+        message(WARNING "NEATS_ALP_HYBRID_CLANG=ON but clang++ was not found; ALP benchmark will be compiled with the main compiler (AVX-512 may be disabled on GCC).")
+    endif()
+endif()
+
 # Comprehensive lossless compressor benchmark (without squash)
 add_executable(LosslessBenchmark benchmark/lossless_benchmark.cpp
         benchmark/NeaTS/NeaTS.hpp
         benchmark/NeaTS/algorithms.hpp)
 target_link_libraries(LosslessBenchmark sdsl sux gef neats_alp)
+if(TARGET neats_alp_bench_obj)
+    add_dependencies(LosslessBenchmark neats_alp_bench_obj)
+    target_sources(LosslessBenchmark PRIVATE "${NEATS_ALP_BENCH_OBJ}")
+else()
+    target_sources(LosslessBenchmark PRIVATE benchmark/alp_benchmark.cpp)
+endif()
 
 # Comprehensive lossless compressor benchmark (with squash - optional)
 option(NEATS_WITH_SQUASH "Build LosslessBenchmarkFull with Squash" ON)
 option(NEATS_WITH_LECO "Build LeCo support (requires Boost headers + Eigen; LeCo headers are heavy)" OFF)
+option(NEATS_ALP_HYBRID_CLANG "Compile ALP benchmark TU with clang++ for AVX-512 while keeping GCC for the rest" ON)
+set(NEATS_ALP_CLANGXX "" CACHE FILEPATH "Path to clang++ used for NEATS_ALP_HYBRID_CLANG (if empty, auto-detect)")
 
 if(NEATS_WITH_SQUASH)
     set(SQUASH_ROOT "/usr/local")
@@ -175,6 +216,12 @@ if(NEATS_WITH_SQUASH)
                 LibLZMA::LibLZMA
                 dl
         )
+        if(TARGET neats_alp_bench_obj)
+            add_dependencies(LosslessBenchmarkFull neats_alp_bench_obj)
+            target_sources(LosslessBenchmarkFull PRIVATE "${NEATS_ALP_BENCH_OBJ}")
+        else()
+            target_sources(LosslessBenchmarkFull PRIVATE benchmark/alp_benchmark.cpp)
+        endif()
         
         # --- Optional LeCo integration ---
         if(NEATS_WITH_LECO)
@@ -238,6 +285,12 @@ if(NEATS_WITH_SQUASH)
                 LibLZMA::LibLZMA
                 dl
         )
+        if(TARGET neats_alp_bench_obj)
+            add_dependencies(LosslessBenchmarkFullNoSIMD neats_alp_bench_obj)
+            target_sources(LosslessBenchmarkFullNoSIMD PRIVATE "${NEATS_ALP_BENCH_OBJ}")
+        else()
+            target_sources(LosslessBenchmarkFullNoSIMD PRIVATE benchmark/alp_benchmark.cpp)
+        endif()
         target_link_options(LosslessBenchmarkFullNoSIMD PRIVATE "-Wl,-rpath,\$ORIGIN/lib")
 
         if(NEATS_WITH_LECO)
