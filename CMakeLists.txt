@@ -145,7 +145,7 @@ if(NEATS_WITH_SQUASH)
             benchmark/NeaTS/NeaTS.hpp
             benchmark/NeaTS/algorithms.hpp
         )
-        target_compile_definitions(LosslessBenchmarkFull PRIVATE USE_SQUASH)
+        target_compile_definitions(LosslessBenchmarkFull PRIVATE USE_SQUASH GEF_DISABLE_OPENMP=1)
 
         target_link_libraries(LosslessBenchmarkFull
             PRIVATE
@@ -176,6 +176,12 @@ if(NEATS_WITH_SQUASH)
             USE_SQUASH 
             GEF_DISABLE_SIMD=1 
             GEF_DISABLE_OPENMP=1
+        )
+        # Disable compiler auto-vectorization to avoid AVX-512 issues even when targeting skylake-avx512
+        # This ensures truly scalar execution for debugging memory corruption issues
+        target_compile_options(LosslessBenchmarkFullNoSIMD PRIVATE
+            -fno-tree-vectorize      # Disable GCC tree vectorizer
+            -fno-tree-slp-vectorize  # Disable SLP vectorizer  
         )
         target_link_libraries(LosslessBenchmarkFullNoSIMD
             PRIVATE
