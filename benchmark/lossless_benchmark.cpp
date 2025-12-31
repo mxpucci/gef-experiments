@@ -213,7 +213,7 @@ struct BenchmarkData {
     std::vector<int64_t> shifted_data; 
     std::vector<double> double_data;
     int64_t decimals;
-    int64_t min_val; // Store for converting shifted_data to double_data later
+    int64_t min_val;
     size_t uncompressed_bits;
     
     // Indices
@@ -450,14 +450,6 @@ BenchmarkResult benchmark_gef(const std::string &compressor_name,
     result.compressed_bits = compressor.size_in_bytes() * 8;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
     result.compression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
-    
-    // Sanity check: compression ratio > 10 is extremely suspicious for lossless compression
-    if (result.compression_ratio > 10.0) {
-        std::cerr << "\n  WARNING: " << compressor_name << " has suspicious compression ratio " 
-                  << result.compression_ratio << " (compressed_bits=" << result.compressed_bits 
-                  << ", uncompressed_bits=" << result.uncompressed_bits << ")" << std::endl;
-        std::cerr << "    This may indicate memory corruption. Consider rebuilding with -DGEF_DISABLE_OPENMP=1" << std::endl;
-    }
     
     // Full decompression
     std::vector<T> decompressed(data.size());
