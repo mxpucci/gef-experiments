@@ -45,18 +45,15 @@ jobs:
           export MAMBA_ROOT_PREFIX=/opt/conda
           
           # Main build environment with GCC 13 + Clang
+          # libc++ needed for LeCo (avoids libstdc++ type_traits conflicts)
           micromamba create -y -n build-env -c conda-forge \
             gcc_linux-64=13 gxx_linux-64=13 \
-            clang clangxx \
+            clang clangxx libcxx \
             cmake ninja pkg-config make \
             ragel patchelf \
             brotli zlib lz4-c zstd snappy xz bzip2 \
             liblzma-devel \
             boost-cpp gmp eigen
-          
-          # Secondary environment with GCC 11 for LeCo (incompatible with GCC 13's libstdc++)
-          micromamba create -y -n gcc11-env -c conda-forge \
-            gcc_linux-64=11 gxx_linux-64=11
 
           # --- ACTIVATE ENVIRONMENT ---
           set +u
@@ -111,15 +108,13 @@ jobs:
           cd /workspace
 
           # --- BUILD PROJECT ---
-          # LeCo is compiled with GCC 11 (in separate TU) due to GCC 13 compatibility issues
-          # Boost/GMP headers are in build-env, so we pass that as extra includes for LeCo
-          GCC11_PATH="/opt/conda/envs/gcc11-env"
+          # LeCo is compiled with Clang + libc++ to avoid libstdc++ type_traits conflicts
+          # Boost/GMP/Eigen headers are in build-env
           cmake -S . -B build-skylake -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DARCH_FLAGS="${TARGET_ARCH}" \
             -DNEATS_WITH_SQUASH=ON \
             -DNEATS_WITH_LECO=ON \
-            -DNEATS_LECO_GXX="$GCC11_PATH/bin/x86_64-conda-linux-gnu-g++" \
             -DNEATS_LECO_EXTRA_INCLUDES="$ENV_PATH/include;$ENV_PATH/include/eigen3" \
             -DNEATS_ALP_HYBRID_CLANG=ON \
             -DNEATS_ALP_CLANGXX="$ENV_PATH/bin/clang++" \
