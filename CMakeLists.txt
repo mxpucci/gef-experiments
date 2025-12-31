@@ -126,8 +126,8 @@ if(NEATS_ALP_HYBRID_CLANG)
             COMMAND "${ALP_CLANGXX}"
                 -c "${NEATS_ALP_BENCH_SRC}"
                 -o "${NEATS_ALP_BENCH_OBJ}"
-                -I"${CMAKE_CURRENT_SOURCE_DIR}/benchmark"
-                -I"${CMAKE_CURRENT_SOURCE_DIR}/lib/ALP/include"
+                "-I${CMAKE_CURRENT_SOURCE_DIR}/benchmark"
+                "-I${CMAKE_CURRENT_SOURCE_DIR}/lib/ALP/include"
                 ${NEATS_ALP_ARCH_FLAGS_LIST}
                 ${NEATS_ALP_COMMON_OPT_FLAGS_LIST}
                 -std=gnu++23
