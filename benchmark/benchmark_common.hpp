@@ -67,7 +67,17 @@ struct BenchmarkData {
 
 template<class T>
 inline void do_not_optimize(T const &value) {
-    asm volatile("" : : "r,m"(value) : "memory");
+    // Prefer a portable implementation when building with strict toolchains.
+    // GNU/Clang inline asm gives the strongest "use" semantics; otherwise fall back
+    // to a compiler-only fence + volatile address-take.
+#if defined(__GNUC__) || defined(__clang__)
+    asm volatile("" : : "g"(value) : "memory");
+#else
+    std::atomic_signal_fence(std::memory_order_seq_cst);
+    auto const volatile* p = &value;
+    (void)p;
+    std::atomic_signal_fence(std::memory_order_seq_cst);
+#endif
 }
 
 // Portable compiler-only barrier to prevent reordering across timing points.

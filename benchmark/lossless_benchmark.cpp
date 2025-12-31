@@ -1281,6 +1281,7 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
         
         const auto& range_indices = bench_data.range_query_indices.at(range);
         std::vector<T> out_buffer(range);
+        volatile T range_checksum = 0;
         
         t1 = std::chrono::high_resolution_clock::now();
         size_t q_count_range = 0;
