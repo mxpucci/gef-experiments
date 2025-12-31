@@ -106,7 +106,8 @@ jobs:
           cmake -S . -B build-skylake -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DARCH_FLAGS="${TARGET_ARCH}" \
-            -DNEATS_WITH_SQUASH=ON
+            -DNEATS_WITH_SQUASH=ON \
+            -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE
           cmake --build build-skylake -j
 
           # --- BUNDLE (CRITICAL FIXES HERE) ---
