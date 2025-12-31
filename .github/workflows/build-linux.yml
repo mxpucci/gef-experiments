@@ -49,7 +49,7 @@ jobs:
             ragel patchelf \
             brotli zlib lz4-c zstd snappy xz bzip2 \
             liblzma-devel \
-            boost-cpp gmp gmpxx
+            boost-cpp gmp
 
           # --- ACTIVATE ENVIRONMENT ---
           set +u
