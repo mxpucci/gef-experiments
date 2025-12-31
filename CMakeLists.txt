@@ -110,36 +110,55 @@ set(NEATS_ALP_CLANGXX "" CACHE FILEPATH "Path to clang++ used for NEATS_ALP_HYBR
 set(NEATS_LECO_EXTRA_INCLUDES "" CACHE STRING "Semicolon-separated extra include paths for LeCo clang build (e.g., for Boost/Eigen)")
 
 if(NEATS_ALP_HYBRID_CLANG)
-    if(NEATS_ALP_CLANGXX)
-        set(ALP_CLANGXX "${NEATS_ALP_CLANGXX}")
-    else()
-        find_program(ALP_CLANGXX NAMES clang++ clang++-18 clang++-17 clang++-16)
+    # On macOS with GCC as main compiler, hybrid clang build is not possible because
+    # Apple clang only supports libc++ while GCC uses libstdc++ (ABI incompatible).
+    # Auto-disable in this case.
+    set(NEATS_ALP_HYBRID_CLANG_EFFECTIVE ON)
+    if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        message(STATUS "NEATS_ALP_HYBRID_CLANG: Auto-disabled on macOS with GCC (Apple clang doesn't support libstdc++)")
+        set(NEATS_ALP_HYBRID_CLANG_EFFECTIVE OFF)
     endif()
 
-    if(ALP_CLANGXX)
-        # ARCH_FLAGS / COMMON_OPT_FLAGS are space-separated strings. Convert them into proper argument lists
-        # so clang++ receives each flag as a separate argv entry.
-        string(REPLACE " " ";" NEATS_ALP_ARCH_FLAGS_LIST "${ARCH_FLAGS}")
-        string(REPLACE " " ";" NEATS_ALP_COMMON_OPT_FLAGS_LIST "${COMMON_OPT_FLAGS}")
+    if(NEATS_ALP_HYBRID_CLANG_EFFECTIVE)
+        if(NEATS_ALP_CLANGXX)
+            set(ALP_CLANGXX "${NEATS_ALP_CLANGXX}")
+        else()
+            find_program(ALP_CLANGXX NAMES clang++ clang++-18 clang++-17 clang++-16)
+        endif()
 
-        add_custom_command(
-            OUTPUT "${NEATS_ALP_BENCH_OBJ}"
-            COMMAND "${ALP_CLANGXX}"
-                -c "${NEATS_ALP_BENCH_SRC}"
-                -o "${NEATS_ALP_BENCH_OBJ}"
-                "-I${CMAKE_CURRENT_SOURCE_DIR}/benchmark"
-                "-I${CMAKE_CURRENT_SOURCE_DIR}/lib/ALP/include"
-                ${NEATS_ALP_ARCH_FLAGS_LIST}
-                ${NEATS_ALP_COMMON_OPT_FLAGS_LIST}
-                -std=gnu++23
-                -fPIC
-            DEPENDS "${NEATS_ALP_BENCH_SRC}" "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/benchmark_common.hpp"
-            VERBATIM
-        )
-        add_custom_target(neats_alp_bench_obj DEPENDS "${NEATS_ALP_BENCH_OBJ}")
-        set_source_files_properties("${NEATS_ALP_BENCH_OBJ}" PROPERTIES GENERATED TRUE)
-    else()
-        message(WARNING "NEATS_ALP_HYBRID_CLANG=ON but clang++ was not found; ALP benchmark will be compiled with the main compiler (AVX-512 may be disabled on GCC).")
+        if(ALP_CLANGXX)
+            # ARCH_FLAGS / COMMON_OPT_FLAGS are space-separated strings. Convert them into proper argument lists
+            # so clang++ receives each flag as a separate argv entry.
+            string(REPLACE " " ";" NEATS_ALP_ARCH_FLAGS_LIST "${ARCH_FLAGS}")
+            string(REPLACE " " ";" NEATS_ALP_COMMON_OPT_FLAGS_LIST "${COMMON_OPT_FLAGS}")
+
+            # On non-Apple platforms, when mixing clang with GCC, we need to use libstdc++ to match ABI.
+            set(NEATS_ALP_STDLIB_FLAG "")
+            if(NOT APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+                # Linux with GCC: force clang to use libstdc++ for ABI compatibility
+                set(NEATS_ALP_STDLIB_FLAG "-stdlib=libstdc++")
+            endif()
+
+            add_custom_command(
+                OUTPUT "${NEATS_ALP_BENCH_OBJ}"
+                COMMAND "${ALP_CLANGXX}"
+                    -c "${NEATS_ALP_BENCH_SRC}"
+                    -o "${NEATS_ALP_BENCH_OBJ}"
+                    "-I${CMAKE_CURRENT_SOURCE_DIR}/benchmark"
+                    "-I${CMAKE_CURRENT_SOURCE_DIR}/lib/ALP/include"
+                    ${NEATS_ALP_ARCH_FLAGS_LIST}
+                    ${NEATS_ALP_COMMON_OPT_FLAGS_LIST}
+                    -std=gnu++20
+                    -fPIC
+                    ${NEATS_ALP_STDLIB_FLAG}
+                DEPENDS "${NEATS_ALP_BENCH_SRC}" "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/benchmark_common.hpp"
+                VERBATIM
+            )
+            add_custom_target(neats_alp_bench_obj DEPENDS "${NEATS_ALP_BENCH_OBJ}")
+            set_source_files_properties("${NEATS_ALP_BENCH_OBJ}" PROPERTIES GENERATED TRUE)
+        else()
+            message(WARNING "NEATS_ALP_HYBRID_CLANG=ON but clang++ was not found; ALP benchmark will be compiled with the main compiler (AVX-512 may be disabled on GCC).")
+        endif()
     endif()
 endif()
 

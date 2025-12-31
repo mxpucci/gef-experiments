@@ -43,33 +43,64 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     auto t1 = std::chrono::high_resolution_clock::now();
     {
         alp::state<double> stt;
-        std::array<double, VEC> sample_buf{};
-
-        for (size_t v = 0; v < num_vecs; ++v) {
-            const double* vec_in = data.data() + v * VEC;
-            int64_t* vec_out = encoded.data() + v * VEC;
-
-            // Initialize encoder for this vector (simplified: one vector = one rowgroup)
-            alp::encoder<double>::init(data.data(), v * VEC, VEC, sample_buf.data(), stt);
-
-            // Skip ALP_RD for simplicity - just use standard ALP
-            if (stt.scheme == alp::Scheme::ALP_RD) {
-                stt.scheme = alp::Scheme::ALP;
-                alp::encoder<double>::init(data.data(), v * VEC, VEC, sample_buf.data(), stt);
+        
+        // Sample buffer needs to hold up to ROWGROUP_VECTOR_SAMPLES * SAMPLES_PER_VECTOR samples
+        constexpr size_t SAMPLE_BUF_SIZE = alp::config::ROWGROUP_VECTOR_SAMPLES * alp::config::SAMPLES_PER_VECTOR;
+        std::vector<double> sample_buf(SAMPLE_BUF_SIZE);
+        
+        // Process data in rowgroups
+        constexpr size_t ROWGROUP_SIZE = alp::config::ROWGROUP_SIZE;  // 100 vectors = 102400 values
+        const size_t num_rowgroups = (n_full + ROWGROUP_SIZE - 1) / ROWGROUP_SIZE;
+        
+        for (size_t rg = 0; rg < num_rowgroups; ++rg) {
+            const size_t rg_start = rg * ROWGROUP_SIZE;
+            const size_t rg_end = std::min(rg_start + ROWGROUP_SIZE, n_full);
+            const size_t rg_size = rg_end - rg_start;
+            
+            // Initialize encoder once per rowgroup - samples from the entire rowgroup
+            alp::encoder<double>::init(data.data(), rg_start, n, sample_buf.data(), stt);
+            
+            // Skip ALP_RD for simplicity - if ALP fails, just use uncompressed
+            if (stt.scheme == alp::Scheme::ALP_RD || stt.best_k_combinations.empty()) {
+                // Fall back to a simple encoding - store original values
+                for (size_t v = rg_start / VEC; v < (rg_end + VEC - 1) / VEC && v < num_vecs; ++v) {
+                    const double* vec_in = data.data() + v * VEC;
+                    int64_t* vec_out = encoded.data() + v * VEC;
+                    
+                    factors[v] = 0;
+                    exponents[v] = 0;
+                    exc_counts[v] = VEC;
+                    exceptions[v].assign(vec_in, vec_in + VEC);
+                    exc_positions[v].resize(VEC);
+                    for (size_t i = 0; i < VEC; ++i) {
+                        exc_positions[v][i] = i;
+                        vec_out[i] = 0;  // placeholder
+                    }
+                }
+                continue;
             }
+            
+            // Process each vector in this rowgroup
+            const size_t rg_vec_start = rg_start / VEC;
+            const size_t rg_vec_end = (rg_end + VEC - 1) / VEC;
+            
+            for (size_t v = rg_vec_start; v < rg_vec_end && v < num_vecs; ++v) {
+                const double* vec_in = data.data() + v * VEC;
+                int64_t* vec_out = encoded.data() + v * VEC;
+                
+                alignas(64) std::array<double, VEC> exc_buf{};
+                alignas(64) std::array<uint16_t, VEC> pos_buf{};
+                uint16_t exc_cnt = 0;
 
-            alignas(64) std::array<double, VEC> exc_buf{};
-            alignas(64) std::array<uint16_t, VEC> pos_buf{};
-            uint16_t exc_cnt = 0;
+                alp::encoder<double>::encode(vec_in, exc_buf.data(), pos_buf.data(), &exc_cnt, vec_out, stt);
 
-            alp::encoder<double>::encode(vec_in, exc_buf.data(), pos_buf.data(), &exc_cnt, vec_out, stt);
-
-            factors[v] = stt.fac;
-            exponents[v] = stt.exp;
-            exc_counts[v] = exc_cnt;
-            if (exc_cnt > 0) {
-                exceptions[v].assign(exc_buf.begin(), exc_buf.begin() + exc_cnt);
-                exc_positions[v].assign(pos_buf.begin(), pos_buf.begin() + exc_cnt);
+                factors[v] = stt.fac;
+                exponents[v] = stt.exp;
+                exc_counts[v] = exc_cnt;
+                if (exc_cnt > 0) {
+                    exceptions[v].assign(exc_buf.begin(), exc_buf.begin() + exc_cnt);
+                    exc_positions[v].assign(pos_buf.begin(), pos_buf.begin() + exc_cnt);
+                }
             }
         }
     }
