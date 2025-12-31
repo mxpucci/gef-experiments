@@ -4,3 +4,6 @@
 [submodule "lib/Learn-to-Compress"]
 	path = lib/Learn-to-Compress
 	url = https://github.com/yhliu918/Learn-to-Compress
+[submodule "lib/ALP"]
+	path = lib/ALP
+	url = https://github.com/cwida/ALP

@@ -87,14 +87,26 @@ target_link_libraries(gef PUBLIC sdsl sux pasta_bit_vector)
 # Add required flags for GEF
 target_compile_options(gef PUBLIC -ffast-math -funroll-loops)
 
+# --- ALP Library (vendored build, avoids ALP's standalone CMake restrictions) ---
+add_library(neats_alp STATIC
+    lib/ALP/src/falp.cpp
+    lib/ALP/src/fastlanes_ffor.cpp
+    lib/ALP/src/fastlanes_generated_ffor.cpp
+    lib/ALP/src/fastlanes_generated_unffor.cpp
+    lib/ALP/src/fastlanes_unffor.cpp
+)
+target_include_directories(neats_alp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/ALP/include)
+target_compile_options(neats_alp PUBLIC -fPIC)
+
 # Comprehensive lossless compressor benchmark (without squash)
 add_executable(LosslessBenchmark benchmark/lossless_benchmark.cpp
         benchmark/NeaTS/NeaTS.hpp
         benchmark/NeaTS/algorithms.hpp)
-target_link_libraries(LosslessBenchmark sdsl sux gef)
+target_link_libraries(LosslessBenchmark sdsl sux gef neats_alp)
 
 # Comprehensive lossless compressor benchmark (with squash - optional)
 option(NEATS_WITH_SQUASH "Build LosslessBenchmarkFull with Squash" ON)
+option(NEATS_WITH_LECO "Build LeCo support (requires Boost headers + Eigen; LeCo headers are heavy)" OFF)
 
 if(NEATS_WITH_SQUASH)
     set(SQUASH_ROOT "/usr/local")
@@ -144,36 +156,16 @@ if(NEATS_WITH_SQUASH)
             benchmark/lossless_benchmark.cpp
             benchmark/NeaTS/NeaTS.hpp
             benchmark/NeaTS/algorithms.hpp
-    )
-target_compile_definitions(LosslessBenchmarkFull PRIVATE USE_SQUASH GEF_DISABLE_OPENMP=1)
+        )
+        target_compile_definitions(LosslessBenchmarkFull PRIVATE USE_SQUASH GEF_DISABLE_OPENMP=1)
 
-# Find Eigen3 for LeCo, or fetch if not found
-find_package(Eigen3 QUIET)
-if(NOT Eigen3_FOUND)
-    message(STATUS "Eigen3 not found locally, fetching via FetchContent...")
-    include(FetchContent)
-    FetchContent_Declare(
-        Eigen3
-        GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-        GIT_TAG        3.4.0
-        GIT_SHALLOW    TRUE
-    )
-    FetchContent_MakeAvailable(Eigen3)
-endif()
-
-# Include LeCo headers
-target_include_directories(LosslessBenchmarkFull PRIVATE 
-    lib/Learn-to-Compress/headers
-    ${EIGEN3_INCLUDE_DIR} # Will be empty if fetched, but targets handle it
-)
-
-target_link_libraries(LosslessBenchmarkFull
-    PRIVATE
-        Eigen3::Eigen
-        sdsl
-        sux
-        gef
-        Squash::Lib
+        target_link_libraries(LosslessBenchmarkFull
+            PRIVATE
+                sdsl
+                sux
+                gef
+                neats_alp
+                Squash::Lib
                 PkgConfig::LZ4
                 PkgConfig::ZSTD
                 PkgConfig::SNAPPY
@@ -183,6 +175,32 @@ target_link_libraries(LosslessBenchmarkFull
                 LibLZMA::LibLZMA
                 dl
         )
+        
+        # --- Optional LeCo integration ---
+        if(NEATS_WITH_LECO)
+            include(CheckIncludeFileCXX)
+            check_include_file_cxx("boost/multiprecision/gmp.hpp" NEATS_HAS_BOOST_GMP_HPP)
+            if(NOT NEATS_HAS_BOOST_GMP_HPP)
+                message(FATAL_ERROR "NEATS_WITH_LECO=ON but Boost headers with multiprecision/gmp.hpp were not found. Install Boost headers or disable NEATS_WITH_LECO.")
+            endif()
+
+            # Find Eigen3 for LeCo, or fetch if not found
+            find_package(Eigen3 QUIET)
+            if(NOT Eigen3_FOUND)
+                message(STATUS "Eigen3 not found locally, fetching via FetchContent...")
+                FetchContent_Declare(
+                    Eigen3
+                    GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+                    GIT_TAG        3.4.0
+                    GIT_SHALLOW    TRUE
+                )
+                FetchContent_MakeAvailable(Eigen3)
+            endif()
+
+            target_compile_definitions(LosslessBenchmarkFull PRIVATE NEATS_ENABLE_LECO=1)
+            target_include_directories(LosslessBenchmarkFull PRIVATE lib/Learn-to-Compress/headers)
+            target_link_libraries(LosslessBenchmarkFull PRIVATE Eigen3::Eigen)
+        endif()
         # Add RPATH so it looks in ./lib relative to binary
         target_link_options(LosslessBenchmarkFull PRIVATE "-Wl,-rpath,\$ORIGIN/lib")
         
@@ -209,6 +227,7 @@ target_link_libraries(LosslessBenchmarkFull
                 sdsl
                 sux
                 gef
+                neats_alp
                 Squash::Lib
                 PkgConfig::LZ4
                 PkgConfig::ZSTD
@@ -220,6 +239,23 @@ target_link_libraries(LosslessBenchmarkFull
                 dl
         )
         target_link_options(LosslessBenchmarkFullNoSIMD PRIVATE "-Wl,-rpath,\$ORIGIN/lib")
+
+        if(NEATS_WITH_LECO)
+            target_compile_definitions(LosslessBenchmarkFullNoSIMD PRIVATE NEATS_ENABLE_LECO=1)
+            target_include_directories(LosslessBenchmarkFullNoSIMD PRIVATE lib/Learn-to-Compress/headers)
+            # Eigen is header-only; link the target for correct include propagation
+            find_package(Eigen3 QUIET)
+            if(NOT Eigen3_FOUND)
+                FetchContent_Declare(
+                    Eigen3
+                    GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+                    GIT_TAG        3.4.0
+                    GIT_SHALLOW    TRUE
+                )
+                FetchContent_MakeAvailable(Eigen3)
+            endif()
+            target_link_libraries(LosslessBenchmarkFullNoSIMD PRIVATE Eigen3::Eigen)
+        endif()
         
     endif()
 endif()
