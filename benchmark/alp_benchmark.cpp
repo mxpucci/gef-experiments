@@ -149,9 +149,31 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
     result.compression_throughput_mbs = (n * sizeof(double) / 1024.0 / 1024.0) / (comp_ns / 1e9);
 
-    // Full decompression
-    std::vector<double> decompressed(n_full);
+    // Full decompression - use small buffer to measure decode speed (not memory bandwidth)
+    // This makes the measurement fair compared to range queries
+    alignas(64) double decomp_buf[VEC];
+    double checksum = 0;
+    
     t1 = std::chrono::high_resolution_clock::now();
+    for (size_t v = 0; v < num_vecs; ++v) {
+        decode_vector(
+            encoded.data() + v * VEC,
+            factors[v], exponents[v],
+            exc_counts[v],
+            exceptions[v].empty() ? nullptr : exceptions[v].data(),
+            exc_positions[v].empty() ? nullptr : exc_positions[v].data(),
+            decomp_buf,
+            VEC
+        );
+        checksum += decomp_buf[0];  // Prevent optimization
+    }
+    t2 = std::chrono::high_resolution_clock::now();
+    do_not_optimize(checksum);
+    auto decomp_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
+    result.decompression_throughput_mbs = (n * sizeof(double) / 1024.0 / 1024.0) / (decomp_ns / 1e9);
+
+    // Verify correctness (separate pass with full buffer)
+    std::vector<double> decompressed(n_full);
     for (size_t v = 0; v < num_vecs; ++v) {
         decode_vector(
             encoded.data() + v * VEC,
@@ -163,12 +185,6 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
             VEC
         );
     }
-    t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(decompressed);
-    auto decomp_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-    result.decompression_throughput_mbs = (n * sizeof(double) / 1024.0 / 1024.0) / (decomp_ns / 1e9);
-
-    // Verify
     for (size_t i = 0; i < n_full; ++i) {
         if (data[i] != decompressed[i]) {
             std::cerr << "ALP verification failed at index " << i << std::endl;
