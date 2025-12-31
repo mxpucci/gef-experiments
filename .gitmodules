@@ -1,3 +1,6 @@
 [submodule "lib/generalized-elias-fano"]
 	path = lib/generalized-elias-fano
 	url = https://github.com/mxpucci/generalized-elias-fano
+[submodule "lib/Learn-to-Compress"]
+	path = lib/Learn-to-Compress
+	url = https://github.com/yhliu918/Learn-to-Compress

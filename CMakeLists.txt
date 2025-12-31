@@ -144,15 +144,24 @@ if(NEATS_WITH_SQUASH)
             benchmark/lossless_benchmark.cpp
             benchmark/NeaTS/NeaTS.hpp
             benchmark/NeaTS/algorithms.hpp
-        )
-        target_compile_definitions(LosslessBenchmarkFull PRIVATE USE_SQUASH GEF_DISABLE_OPENMP=1)
+    )
+target_compile_definitions(LosslessBenchmarkFull PRIVATE USE_SQUASH GEF_DISABLE_OPENMP=1)
 
-        target_link_libraries(LosslessBenchmarkFull
-            PRIVATE
-                sdsl
-                sux
-                gef
-                Squash::Lib
+# Find Eigen3 for LeCo
+find_package(Eigen3 REQUIRED)
+
+# Include LeCo headers
+target_include_directories(LosslessBenchmarkFull PRIVATE 
+    lib/Learn-to-Compress/headers
+    ${EIGEN3_INCLUDE_DIR}
+)
+
+target_link_libraries(LosslessBenchmarkFull
+    PRIVATE
+        sdsl
+        sux
+        gef
+        Squash::Lib
                 PkgConfig::LZ4
                 PkgConfig::ZSTD
                 PkgConfig::SNAPPY
