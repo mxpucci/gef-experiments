@@ -280,9 +280,11 @@ if(NEATS_WITH_SQUASH)
             target_sources(LosslessBenchmarkFull PRIVATE benchmark/alp_benchmark.cpp)
         endif()
         
-        # --- Optional LeCo integration (compiled with GCC 11 in separate TU) ---
+        # --- Optional LeCo integration (compiled with Clang in separate TU) ---
         if(NEATS_WITH_LECO)
+            find_library(GMP_LIBRARY gmp REQUIRED)
             target_compile_definitions(LosslessBenchmarkFull PRIVATE NEATS_ENABLE_LECO=1)
+            target_link_libraries(LosslessBenchmarkFull PRIVATE ${GMP_LIBRARY})
             if(TARGET neats_leco_bench_obj)
                 add_dependencies(LosslessBenchmarkFull neats_leco_bench_obj)
                 target_sources(LosslessBenchmarkFull PRIVATE "${NEATS_LECO_BENCH_OBJ}")
@@ -335,6 +337,7 @@ if(NEATS_WITH_SQUASH)
 
         if(NEATS_WITH_LECO)
             target_compile_definitions(LosslessBenchmarkFullNoSIMD PRIVATE NEATS_ENABLE_LECO=1)
+            target_link_libraries(LosslessBenchmarkFullNoSIMD PRIVATE ${GMP_LIBRARY})
             if(TARGET neats_leco_bench_obj)
                 add_dependencies(LosslessBenchmarkFullNoSIMD neats_leco_bench_obj)
                 target_sources(LosslessBenchmarkFullNoSIMD PRIVATE "${NEATS_LECO_BENCH_OBJ}")
