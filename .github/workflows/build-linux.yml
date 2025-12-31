@@ -112,6 +112,7 @@ jobs:
 
           # --- BUILD PROJECT ---
           # LeCo is compiled with GCC 11 (in separate TU) due to GCC 13 compatibility issues
+          # Boost/GMP headers are in build-env, so we pass that as extra includes for LeCo
           GCC11_PATH="/opt/conda/envs/gcc11-env"
           cmake -S . -B build-skylake -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
@@ -119,6 +120,7 @@ jobs:
             -DNEATS_WITH_SQUASH=ON \
             -DNEATS_WITH_LECO=ON \
             -DNEATS_LECO_GXX="$GCC11_PATH/bin/x86_64-conda-linux-gnu-g++" \
+            -DNEATS_LECO_EXTRA_INCLUDES="$ENV_PATH/include" \
             -DNEATS_ALP_HYBRID_CLANG=ON \
             -DNEATS_ALP_CLANGXX="$ENV_PATH/bin/clang++" \
             -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE

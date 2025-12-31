@@ -108,6 +108,7 @@ option(NEATS_WITH_LECO "Build LeCo support (requires Boost headers + Eigen; comp
 option(NEATS_ALP_HYBRID_CLANG "Compile ALP benchmark TU with clang++ for AVX-512 while keeping GCC for the rest" ON)
 set(NEATS_ALP_CLANGXX "" CACHE FILEPATH "Path to clang++ used for NEATS_ALP_HYBRID_CLANG (if empty, auto-detect)")
 set(NEATS_LECO_GXX "" CACHE FILEPATH "Path to g++ (GCC 11) used for LeCo (if empty, auto-detect)")
+set(NEATS_LECO_EXTRA_INCLUDES "" CACHE PATH "Extra include path for LeCo GCC 11 build (e.g., for Boost/GMP headers)")
 
 if(NEATS_ALP_HYBRID_CLANG)
     if(NEATS_ALP_CLANGXX)
@@ -159,14 +160,22 @@ if(NEATS_WITH_LECO)
         
         string(REPLACE " " ";" NEATS_LECO_ARCH_FLAGS_LIST "${ARCH_FLAGS}")
         string(REPLACE " " ";" NEATS_LECO_COMMON_OPT_FLAGS_LIST "${COMMON_OPT_FLAGS}")
+        
+        # Build include flags list
+        set(NEATS_LECO_INCLUDE_FLAGS
+            "-I${CMAKE_CURRENT_SOURCE_DIR}/benchmark"
+            "-I${CMAKE_CURRENT_SOURCE_DIR}/lib/Learn-to-Compress/headers"
+        )
+        if(NEATS_LECO_EXTRA_INCLUDES)
+            list(APPEND NEATS_LECO_INCLUDE_FLAGS "-isystem${NEATS_LECO_EXTRA_INCLUDES}")
+        endif()
 
         add_custom_command(
             OUTPUT "${NEATS_LECO_BENCH_OBJ}"
             COMMAND "${LECO_GXX}"
                 -c "${NEATS_LECO_BENCH_SRC}"
                 -o "${NEATS_LECO_BENCH_OBJ}"
-                "-I${CMAKE_CURRENT_SOURCE_DIR}/benchmark"
-                "-I${CMAKE_CURRENT_SOURCE_DIR}/lib/Learn-to-Compress/headers"
+                ${NEATS_LECO_INCLUDE_FLAGS}
                 ${NEATS_LECO_ARCH_FLAGS_LIST}
                 ${NEATS_LECO_COMMON_OPT_FLAGS_LIST}
                 -std=gnu++17
