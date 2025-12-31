@@ -147,17 +147,29 @@ if(NEATS_WITH_SQUASH)
     )
 target_compile_definitions(LosslessBenchmarkFull PRIVATE USE_SQUASH GEF_DISABLE_OPENMP=1)
 
-# Find Eigen3 for LeCo
-find_package(Eigen3 REQUIRED)
+# Find Eigen3 for LeCo, or fetch if not found
+find_package(Eigen3 QUIET)
+if(NOT Eigen3_FOUND)
+    message(STATUS "Eigen3 not found locally, fetching via FetchContent...")
+    include(FetchContent)
+    FetchContent_Declare(
+        Eigen3
+        GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+        GIT_TAG        3.4.0
+        GIT_SHALLOW    TRUE
+    )
+    FetchContent_MakeAvailable(Eigen3)
+endif()
 
 # Include LeCo headers
 target_include_directories(LosslessBenchmarkFull PRIVATE 
     lib/Learn-to-Compress/headers
-    ${EIGEN3_INCLUDE_DIR}
+    ${EIGEN3_INCLUDE_DIR} # Will be empty if fetched, but targets handle it
 )
 
 target_link_libraries(LosslessBenchmarkFull
     PRIVATE
+        Eigen3::Eigen
         sdsl
         sux
         gef
