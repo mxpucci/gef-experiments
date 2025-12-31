@@ -158,7 +158,7 @@ if(NEATS_WITH_LECO)
     endif()
 
     if(LECO_CLANGXX)
-        message(STATUS "LeCo will be compiled with: ${LECO_CLANGXX} (using libc++ to avoid libstdc++ type_traits conflicts)")
+        message(STATUS "LeCo will be compiled with: ${LECO_CLANGXX}")
         
         string(REPLACE " " ";" NEATS_LECO_ARCH_FLAGS_LIST "${ARCH_FLAGS}")
         string(REPLACE " " ";" NEATS_LECO_COMMON_OPT_FLAGS_LIST "${COMMON_OPT_FLAGS}")
@@ -182,7 +182,6 @@ if(NEATS_WITH_LECO)
                 ${NEATS_LECO_INCLUDE_FLAGS}
                 ${NEATS_LECO_ARCH_FLAGS_LIST}
                 ${NEATS_LECO_COMMON_OPT_FLAGS_LIST}
-                -stdlib=libc++
                 -std=gnu++17
                 -fPIC
             DEPENDS "${NEATS_LECO_BENCH_SRC}" "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/benchmark_common.hpp"
