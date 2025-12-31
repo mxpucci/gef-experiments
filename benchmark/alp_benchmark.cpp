@@ -39,15 +39,15 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     std::vector<std::vector<double>> exceptions(num_vecs);
     std::vector<std::vector<uint16_t>> exc_positions(num_vecs);
 
+    // Sample buffer - sized generously to avoid any overflow
+    // ALP samples at most ROWGROUP_VECTOR_SAMPLES vectors, each with SAMPLES_PER_VECTOR samples
+    // Add extra margin for safety
+    constexpr size_t SAMPLE_BUF_SIZE = alp::config::ROWGROUP_SIZE;  // Use full rowgroup size for safety
+    std::vector<double> sample_buf(SAMPLE_BUF_SIZE);
+
     // Compression
     auto t1 = std::chrono::high_resolution_clock::now();
     {
-        alp::state<double> stt;
-        
-        // Sample buffer needs to hold up to ROWGROUP_VECTOR_SAMPLES * SAMPLES_PER_VECTOR samples
-        constexpr size_t SAMPLE_BUF_SIZE = alp::config::ROWGROUP_VECTOR_SAMPLES * alp::config::SAMPLES_PER_VECTOR;
-        std::vector<double> sample_buf(SAMPLE_BUF_SIZE);
-        
         // Process data in rowgroups
         constexpr size_t ROWGROUP_SIZE = alp::config::ROWGROUP_SIZE;  // 100 vectors = 102400 values
         const size_t num_rowgroups = (n_full + ROWGROUP_SIZE - 1) / ROWGROUP_SIZE;
@@ -55,51 +55,55 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
         for (size_t rg = 0; rg < num_rowgroups; ++rg) {
             const size_t rg_start = rg * ROWGROUP_SIZE;
             const size_t rg_end = std::min(rg_start + ROWGROUP_SIZE, n_full);
-            const size_t rg_size = rg_end - rg_start;
             
-            // Initialize encoder once per rowgroup - samples from the entire rowgroup
+            // Create fresh state for each rowgroup to avoid any state contamination
+            alp::state<double> stt;
+            
+            // Initialize encoder once per rowgroup
+            // Important: pass the total data size (n) and the starting offset (rg_start)
             alp::encoder<double>::init(data.data(), rg_start, n, sample_buf.data(), stt);
             
-            // Skip ALP_RD for simplicity - if ALP fails, just use uncompressed
+            // Calculate vector range for this rowgroup
+            const size_t rg_vec_start = rg_start / VEC;
+            const size_t rg_vec_end = rg_end / VEC;  // Only complete vectors
+            
+            // Skip ALP_RD or if no valid combinations found - fall back to storing raw values
             if (stt.scheme == alp::Scheme::ALP_RD || stt.best_k_combinations.empty()) {
-                // Fall back to a simple encoding - store original values
-                for (size_t v = rg_start / VEC; v < (rg_end + VEC - 1) / VEC && v < num_vecs; ++v) {
+                for (size_t v = rg_vec_start; v < rg_vec_end; ++v) {
                     const double* vec_in = data.data() + v * VEC;
                     int64_t* vec_out = encoded.data() + v * VEC;
                     
                     factors[v] = 0;
                     exponents[v] = 0;
-                    exc_counts[v] = VEC;
+                    exc_counts[v] = static_cast<uint16_t>(VEC);
                     exceptions[v].assign(vec_in, vec_in + VEC);
                     exc_positions[v].resize(VEC);
                     for (size_t i = 0; i < VEC; ++i) {
-                        exc_positions[v][i] = i;
+                        exc_positions[v][i] = static_cast<uint16_t>(i);
                         vec_out[i] = 0;  // placeholder
                     }
                 }
                 continue;
             }
             
-            // Process each vector in this rowgroup
-            const size_t rg_vec_start = rg_start / VEC;
-            const size_t rg_vec_end = (rg_end + VEC - 1) / VEC;
-            
-            for (size_t v = rg_vec_start; v < rg_vec_end && v < num_vecs; ++v) {
+            // Process each vector in this rowgroup with ALP encoding
+            for (size_t v = rg_vec_start; v < rg_vec_end; ++v) {
                 const double* vec_in = data.data() + v * VEC;
                 int64_t* vec_out = encoded.data() + v * VEC;
                 
-                alignas(64) std::array<double, VEC> exc_buf{};
-                alignas(64) std::array<uint16_t, VEC> pos_buf{};
+                // Use aligned buffers for exceptions - sized for worst case
+                alignas(64) double exc_buf[VEC] = {};
+                alignas(64) uint16_t pos_buf[VEC] = {};
                 uint16_t exc_cnt = 0;
 
-                alp::encoder<double>::encode(vec_in, exc_buf.data(), pos_buf.data(), &exc_cnt, vec_out, stt);
+                alp::encoder<double>::encode(vec_in, exc_buf, pos_buf, &exc_cnt, vec_out, stt);
 
                 factors[v] = stt.fac;
                 exponents[v] = stt.exp;
                 exc_counts[v] = exc_cnt;
                 if (exc_cnt > 0) {
-                    exceptions[v].assign(exc_buf.begin(), exc_buf.begin() + exc_cnt);
-                    exc_positions[v].assign(pos_buf.begin(), pos_buf.begin() + exc_cnt);
+                    exceptions[v].assign(exc_buf, exc_buf + exc_cnt);
+                    exc_positions[v].assign(pos_buf, pos_buf + exc_cnt);
                 }
             }
         }
@@ -130,7 +134,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
 
             alp::decoder<double>::decode(vec_in, factors[v], exponents[v], vec_out);
 
-            if (exc_counts[v] > 0) {
+            if (exc_counts[v] > 0 && !exceptions[v].empty()) {
                 alp::exp_c_t ec = exc_counts[v];
                 alp::decoder<double>::patch_exceptions(
                     vec_out,
