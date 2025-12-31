@@ -107,9 +107,20 @@ jobs:
           fi
           cd /workspace
 
+          # --- PATCH LECO HEADERS ---
+          # LeCo has bugs: 1) redefines std::is_integral<__uint128_t> etc. (already in libstdc++)
+          #                2) uses deprecated 'register' keyword
+          # We patch these in-place since LeCo is a submodule
+          
+          # Patch 1: Wrap type_traits specializations in version guard
+          sed -i 's/^namespace std$/\n#if !defined(__GLIBCXX__) || __GLIBCXX__ < 20110325\nnamespace std/' \
+            lib/Learn-to-Compress/headers/string/leco_uint256.h
+          sed -i '/^}$/a #endif' lib/Learn-to-Compress/headers/string/leco_uint256.h
+          
+          # Patch 2: Remove deprecated 'register' keyword
+          sed -i 's/register uint64_t/uint64_t/g' lib/Learn-to-Compress/headers/popcount.h
+          
           # --- BUILD PROJECT ---
-          # LeCo is compiled with Clang + libc++ to avoid libstdc++ type_traits conflicts
-          # Boost/GMP/Eigen headers are in build-env
           cmake -S . -B build-skylake -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DARCH_FLAGS="${TARGET_ARCH}" \
