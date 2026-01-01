@@ -124,8 +124,8 @@ jobs:
           cmake -S . -B build-gcc -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DARCH_FLAGS="${TARGET_ARCH}" \
-            -DCMAKE_C_COMPILER=gcc \
-            -DCMAKE_CXX_COMPILER=g++ \
+            -DCMAKE_C_COMPILER="$ENV_PATH/bin/x86_64-conda-linux-gnu-gcc" \
+            -DCMAKE_CXX_COMPILER="$ENV_PATH/bin/x86_64-conda-linux-gnu-g++" \
             -DNEATS_WITH_SQUASH=ON \
             -DNEATS_WITH_LECO=ON \
             -DNEATS_LECO_EXTRA_INCLUDES="$ENV_PATH/include;$ENV_PATH/include/eigen3" \
@@ -139,8 +139,8 @@ jobs:
           cmake -S . -B build-clang -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DARCH_FLAGS="${TARGET_ARCH}" \
-            -DCMAKE_C_COMPILER=clang \
-            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_C_COMPILER="$ENV_PATH/bin/clang" \
+            -DCMAKE_CXX_COMPILER="$ENV_PATH/bin/clang++" \
             -DNEATS_WITH_SQUASH=ON \
             -DNEATS_WITH_LECO=ON \
             -DNEATS_LECO_EXTRA_INCLUDES="$ENV_PATH/include;$ENV_PATH/include/eigen3" \
