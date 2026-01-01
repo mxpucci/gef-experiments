@@ -13,7 +13,9 @@
 #include <span>
 #include <ranges>
 #include <climits>
+#if __has_include(<experimental/simd>)
 #include <experimental/simd>
+#endif
 
 /** Computes (bits_per_correction > 0 ? 2^(bits_per_correction-1) - 1 : 0) without the conditional operator. */
 #define BPC_TO_EPSILON(bits_per_correction) (((1ul << (bits_per_correction)) + 1) / 2 - 1)
@@ -204,6 +206,7 @@ namespace pfa::algorithm {
             }
         }
 
+#if __has_include(<experimental/simd>)
         template<typename TypeIn>
         inline std::vector<TypeIn> simd_preprocess(const std::string& fn, auto bpc, bool first_is_size) {
             namespace stdx = std::experimental;
@@ -245,6 +248,7 @@ namespace pfa::algorithm {
             simd_preprocess(data_vec.data(), data_vec.size(), simd_min(data_vec.data(), data_vec.size()) - epsilon);
             return data_vec;
         }
+#endif
 
         template<typename TypeIn, typename TypeOut>
         std::vector<TypeOut, AlignedAllocator<TypeOut>>
