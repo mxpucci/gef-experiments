@@ -8,7 +8,12 @@
 #include <sdsl/util.hpp>
 #include "my_elias_fano.hpp"
 #include <ranges>
+#if __has_include(<experimental/simd>)
 #include <experimental/simd>
+#define NEATS_HAS_SIMD 1
+#else
+#define NEATS_HAS_SIMD 0
+#endif
 #include <execution>
 #include <functional>
 // #include <stdfloat>
@@ -19,7 +24,9 @@
 #endif
 
 namespace pfa::neats {
+#if NEATS_HAS_SIMD
     namespace stdx = std::experimental;
+#endif
 
     template<typename x_t = uint32_t, typename y_t = int64_t, typename poly = double, typename T1 = float, typename T2 = double>
     class compressor {
@@ -31,12 +38,16 @@ namespace pfa::neats {
         using uint_scalar_t = std::make_unsigned_t<int_scalar_t>;
         using float_scalar_t = std::conditional_t<sizeof(y_t) == 4, float, double>;
 
+#if NEATS_HAS_SIMD
         using uintv_simd_t = stdx::native_simd<uint_scalar_t>;
         using intv_simd_t = stdx::native_simd<int_scalar_t>;
 
         using floatv_simd_t = stdx::native_simd<float_scalar_t>;
         static_assert(uintv_simd_t::size() == floatv_simd_t::size());
         static constexpr auto simd_width = uintv_simd_t::size();
+#else
+        static constexpr auto simd_width = 1;
+#endif
         static constexpr auto _simd_width_bit_size = simd_width * sizeof(int_scalar_t) * 8; // 512 bits
 
         std::vector<std::pair<uint8_t, out_t>> mem_out{};
@@ -156,6 +167,7 @@ namespace pfa::neats {
 
         template<typename It>
         inline void simd_make_residuals(It in_data) {
+#if NEATS_HAS_SIMD
             auto num_partitions = mem_out.size();
             residuals = sdsl::int_vector<64>(CEIL_UINT_DIV(residuals_bit_size, 64) + 1, 0);
             std::vector<uint64_t> starting_positions(num_partitions, 0);
@@ -313,6 +325,9 @@ namespace pfa::neats {
             sdsl::util::init_support(quad_fun_rank, &qbv);
 
             mem_out.clear();
+#else
+            throw std::runtime_error("SIMD not available");
+#endif
         }
 
         template<typename It>
@@ -409,7 +424,11 @@ namespace pfa::neats {
             }
 
             std::reverse(mem_out.begin(), mem_out.end());
+#if NEATS_HAS_SIMD
             simd_make_residuals(begin);
+#else
+            make_residuals(begin, end);
+#endif
         }
 
         template<typename It>
@@ -482,6 +501,7 @@ namespace pfa::neats {
 
         template<typename T>
         inline void simd_decompress(T *out) {
+#if NEATS_HAS_SIMD
             auto unpack_residuals = [this](const auto im, x_t offset_res, const auto num_residuals, auto *out_start) {
                 const uint8_t bpc = bits_per_correction[im];
                 const int_scalar_t eps = BPC_TO_EPSILON(bpc) + 1;
@@ -697,10 +717,14 @@ namespace pfa::neats {
                 offset_res += bpc * (end - start);
                 start = end;
             }
+#else
+            decompress(out, out + _n);
+#endif
         }
 
         template<typename T>
         inline void simd_scan(x_t s, x_t e, T *out) const {
+#if NEATS_HAS_SIMD
             auto unpack_residuals = [this](const auto im, x_t offset_res, const auto num_residuals, auto *out_start) {
                 const uint8_t bpc = bits_per_correction[im];
                 const int_scalar_t eps = BPC_TO_EPSILON(bpc) + 1;
@@ -916,6 +940,12 @@ namespace pfa::neats {
                 st_off = 0;
                 offset_coefficients++;
             }
+#else
+            // Fallback scalar scan
+            for(x_t i = s; i < e; ++i) {
+                out[i - s] = (*this)[i];
+            }
+#endif
         }
 
 
