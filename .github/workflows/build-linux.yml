@@ -48,7 +48,7 @@ jobs:
           # libc++ needed for LeCo (avoids libstdc++ type_traits conflicts)
           micromamba create -y -n build-env -c conda-forge \
             gcc_linux-64=13 gxx_linux-64=13 \
-            clang clangxx libcxx \
+            clang clangxx libcxx llvm-openmp \
             cmake ninja pkg-config make \
             ragel patchelf \
             brotli zlib lz4-c zstd snappy xz bzip2 \
@@ -82,7 +82,7 @@ jobs:
           Cflags: -I\${includedir}
           PC
 
-          # --- BUILD SQUASH 0.7.0 ---
+          # --- BUILD SQUASH 0.7.0 (with GCC default) ---
           export SQUASH_PREFIX=/usr/local
           export TARGET_ARCH="-march=skylake-avx512 -mtune=skylake-avx512"
           
@@ -119,71 +119,87 @@ jobs:
           # Patch 2: Remove deprecated 'register' keyword
           sed -i 's/register uint64_t/uint64_t/g' lib/Learn-to-Compress/headers/popcount.h
           
-          # --- BUILD PROJECT ---
-          cmake -S . -B build-skylake -G Ninja \
+          # --- BUILD PROJECT (GCC) ---
+          echo "Building with GCC..."
+          cmake -S . -B build-gcc -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DARCH_FLAGS="${TARGET_ARCH}" \
+            -DCMAKE_C_COMPILER=gcc \
+            -DCMAKE_CXX_COMPILER=g++ \
             -DNEATS_WITH_SQUASH=ON \
             -DNEATS_WITH_LECO=ON \
             -DNEATS_LECO_EXTRA_INCLUDES="$ENV_PATH/include;$ENV_PATH/include/eigen3" \
             -DNEATS_ALP_HYBRID_CLANG=ON \
             -DNEATS_ALP_CLANGXX="$ENV_PATH/bin/clang++" \
             -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE
-          cmake --build build-skylake -j
+          cmake --build build-gcc -j
 
-          # --- BUNDLE (CRITICAL FIXES HERE) ---
-          BIN_FULL="build-skylake/LosslessBenchmarkFull"
-          BIN_NOSIMD="build-skylake/LosslessBenchmarkFullNoSIMD"
+          # --- BUILD PROJECT (Clang) ---
+          echo "Building with Clang..."
+          cmake -S . -B build-clang -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DARCH_FLAGS="${TARGET_ARCH}" \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DNEATS_WITH_SQUASH=ON \
+            -DNEATS_WITH_LECO=ON \
+            -DNEATS_LECO_EXTRA_INCLUDES="$ENV_PATH/include;$ENV_PATH/include/eigen3" \
+            -DNEATS_ALP_HYBRID_CLANG=OFF \
+            -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE
+          cmake --build build-clang -j
+
+          # --- BUNDLE ---
           OUT="NeaTS-CentOS7-Skylake"
-          
-          if [ ! -f "$BIN_FULL" ]; then echo "LosslessBenchmarkFull binary not found!"; exit 1; fi
-          if [ ! -f "$BIN_NOSIMD" ]; then echo "LosslessBenchmarkFullNoSIMD binary not found!"; exit 1; fi
           
           rm -rf "$OUT"
           mkdir -p "$OUT/lib"
           
-          # Copy both binaries
-          cp -v "$BIN_FULL" "$OUT/LosslessBenchmarkFull"
-          cp -v "$BIN_NOSIMD" "$OUT/LosslessBenchmarkFullNoSIMD"
-          patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFull"
-          patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFullNoSIMD"
+          # Copy binaries from GCC build
+          if [ -f "build-gcc/LosslessBenchmarkFull" ]; then
+             cp -v "build-gcc/LosslessBenchmarkFull" "$OUT/LosslessBenchmarkFull-gcc"
+             cp -v "build-gcc/LosslessBenchmarkFullNoSIMD" "$OUT/LosslessBenchmarkFullNoSIMD-gcc"
+          else
+             echo "GCC binaries not found!" && exit 1
+          fi
+
+          # Copy binaries from Clang build
+          if [ -f "build-clang/LosslessBenchmarkFull" ]; then
+             cp -v "build-clang/LosslessBenchmarkFull" "$OUT/LosslessBenchmarkFull-clang"
+             cp -v "build-clang/LosslessBenchmarkFullNoSIMD" "$OUT/LosslessBenchmarkFullNoSIMD-clang"
+          else
+             echo "Clang binaries not found!" && exit 1
+          fi
+
+          # Set RPATHs for all binaries
+          patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFull-gcc"
+          patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFullNoSIMD-gcc"
+          patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFull-clang"
+          patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFullNoSIMD-clang"
 
           # 1. FLATTEN SQUASH PLUGINS
-          # We copy plugins to a simple 'lib/plugins' folder to avoid path confusion
           mkdir -p "$OUT/lib/plugins"
-          
-          # Detect the install directory safely (checking lib64 first)
           if [ -d "/usr/local/lib64/squash" ]; then
               SQUASH_INSTALL_DIR="/usr/local/lib64/squash"
           elif [ -d "/usr/local/lib/squash" ]; then
               SQUASH_INSTALL_DIR="/usr/local/lib/squash"
           else
-              echo "Error: Could not find Squash installation directory in /usr/local"
+              echo "Error: Could not find Squash installation directory"
               exit 1
           fi
-
-          # Find the actual 'plugins' folder inside the versioned directory
           SRC_PLUGIN_DIR=$(find "$SQUASH_INSTALL_DIR" -type d -name "plugins" | head -n 1)
-          
           if [ -n "$SRC_PLUGIN_DIR" ]; then
-             echo "Copying plugins from $SRC_PLUGIN_DIR..."
              cp -r "$SRC_PLUGIN_DIR"/* "$OUT/lib/plugins/"
           else
-             echo "WARNING: No plugins found to copy!"
+             echo "WARNING: No plugins found!"
           fi
 
-          # 2. RESOLVE DEPENDENCIES (Recursive)
+          # 2. RESOLVE DEPENDENCIES
           echo "Resolving dependencies..."
-          # Find dependencies for both binaries AND all the plugin .so files we just copied
-          find "$OUT" -type f \( -name "LosslessBenchmarkFull" -o -name "LosslessBenchmarkFullNoSIMD" -o -name "*.so" \) > binaries.txt
+          find "$OUT" -type f \( -name "LosslessBenchmarkFull*" -o -name "*.so" \) > binaries.txt
           
           cat binaries.txt | xargs ldd | awk '{print $3}' | grep -E '^/' | sort -u > libs_to_copy.txt
           
-          # CRITICAL FIX: Explicitly find and copy compressor libraries that ldd might miss
-          # (e.g. if plugins use dlopen)
           echo "Manually finding compressor libraries..."
-          # Fix: Use $ENV_PATH instead of hardcoded /opt/conda/lib, and ensure we check all likely library paths
-          # Also use -follow to handle symlinks if find supports it, or just rely on multiple paths
           find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 $ENV_PATH/lib -name "libbrotlienc.so*" >> libs_to_copy.txt
           find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 $ENV_PATH/lib -name "libbrotlidec.so*" >> libs_to_copy.txt
           find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 $ENV_PATH/lib -name "libbrotlicommon.so*" >> libs_to_copy.txt
@@ -192,7 +208,6 @@ jobs:
           find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 $ENV_PATH/lib -name "libsnappy.so*" >> libs_to_copy.txt
           find /usr/lib /usr/lib64 /usr/local/lib /usr/local/lib64 $ENV_PATH/lib -name "liblzma.so*" >> libs_to_copy.txt
           
-          # --- FIXED LOOP: Use 'sort -u input_file' piped directly into while loop ---
           sort -u libs_to_copy.txt | while read -r lib; do
             base="$(basename "$lib")"
             case "$base" in
@@ -202,48 +217,35 @@ jobs:
             cp -vL "$lib" "$OUT/lib/" || true
           done
 
-          # 3. FIX SYMLINKS (The Fix for Brotli)
-          # We run ldconfig to create symlinks like libbrotlienc.so.1 -> libbrotlienc.so.1.0.9
-          echo "Generating library symlinks..."
+          # 3. FIX SYMLINKS
           /sbin/ldconfig -n "$OUT/lib"
 
           # 4. CREATE RUN SCRIPTS
-          # Main run script (SIMD enabled, high performance)
-          cat << 'WRAPPER' > "$OUT/run.sh"
+          # Helper function for run scripts
+          create_run_script() {
+              local suffix=$1
+              local binary=$2
+              cat << WRAPPER > "$OUT/run_${suffix}.sh"
           #!/bin/bash
-          HERE="$(dirname "$(readlink -f "$0")")"
-          
-          # Point Squash explicitly to our flattened plugins folder
-          # We set multiple variables to cover different Squash versions/conventions
-          export SQUASH_PLUGIN_PATH="$HERE/lib/plugins"
-          export SQUASH_PLUGINS_PATH="$HERE/lib/plugins"
-          export SQUASH_PLUGINS="$HERE/lib/plugins"
-          export SQUASH_PLUGIN_DIR="$HERE/lib/plugins"
-          
-          # Add lib to path so plugins can find dependencies (libbrotlienc.so.1)
-          export LD_LIBRARY_PATH="$HERE/lib:$LD_LIBRARY_PATH"
-          
-          exec "$HERE/LosslessBenchmarkFull" "$@"
+          HERE="\$(dirname "\$(readlink -f "\$0")")"
+          export SQUASH_PLUGIN_PATH="\$HERE/lib/plugins"
+          export SQUASH_PLUGINS_PATH="\$HERE/lib/plugins"
+          export SQUASH_PLUGINS="\$HERE/lib/plugins"
+          export SQUASH_PLUGIN_DIR="\$HERE/lib/plugins"
+          export LD_LIBRARY_PATH="\$HERE/lib:\$LD_LIBRARY_PATH"
+          exec "\$HERE/${binary}" "\$@"
           WRAPPER
+              chmod +x "$OUT/run_${suffix}.sh"
+          }
+
+          create_run_script "gcc" "LosslessBenchmarkFull-gcc"
+          create_run_script "gcc_nosimd" "LosslessBenchmarkFullNoSIMD-gcc"
+          create_run_script "clang" "LosslessBenchmarkFull-clang"
+          create_run_script "clang_nosimd" "LosslessBenchmarkFullNoSIMD-clang"
+
+          # Default run.sh -> GCC optimized
+          cp "$OUT/run_gcc.sh" "$OUT/run.sh"
           
-          # NoSIMD run script (fallback for GEF issues with AVX-512/OpenMP)
-          cat << 'WRAPPER' > "$OUT/run_nosimd.sh"
-          #!/bin/bash
-          # Use this script if you encounter GEF compression ratio > 100x bugs
-          # when running multiple GEF compressors sequentially.
-          HERE="$(dirname "$(readlink -f "$0")")"
-          
-          export SQUASH_PLUGIN_PATH="$HERE/lib/plugins"
-          export SQUASH_PLUGINS_PATH="$HERE/lib/plugins"
-          export SQUASH_PLUGINS="$HERE/lib/plugins"
-          export SQUASH_PLUGIN_DIR="$HERE/lib/plugins"
-          export LD_LIBRARY_PATH="$HERE/lib:$LD_LIBRARY_PATH"
-          
-          exec "$HERE/LosslessBenchmarkFullNoSIMD" "$@"
-          WRAPPER
-          
-          chmod +x "$OUT/run.sh"
-          chmod +x "$OUT/run_nosimd.sh"
           chown -R $(id -u):$(id -g) "$OUT"
           EOF
           
