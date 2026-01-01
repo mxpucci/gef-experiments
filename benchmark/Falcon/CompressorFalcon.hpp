@@ -176,7 +176,7 @@ class CompressorFalcon {
     static_assert(std::is_same_v<T, double>, "CompressorFalcon only supports double");
     
 public:
-    static constexpr size_t BLOCK_SIZE = 1025;
+    static constexpr size_t BLOCK_SIZE = 1000;
     
 private:
     static constexpr double POW_NUM = (1LL << 51) + (1LL << 52);
@@ -188,14 +188,12 @@ private:
         100000000000000.0, 1000000000000000.0, 10000000000000000.0
     };
     
-    std::vector<T> buffer;                 // legacy (when total count is unknown)
     std::vector<T> block_buffer;           // streaming block buffer
     size_t totalValues = 0;
     size_t valuesAdded = 0;
-    bool streaming = false;
     bool header_written = false;
-    size_t totalBlocks = 0;
     size_t processedBlocks = 0;
+    int forcedDecimalPlaces = -1;
     
     // From original: zigzag_encode
     static uint64_t zigzag_encode(int64_t value) {
@@ -276,7 +274,12 @@ private:
                  goto force_raw;
             }
 
-            int decimalPlaces = getDecimalPlaces(val, sp);
+            int decimalPlaces;
+            if (forcedDecimalPlaces >= 0) {
+                decimalPlaces = forcedDecimalPlaces;
+            } else {
+                decimalPlaces = getDecimalPlaces(val, sp);
+            }
             maxDecimalPlaces = std::max(maxDecimalPlaces, decimalPlaces);
             
             // If decimal places blow up, just bail early
@@ -422,59 +425,33 @@ public:
     T storedValue = 0;
     std::vector<uint8_t> bytes;  // For benchmark compatibility
     
-    explicit CompressorFalcon(const T& value, size_t totalValuesHint = 0) {
+    explicit CompressorFalcon(const T& value, size_t totalValuesHint, int decimals = -1) {
         storedValue = value;
-        if (totalValuesHint > 0) {
-            streaming = true;
-            totalValues = totalValuesHint;
-            valuesAdded = 0;
-            totalBlocks = (totalValues + BLOCK_SIZE - 1) / BLOCK_SIZE;
-            processedBlocks = 0;
-            writeHeader();
-            addValue(value);
-        } else {
-            // Legacy behavior: buffer everything and write header in close().
-            buffer.push_back(value);
-            totalValues = 1;
-        }
+        totalValues = totalValuesHint;
+        valuesAdded = 0;
+        processedBlocks = 0;
+        forcedDecimalPlaces = decimals;
+        writeHeader();
+        addValue(value);
     }
     
     void addValue(const T& value) {
         storedValue = value;
-        if (streaming) {
-            block_buffer.push_back(value);
-            valuesAdded++;
-            if (block_buffer.size() == BLOCK_SIZE) {
-                compressAndAppendBlock(block_buffer);
-                block_buffer.clear();
-            }
-        } else {
-            buffer.push_back(value);
-            totalValues++;
+        block_buffer.push_back(value);
+        valuesAdded++;
+        if (block_buffer.size() == BLOCK_SIZE) {
+            compressAndAppendBlock(block_buffer);
+            block_buffer.clear();
         }
     }
     
     void close() {
-        if (streaming) {
-            // Flush last partial block (if any)
-            if (!block_buffer.empty()) {
-                compressAndAppendBlock(block_buffer);
-                block_buffer.clear();
-            }
-            // Best effort: ensure we consumed the expected amount.
-            // (If not, the benchmark supplied inconsistent totalValues.)
-        } else {
-            // Legacy path: Compress all buffered data at close()
-            totalBlocks = (buffer.size() + BLOCK_SIZE - 1) / BLOCK_SIZE;
-            processedBlocks = 0;
-            writeHeader(); // uses totalValues
-            
-            for (size_t i = 0; i < buffer.size(); i += BLOCK_SIZE) {
-                size_t currentBlockSize = std::min(BLOCK_SIZE, buffer.size() - i);
-                std::vector<T> block(buffer.begin() + i, buffer.begin() + i + currentBlockSize);
-                compressAndAppendBlock(block);
-            }
+        // Flush last partial block (if any)
+        if (!block_buffer.empty()) {
+            compressAndAppendBlock(block_buffer);
+            block_buffer.clear();
         }
+        block_buffer.shrink_to_fit();
     }
     
     size_t getSize() const {
@@ -483,10 +460,6 @@ public:
         total_bits += sizeof(*this) * 8;
         // Account for the compressed data size (RAM usage)
         total_bits += bytes.size() * 8;
-        // Account for the streaming block buffer size
-        total_bits += block_buffer.size() * sizeof(T) * 8;
-        // Account for the legacy buffer size
-        total_bits += buffer.size() * sizeof(T) * 8;
         return total_bits;
     }
     

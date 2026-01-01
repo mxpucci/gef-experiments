@@ -225,19 +225,6 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
         }
     }
     
-    // Debug statistics
-    double total_bw = 0;
-    size_t zero_bw_count = 0;
-    double total_exc = 0;
-    for(const auto& m : metadata_stream) {
-        total_bw += m.bit_width;
-        if (m.bit_width == 0) zero_bw_count++;
-        total_exc += m.exc_count;
-    }
-    std::cout << "[ALP Stats] Avg BitWidth: " << total_bw / num_vecs << std::endl;
-    std::cout << "[ALP Stats] Zero BitWidth Vectors: " << zero_bw_count << "/" << num_vecs << " (" << (100.0 * zero_bw_count / num_vecs) << "%)" << std::endl;
-    std::cout << "[ALP Stats] Avg Exceptions: " << total_exc / num_vecs << std::endl;
-
     // Random access - with volatile checksum to prevent optimization
     const size_t num_ra_queries = std::min(size_t(10000), bench_data.random_indices.size());
     alignas(64) double vec_buf[VEC];

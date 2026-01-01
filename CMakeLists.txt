@@ -52,10 +52,11 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
 endif()
 
 # Enable OpenMP for parallel processing (used by GEF)
+# IMPORTANT: do NOT add OpenMP flags globally via CMAKE_CXX_FLAGS, otherwise unrelated
+# translation units (e.g., ALP) may be compiled with OpenMP enabled.
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
-    message(STATUS "OpenMP found - parallel processing enabled")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    message(STATUS "OpenMP found - will be enabled only for targets that link OpenMP::OpenMP_CXX")
 endif()
 
 add_library(sux INTERFACE)
@@ -84,6 +85,10 @@ target_include_directories(gef PUBLIC
     ${PASTA_INCLUDE_DIR}
 )
 target_link_libraries(gef PUBLIC sdsl sux pasta_bit_vector)
+# OpenMP is only used/beneficial for GEF; keep it scoped to this target.
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(gef PUBLIC OpenMP::OpenMP_CXX)
+endif()
 # Add required flags for GEF
 target_compile_options(gef PUBLIC -ffast-math -funroll-loops)
 
@@ -148,6 +153,7 @@ if(NEATS_ALP_HYBRID_CLANG)
                     "-I${CMAKE_CURRENT_SOURCE_DIR}/lib/ALP/include"
                     ${NEATS_ALP_ARCH_FLAGS_LIST}
                     ${NEATS_ALP_COMMON_OPT_FLAGS_LIST}
+                    -fno-openmp
                     -std=gnu++20
                     -fPIC
                     ${NEATS_ALP_STDLIB_FLAG}

@@ -933,7 +933,7 @@ BenchmarkResult benchmark_falcon(const BenchmarkData &bench_data,
                                  const std::vector<size_t> &range_sizes,
                                  size_t block_size = 1000) { // Default to 1000 to match your proposal
     BenchmarkResult result;
-    result.compressor = "Falcon (Block-Based)";
+    result.compressor = "Falcon";
     result.dataset = bench_data.filename;
     
     // Use double data
@@ -961,7 +961,8 @@ BenchmarkResult benchmark_falcon(const BenchmarkData &bench_data,
         
         // Initialize Compressor for JUST this block
         // Note: We pass current_bs so Falcon writes the correct header count
-        CompressorFalcon<T> cmpr(data[start_idx], current_bs);
+        // We also pass decimals to help Falcon avoid raw fallback on tricky values
+        CompressorFalcon<T> cmpr(data[start_idx], current_bs, static_cast<int>(bench_data.decimals));
         
         for (size_t k = 1; k < current_bs; ++k) {
             cmpr.addValue(data[start_idx + k]);
