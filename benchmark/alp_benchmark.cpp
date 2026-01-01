@@ -251,9 +251,43 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     t2 = std::chrono::high_resolution_clock::now();
     do_not_optimize(ra_sum);
     auto ra_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-    
-    result.random_access_ns = static_cast<double>(ra_ns) / num_ra_queries;
-    result.random_access_mbs = (num_ra_queries * sizeof(double) / 1024.0 / 1024.0) / (ra_ns / 1e9);
+
+    if (num_ra_queries == 0) {
+        result.random_access_ns = 0.0;
+        result.random_access_mbs = 0.0;
+    } else {
+        result.random_access_ns = static_cast<double>(ra_ns) / num_ra_queries;
+        result.random_access_mbs = (num_ra_queries * sizeof(double) / 1024.0 / 1024.0) / (ra_ns / 1e9);
+    }
+
+    // Random-access correctness spot-check (after timing, to avoid warming caches / predictors).
+    // Compare point-decoded values to the original input.
+    {
+        const size_t check_queries = std::min<size_t>(200, num_ra_queries);
+        for (size_t q = 0; q < check_queries; ++q) {
+            const size_t idx = bench_data.random_indices[q];
+            if (idx >= n_full) continue;
+
+            const size_t vec_idx = idx / VEC;
+            const size_t offset = idx % VEC;
+
+            decode_vector(
+                metadata_stream[vec_idx],
+                ffor_stream.data(),
+                exc_val_stream.data(),
+                exc_pos_stream.data(),
+                vec_buf
+            );
+
+            const double got = vec_buf[offset];
+            const double expected = data[idx];
+            if (got != expected) {
+                std::cerr << "ALP random access mismatch at idx=" << idx
+                          << " expected=" << expected << " got=" << got << std::endl;
+                break;
+            }
+        }
+    }
 
     // Range queries - with volatile checksum to prevent optimization
     const size_t num_range_queries = 1000;
