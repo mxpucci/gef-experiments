@@ -52,3 +52,8 @@ python3 "$PLOT_SCRIPT" "$CSV_FILE" "$OUT_DIR"
 
 echo "Done."
 
+
+
+
+
+
