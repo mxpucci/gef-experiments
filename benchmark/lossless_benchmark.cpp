@@ -68,12 +68,7 @@
 // WORKAROUND: Use LosslessBenchmarkFullNoSIMD which is compiled with:
 //   -DGEF_DISABLE_SIMD=1 -DGEF_DISABLE_OPENMP=1
 // These flags force sequential partition construction and scalar gap computation.
-#include "gef/UniformedPartitioner.hpp"
-#include "gef/RLE_GEF.hpp"
-#include "gef/U_GEF.hpp"
-#include "gef/B_GEF.hpp"
-#include "gef/B_GEF_STAR.hpp"
-#include "datastructures/SDSLBitVectorFactory.hpp"
+#include "gef/gef.hpp"
 
 // ============================================================================
 // Utility functions
@@ -349,48 +344,10 @@ BenchmarkResult benchmark_neats(const BenchmarkData &bench_data,
 
 static constexpr size_t GEF_UNIFORM_PARTITION_SIZE = 32000;
 
-template<typename T>
-struct RLE_GEF_Wrapper : public gef::RLE_GEF<T> {
-    template<typename C>
-    RLE_GEF_Wrapper(const C& data, std::shared_ptr<IBitVectorFactory> factory)
-        : gef::RLE_GEF<T>(factory, data) {}
-    
-    RLE_GEF_Wrapper() : gef::RLE_GEF<T>() {}
-    // RLE_GEF supports copy, so defaults are fine
-};
-
-template<typename T, gef::SplitPointStrategy Strategy>
-struct U_GEF_Wrapper : public gef::U_GEF<T> {
-    template<typename C>
-    U_GEF_Wrapper(const C& data, std::shared_ptr<IBitVectorFactory> factory)
-        : gef::U_GEF<T>(factory, data, Strategy) {}
-    
-    U_GEF_Wrapper() : gef::U_GEF<T>() {}
-};
-
-template<typename T, gef::SplitPointStrategy Strategy>
-struct B_GEF_Wrapper : public gef::B_GEF<T> {
-    template<typename C>
-    B_GEF_Wrapper(const C& data, std::shared_ptr<IBitVectorFactory> factory)
-        : gef::B_GEF<T>(factory, data, Strategy) {}
-    
-    B_GEF_Wrapper() : gef::B_GEF<T>() {}
-};
-
-template<typename T, gef::SplitPointStrategy Strategy>
-struct B_GEF_STAR_Wrapper : public gef::B_GEF_STAR<T> {
-    template<typename C>
-    B_GEF_STAR_Wrapper(const C& data, std::shared_ptr<IBitVectorFactory> factory)
-        : gef::B_GEF_STAR<T>(factory, data, Strategy) {}
-    
-    B_GEF_STAR_Wrapper() : gef::B_GEF_STAR<T>() {}
-};
-
 template<typename GEFType, typename T = int64_t>
 BenchmarkResult benchmark_gef(const std::string &compressor_name,
                               const BenchmarkData &bench_data,
-                              const std::vector<size_t> &range_sizes,
-                              size_t block_size = 1000) {
+                              const std::vector<size_t> &range_sizes) {
     BenchmarkResult result;
     result.compressor = compressor_name;
     result.dataset = bench_data.filename;
@@ -401,12 +358,9 @@ BenchmarkResult benchmark_gef(const std::string &compressor_name,
     result.num_values = data.size();
     result.uncompressed_bits = bench_data.uncompressed_bits;
     
-    auto factory = std::make_shared<SDSLBitVectorFactory>();
-    
     // Compression
     auto t1 = std::chrono::high_resolution_clock::now();
-    // UniformedPartitioner(data, k, args...) -> Wrapper(view, factory)
-    GEFType compressor(data, block_size, factory);
+    GEFType compressor(data);
     compiler_barrier();
     auto t2 = std::chrono::high_resolution_clock::now();
     auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
@@ -1575,26 +1529,26 @@ int main(int argc, char *argv[]) {
 #else
                 else if (comp == "rle_gef") {
 #endif
-                    using UP_RLE = gef::UniformedPartitioner<int64_t, RLE_GEF_Wrapper<int64_t>, std::shared_ptr<IBitVectorFactory>>;
-                    result = benchmark_gef<UP_RLE, int64_t>("rle_gef", bench_data, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                    using UP_RLE = gef::RLE_GEF<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
+                    result = benchmark_gef<UP_RLE, int64_t>("rle_gef", bench_data, range_sizes);
                 } else if (comp == "u_gef_approximate") {
-                    using UP_U = gef::UniformedPartitioner<int64_t, U_GEF_Wrapper<int64_t, gef::APPROXIMATE_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
-                    result = benchmark_gef<UP_U, int64_t>("u_gef_approximate", bench_data, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                    using UP_U = gef::U_GEF_APPROXIMATE<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
+                    result = benchmark_gef<UP_U, int64_t>("u_gef_approximate", bench_data, range_sizes);
                 } else if (comp == "u_gef_optimal") {
-                    using UP_U = gef::UniformedPartitioner<int64_t, U_GEF_Wrapper<int64_t, gef::OPTIMAL_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
-                    result = benchmark_gef<UP_U, int64_t>("u_gef_optimal", bench_data, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                    using UP_U = gef::U_GEF<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
+                    result = benchmark_gef<UP_U, int64_t>("u_gef_optimal", bench_data, range_sizes);
                 } else if (comp == "b_gef_approximate") {
-                    using UP_B = gef::UniformedPartitioner<int64_t, B_GEF_Wrapper<int64_t, gef::APPROXIMATE_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
-                    result = benchmark_gef<UP_B, int64_t>("b_gef_approximate", bench_data, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                    using UP_B = gef::B_GEF_APPROXIMATE<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
+                    result = benchmark_gef<UP_B, int64_t>("b_gef_approximate", bench_data, range_sizes);
                 } else if (comp == "b_gef_optimal") {
-                    using UP_B = gef::UniformedPartitioner<int64_t, B_GEF_Wrapper<int64_t, gef::OPTIMAL_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
-                    result = benchmark_gef<UP_B, int64_t>("b_gef_optimal", bench_data, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                    using UP_B = gef::B_GEF<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
+                    result = benchmark_gef<UP_B, int64_t>("b_gef_optimal", bench_data, range_sizes);
                 } else if (comp == "b_star_gef_approximate") {
-                    using UP_B_STAR = gef::UniformedPartitioner<int64_t, B_GEF_STAR_Wrapper<int64_t, gef::APPROXIMATE_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
-                    result = benchmark_gef<UP_B_STAR, int64_t>("b_star_gef_approximate", bench_data, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                    using UP_B_STAR = gef::B_STAR_GEF_APPROXIMATE<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
+                    result = benchmark_gef<UP_B_STAR, int64_t>("b_star_gef_approximate", bench_data, range_sizes);
                 } else if (comp == "b_star_gef_optimal") {
-                    using UP_B_STAR = gef::UniformedPartitioner<int64_t, B_GEF_STAR_Wrapper<int64_t, gef::OPTIMAL_SPLIT_POINT>, std::shared_ptr<IBitVectorFactory>>;
-                    result = benchmark_gef<UP_B_STAR, int64_t>("b_star_gef_optimal", bench_data, range_sizes, GEF_UNIFORM_PARTITION_SIZE);
+                    using UP_B_STAR = gef::B_STAR_GEF<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
+                    result = benchmark_gef<UP_B_STAR, int64_t>("b_star_gef_optimal", bench_data, range_sizes);
                 } else {
                     std::cerr << " unknown compressor, skipping" << std::endl;
                     continue;
