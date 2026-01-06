@@ -141,6 +141,7 @@ jobs:
             -DARCH_FLAGS="${TARGET_ARCH}" \
             -DCMAKE_C_COMPILER="$ENV_PATH/bin/clang" \
             -DCMAKE_CXX_COMPILER="$ENV_PATH/bin/clang++" \
+            -DCMAKE_CXX_SCAN_FOR_MODULES=OFF \
             -DNEATS_WITH_SQUASH=ON \
             -DNEATS_WITH_LECO=ON \
             -DNEATS_LECO_EXTRA_INCLUDES="$ENV_PATH/include;$ENV_PATH/include/eigen3" \
