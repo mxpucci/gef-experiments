@@ -79,7 +79,12 @@ FetchContent_MakeAvailable(pasta)
 set(PASTA_INCLUDE_DIR ${pasta_SOURCE_DIR}/include)
 
 # --- GEF Library (Manual integration to avoid submodule CMake issues) ---
-add_library(gef STATIC lib/generalized-elias-fano/src/gef.cpp)
+add_library(gef STATIC 
+    lib/generalized-elias-fano/src/bgef_no_rle.cpp
+    lib/generalized-elias-fano/src/bgef.cpp
+    lib/generalized-elias-fano/src/rle_gef.cpp
+    lib/generalized-elias-fano/src/ugef.cpp
+)
 target_include_directories(gef PUBLIC 
     lib/generalized-elias-fano/include
     ${PASTA_INCLUDE_DIR}
