@@ -12,6 +12,21 @@ The core implementation of Generalized Elias Fano is available here:
 *   **Python 3** (for generating plots and tables)
 *   **Squash** (optional, for comparing against a wide range of compressors)
 
+## 📥 Cloning the Repository
+
+To clone this repository, make sure to include the `--recursive` flag to initialize all submodules:
+
+```bash
+git clone --recursive https://github.com/mxpucci/gef-experiments.git
+cd gef-experiments
+```
+
+If you have already cloned the repository without the recursive flag, you can initialize the submodules manually:
+
+```bash
+git submodule update --init --recursive
+```
+
 ## 🛠️ Building the Benchmarks
 
 To build the project, run the following commands:
@@ -36,6 +51,44 @@ You can run the benchmarks using the provided helper script. It requires a direc
 ```
 
 The results will be saved in the `benchmark_results/` directory as text files.
+
+## 📂 Datasets
+
+The datasets used for benchmarking are stored as a **split zip archive** to accommodate file size limits. They are managed via **Git LFS** and excluded from the default clone.
+
+### Downloading and Extracting
+To get the datasets, you need to pull the archive files and then extract them.
+
+1.  **Download the archive:**
+    ```bash
+    git lfs pull --include="datasets_archive.*"
+    ```
+
+2.  **Extract the archive:**
+    You need to combine the split files. Use `7z` or `unzip`:
+    ```bash
+    # Using 7zip (Recommended)
+    7z x datasets_archive.zip
+
+    # OR using unzip (if your version supports split archives)
+    unzip datasets_archive.zip
+    ```
+    This will create the `datasets/` directory containing all binary files.
+
+### Dataset Credits
+We gratefully acknowledge the sources of the datasets used in this benchmark:
+
+*   **IT (IR Sensor Temp)**: [NEON (DP1.00005.001)](https://doi.org/10.48443/7RS6-FF56)
+*   **US / UK / GE (Stock Exchanges)**: [INFORE Project](https://doi.org/10.5281/zenodo.3886895)
+*   **ECG**: [Zheng et al.](https://doi.org/10.13026/wgex-er52)
+*   **WD (Wind Direction)**: [NEON (DP1.00001.001)](https://doi.org/10.48443/77N6-EH42)
+*   **AP (Barometric Pressure)**: [NEON (DP1.00004.001)](https://doi.org/10.48443/ZR37-0238)
+*   **LAT / LON (GPS)**: [Microsoft Research (GeoLife)](https://www.microsoft.com/en-us/research/publication/geolife-gps-trajectory-dataset-user-guide/)
+*   **DP (Dew Point)**: [NEON (DP1.20271.001)](https://doi.org/10.48443/1W06-WM51)
+*   **CT (City Temp)**: [University of Dayton (via Kaggle)](https://www.kaggle.com/datasets)
+*   **DU (PM10 Dust)**: [NEON (DP1.00017.001)](https://doi.org/10.48443/RDZ9-XR84)
+*   **BW (Basel Wind) / BT (Basel Temp)**: [Meteoblue](https://www.meteoblue.com/)
+*   **BM (Bird Migration) / BP (Bitcoin)**: [InfluxData](https://github.com/influxdata/influxdb2-sample-data)
 
 ## 💾 Dataset Format
 

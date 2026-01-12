@@ -9,3 +9,4 @@ lib/boost_1_83_0/libs/
 build/
 .vscode/
 __pycache__/
+datasets/
