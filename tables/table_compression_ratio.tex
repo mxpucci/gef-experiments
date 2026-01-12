@@ -1,0 +1,39 @@
+\begin{table}[htbp]
+\caption{Compression Ratio (\%) \textbf{Bold}: Best, \underline{Underlined}: Second, \textit{Italics}: Third.}
+\label{tab:ratio}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}l *{5}{c} *{11}{c} *{7}{c} @{}}
+\toprule
+ & \multicolumn{5}{c}{\textbf{General-purpose compressors}} & \multicolumn{11}{c}{\textbf{Special-purpose compressors}} & \multicolumn{7}{c}{\textbf{GEF variants}} \\
+\cmidrule(lr){2-6}
+\cmidrule(lr){7-17}
+\cmidrule(lr){18-24}
+\textbf{Dataset} & \rotatebox{45}{Brotli} & \rotatebox{45}{Lz4} & \rotatebox{45}{Snappy} & \rotatebox{45}{Xz} & \rotatebox{45}{Zstd} & \rotatebox{45}{ALP} & \rotatebox{45}{Camel} & \rotatebox{45}{Chimp} & \rotatebox{45}{Chimp128} & \rotatebox{45}{DAC} & \rotatebox{45}{ELF} & \rotatebox{45}{Falcon} & \rotatebox{45}{Gorilla} & \rotatebox{45}{LeCo} & \rotatebox{45}{NeaTS} & \rotatebox{45}{TSXor} & \rotatebox{45}{\RLEGEF} & \rotatebox{45}{$\hat{\UGEF}$} & \rotatebox{45}{$\UGEF^*$} & \rotatebox{45}{$\hat{\BGEF}$} & \rotatebox{45}{$\BGEF^*$} & \rotatebox{45}{$\hat{\BSTARGEF}$} & \rotatebox{45}{$\BSTARGEF^*$} \\
+\midrule
+IT & 0.14 & 0.41 & 0.37 & 0.13 & 0.23 & 0.17 & 0.20 & 0.72 & 0.30 & 0.24 & 0.38 & \textit{0.11} & 0.79 & 0.16 & 0.12 & 0.31 & 0.12 & 0.12 & 0.12 & 0.11 & 0.11 & \textbf{0.10} & \textbf{0.10} \\
+US & 0.09 & 0.27 & 0.21 & 0.09 & 0.13 & 0.11 & 0.20 & 0.55 & 0.19 & 0.25 & 0.27 & \textit{0.07} & 0.57 & 0.10 & 0.08 & 0.19 & 0.08 & 0.09 & 0.08 & 0.07 & 0.08 & \textbf{0.06} & \textbf{0.06} \\
+ECG & 0.12 & 0.34 & 0.26 & 0.12 & 0.17 & 0.16 & 0.22 & 0.69 & 0.27 & 0.25 & 0.32 & \textit{0.12} & 0.73 & 0.16 & 0.14 & 0.24 & 0.13 & 0.13 & 0.13 & 0.12 & 0.12 & \textbf{0.11} & \textbf{0.11} \\
+WD & 0.28 & 0.53 & 0.54 & 0.24 & 0.34 & 0.25 & 0.40 & 0.84 & 0.44 & 0.26 & 0.54 & 0.23 & 0.91 & 0.25 & 0.25 & 0.47 & \textbf{0.23} & 0.23 & 0.23 & 0.23 & \underline{0.23} & \textit{0.23} & \textit{0.23} \\
+AP & \underline{0.13} & 0.26 & 0.25 & \textbf{0.12} & 0.18 & 0.25 & 0.44 & 0.36 & 0.30 & 0.41 & 0.37 & 0.16 & 0.38 & 0.24 & 0.20 & 0.35 & \textit{0.14} & 0.19 & 0.16 & 0.18 & 0.16 & 0.17 & 0.17 \\
+\addlinespace
+UK & 0.09 & 0.27 & 0.21 & 0.09 & 0.13 & 0.12 & 0.15 & 0.47 & 0.23 & 0.26 & 0.36 & \textit{0.08} & 0.54 & 0.11 & 0.09 & 0.16 & 0.09 & 0.11 & 0.10 & 0.09 & 0.09 & \textbf{0.07} & \textbf{0.07} \\
+GE & 0.11 & 0.30 & 0.24 & 0.11 & 0.15 & 0.14 & 0.23 & 0.67 & 0.21 & 0.29 & 0.36 & \textit{0.11} & 0.71 & 0.14 & 0.12 & 0.21 & 0.12 & 0.14 & 0.13 & 0.12 & 0.12 & \textbf{0.10} & \textbf{0.10} \\
+LON & 0.19 & 0.50 & 0.49 & \textit{0.17} & 0.33 & 0.26 & 0.37 & 0.62 & 0.55 & 0.47 & 0.64 & \textbf{0.15} & 0.63 & 0.25 & 0.18 & 0.66 & 0.19 & 0.19 & 0.18 & 0.19 & \underline{0.17} & 0.19 & 0.19 \\
+LAT & 0.24 & 0.52 & 0.51 & \textit{0.21} & 0.41 & 0.25 & 0.26 & 0.61 & 0.44 & 0.47 & 0.63 & \textbf{0.19} & 0.64 & 0.30 & 0.22 & 0.51 & 0.24 & 0.24 & 0.23 & 0.24 & \underline{0.21} & 0.23 & 0.23 \\
+DP & 0.17 & 0.49 & 0.48 & 0.16 & 0.29 & 0.21 & 0.26 & 0.77 & 0.50 & 0.27 & 0.42 & \textit{0.15} & 0.83 & 0.21 & 0.16 & 0.61 & 0.16 & 0.17 & 0.16 & 0.15 & 0.15 & \textbf{0.13} & \textbf{0.13} \\
+\addlinespace
+CT & 0.16 & 0.43 & 0.38 & 0.16 & 0.25 & 0.15 & 0.23 & 0.74 & 0.36 & 0.19 & 0.66 & 0.14 & 0.87 & 0.15 & 0.14 & 0.31 & \textit{0.14} & 0.14 & 0.14 & 0.14 & 0.14 & \textbf{0.13} & \textbf{0.13} \\
+DU & \textbf{0.08} & 0.23 & 0.19 & \textit{0.08} & 0.11 & 0.13 & 0.18 & 0.40 & 0.22 & 0.12 & 0.21 & \underline{0.08} & 0.44 & 0.13 & 0.09 & 0.18 & 0.09 & 0.10 & 0.09 & 0.10 & 0.09 & 0.10 & 0.10 \\
+BT & \underline{0.46} & 0.67 & 0.69 & \textbf{0.46} & 0.58 & \textit{0.47} & 0.53 & 0.84 & 0.48 & 0.57 & 0.82 & 0.52 & 0.93 & 0.55 & 0.65 & 0.56 & 0.53 & 0.53 & 0.53 & 0.53 & 0.53 & 0.51 & 0.51 \\
+BW & \underline{0.41} & 0.59 & 0.59 & \textbf{0.36} & 0.50 & 0.48 & 0.54 & 0.88 & 0.71 & 0.46 & 0.80 & 0.44 & 1.00 & 0.49 & 0.45 & 0.82 & 0.46 & 0.47 & 0.46 & 0.47 & \textit{0.44} & 0.47 & 0.47 \\
+BM & \underline{0.21} & 0.44 & 0.39 & \textbf{0.20} & 0.29 & 0.33 & 0.41 & 0.65 & 0.41 & 0.37 & 0.65 & 0.22 & 0.73 & 0.31 & 0.24 & 0.48 & 0.24 & 0.24 & 0.24 & 0.25 & \textit{0.22} & 0.24 & 0.24 \\
+\addlinespace
+BP & 0.40 & 0.69 & 0.71 & 0.37 & 0.66 & 0.37 & 0.63 & 0.77 & 0.72 & 0.46 & 0.68 & \textit{0.36} & 0.83 & 0.40 & 0.40 & 0.88 & 0.36 & 0.37 & 0.37 & 0.36 & 0.36 & \textbf{0.34} & \textbf{0.34} \\
+\bottomrule
+\end{tabular}
+\\
+\footnotesize
+With $\hat C$ and $C^*$, we denote the GEF variant $C$ that uses either its approximated or optimal split point, respectively.
+\end{table}

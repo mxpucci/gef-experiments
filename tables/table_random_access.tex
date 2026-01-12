@@ -1,0 +1,36 @@
+\begin{table}[htbp]
+\caption{Random Access Throughput (MB/s) \textbf{Bold}: Best, \underline{Underlined}: Second, \textit{Italics}: Third.}
+\label{tab:ra_speed}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}l *{5}{c} *{11}{c} *{4}{c} @{}}
+\toprule
+ & \multicolumn{5}{c}{\textbf{General-purpose compressors}} & \multicolumn{11}{c}{\textbf{Special-purpose compressors}} & \multicolumn{4}{c}{\textbf{GEF variants}} \\
+\cmidrule(lr){2-6}
+\cmidrule(lr){7-17}
+\cmidrule(lr){18-21}
+\textbf{Dataset} & \rotatebox{45}{Brotli} & \rotatebox{45}{Lz4} & \rotatebox{45}{Snappy} & \rotatebox{45}{Xz} & \rotatebox{45}{Zstd} & \rotatebox{45}{ALP} & \rotatebox{45}{Camel} & \rotatebox{45}{Chimp} & \rotatebox{45}{Chimp128} & \rotatebox{45}{DAC} & \rotatebox{45}{ELF} & \rotatebox{45}{Falcon} & \rotatebox{45}{Gorilla} & \rotatebox{45}{LeCo} & \rotatebox{45}{NeaTS} & \rotatebox{45}{TSXor} & \rotatebox{45}{\RLEGEF} & \rotatebox{45}{\UGEF} & \rotatebox{45}{\BGEF} & \rotatebox{45}{\BSTARGEF} \\
+\midrule
+IT & 0.33 & 0.98 & 0.55 & 0.08 & 0.35 & 7.22 & 0.48 & 0.87 & 0.89 & \textbf{140.37} & 0.53 & 0.50 & 0.97 & \underline{121.42} & 44.58 & 1.02 & \textit{64.78} & 18.94 & 9.32 & 22.71 \\
+US & 0.44 & 1.32 & 0.93 & 0.12 & 0.52 & 8.02 & 0.56 & 0.95 & 1.40 & \underline{76.99} & 0.61 & 0.63 & 1.07 & \textbf{134.66} & 53.60 & 1.58 & \textit{68.01} & 21.84 & 11.22 & 28.35 \\
+ECG & 0.32 & 1.21 & 0.77 & 0.09 & 0.47 & 5.83 & 0.56 & 0.83 & 1.01 & \textbf{139.14} & 0.49 & 0.46 & 0.81 & \underline{121.78} & 48.52 & 1.33 & \textit{60.28} & 10.52 & 10.33 & 24.98 \\
+WD & 0.23 & 1.37 & 0.48 & 0.05 & 0.37 & 7.36 & 0.31 & 0.82 & 0.90 & \underline{133.38} & 0.48 & 0.33 & 1.00 & \textbf{142.19} & 11.47 & 1.02 & \textit{71.40} & 26.14 & 14.64 & 30.24 \\
+AP & 0.35 & 1.21 & 0.78 & 0.09 & 0.51 & 5.72 & 0.31 & 1.10 & 1.10 & \textit{66.26} & 0.69 & 0.35 & 1.29 & \textbf{135.02} & 23.69 & 1.25 & \underline{75.79} & 26.05 & 15.93 & 26.60 \\
+\addlinespace
+UK & 0.45 & 1.35 & 0.99 & 0.12 & 0.53 & 6.03 & 0.67 & 0.95 & 1.13 & \underline{129.98} & 0.63 & 0.60 & 1.13 & \textbf{193.98} & 69.66 & 1.57 & \textit{113.17} & 31.08 & 15.92 & 36.17 \\
+GE & 0.39 & 1.28 & 0.91 & 0.11 & 0.50 & 6.25 & 0.48 & 0.92 & 1.28 & \underline{179.22} & 0.53 & 0.53 & 1.06 & \textbf{202.92} & 66.50 & 1.47 & \textit{119.35} & 35.01 & 16.77 & 40.35 \\
+LON & 0.31 & 1.16 & 0.49 & 0.06 & 0.35 & 10.50 & 0.33 & 1.42 & 1.01 & \underline{204.02} & 0.58 & 0.36 & 1.07 & \textbf{212.05} & 76.67 & 0.99 & \textit{136.65} & 35.69 & 19.68 & 46.74 \\
+LAT & 0.25 & 1.20 & 0.49 & 0.05 & 0.33 & 10.39 & 0.39 & 1.37 & 0.87 & \underline{203.26} & 0.58 & 0.31 & 1.06 & \textbf{207.58} & 72.32 & 0.94 & \textit{130.67} & 34.98 & 19.55 & 46.35 \\
+DP & 0.31 & 1.05 & 0.48 & 0.06 & 0.32 & 14.26 & 0.39 & 0.92 & 0.80 & \underline{319.40} & 0.57 & 0.47 & 1.02 & \textbf{419.93} & 99.87 & 0.89 & \textit{212.01} & 51.21 & 27.95 & 69.74 \\
+\addlinespace
+CT & 0.28 & 0.89 & 0.57 & 0.07 & 0.35 & 17.28 & 0.47 & 0.83 & 1.06 & \underline{460.05} & 0.55 & 0.50 & 1.07 & \textbf{561.48} & 116.44 & 1.12 & \textit{240.90} & 68.91 & 34.23 & 82.39 \\
+DU & 0.51 & 1.57 & 1.10 & 0.14 & 0.62 & 27.53 & 0.67 & 1.23 & 1.34 & \underline{393.38} & 0.71 & 0.47 & 1.33 & \textbf{953.09} & 132.78 & 1.61 & \textit{320.34} & 70.73 & 42.21 & 96.88 \\
+BT & 0.18 & 1.13 & 0.47 & 0.03 & 0.34 & 21.83 & 0.19 & 0.94 & 0.94 & \underline{654.43} & 0.46 & 0.19 & 1.07 & \textbf{999.03} & 122.00 & 0.97 & \textit{292.19} & 67.32 & 38.91 & 94.63 \\
+BW & 0.16 & 1.04 & 0.50 & 0.04 & 0.32 & 9.71 & 0.19 & 0.86 & 0.80 & \underline{764.17} & 0.44 & 0.21 & 1.13 & \textbf{984.79} & 132.25 & 0.88 & \textit{297.95} & 75.99 & 40.97 & 91.14 \\
+BM & 0.26 & 1.11 & 0.59 & 0.06 & 0.43 & 26.32 & 0.32 & 1.02 & 1.12 & \underline{502.65} & 0.53 & 0.28 & 1.17 & \textbf{1083.34} & 136.37 & 1.13 & \textit{344.71} & 89.25 & 52.11 & 119.83 \\
+\addlinespace
+BP & 0.21 & 1.62 & 0.48 & 0.03 & 0.32 & 28.46 & 0.25 & 1.06 & 0.94 & \underline{866.33} & 0.55 & 0.26 & 1.24 & \textbf{1159.38} & 128.05 & 1.00 & \textit{317.75} & 105.95 & 57.97 & 118.63 \\
+\bottomrule
+\end{tabular}
+\end{table}
