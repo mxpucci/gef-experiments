@@ -3,11 +3,10 @@
 # Configuration
 VENV_DIR=".venv"
 REQUIREMENTS_FILE="requirements.txt"
-TABLE_SCRIPT="scripts/tables.py"
+TABLE_SCRIPT="scripts/full_tables.py"
 # Default input/output if not provided as arguments
-DEFAULT_CSV="benchmark_results/dataset_normalized_optimized.csv"
+DEFAULT_CSV="benchmark_results/results.csv"
 DEFAULT_OUT_DIR="tables"
-DEFAULT_THRESHOLD="0.35"
 
 # Check if python3 is available
 if ! command -v python3 &> /dev/null; then
@@ -33,7 +32,7 @@ else
 fi
 
 # Determine arguments
-# Usage: ./generate_tables.sh [csv_file] [output_dir] [threshold] [--compressors "list"] [--include-approx]
+# Usage: ./generate_tables.sh [csv_file] [output_dir] [--compressors "list"] [--datasets "list"]
 
 POSITIONAL_ARGS=()
 EXTRA_ARGS=()
@@ -43,10 +42,6 @@ while [[ $# -gt 0 ]]; do
         --compressors)
             EXTRA_ARGS+=("--compressors" "$2")
             shift 2
-            ;;
-        --include-approx)
-            EXTRA_ARGS+=("--include-approx")
-            shift
             ;;
         --datasets)
             EXTRA_ARGS+=("--datasets" "$2")
@@ -61,22 +56,20 @@ done
 
 CSV_FILE="${POSITIONAL_ARGS[0]:-$DEFAULT_CSV}"
 OUT_DIR="${POSITIONAL_ARGS[1]:-$DEFAULT_OUT_DIR}"
-THRESHOLD="${POSITIONAL_ARGS[2]:-$DEFAULT_THRESHOLD}"
 
 if [ ! -f "$CSV_FILE" ]; then
     # Try to find any CSV in benchmark_results if default doesn't exist
     CSV_FILE=$(find benchmark_results -name "*.csv" | head -n 1)
     if [ -z "$CSV_FILE" ]; then
         echo "Error: No CSV file found to process."
-        echo "Usage: ./generate_tables.sh [csv_file] [output_dir] [threshold] [--compressors list] [--include-approx]"
+        echo "Usage: ./generate_tables.sh [csv_file] [output_dir] [--compressors list] [--datasets list]"
         exit 1
     fi
     echo "Default CSV not found, using found CSV: $CSV_FILE"
 fi
 
 # Run the table script
-echo "Generating tables from $CSV_FILE with threshold $THRESHOLD to $OUT_DIR..."
-python3 "$TABLE_SCRIPT" "$CSV_FILE" "$THRESHOLD" "$OUT_DIR" "${EXTRA_ARGS[@]}"
+echo "Generating tables from $CSV_FILE to $OUT_DIR..."
+python3 "$TABLE_SCRIPT" "$CSV_FILE" "$OUT_DIR" "${EXTRA_ARGS[@]}"
 
 echo "Done."
-

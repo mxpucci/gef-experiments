@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""
-Generate Optimized LaTeX tables for compression benchmarks.
-- UNIFORMITY FIX: Uses tabular* with \extracolsep{\fill} to ensure all tables 
-  have identical width and font size.
-- Removes adjustbox scaling (which caused the font size mismatch).
-- Auto-generates captions with formatting legends.
-"""
 
 import argparse
 import sys
