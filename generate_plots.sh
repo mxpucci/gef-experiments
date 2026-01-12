@@ -5,7 +5,7 @@ VENV_DIR=".venv"
 REQUIREMENTS_FILE="requirements.txt"
 PLOT_SCRIPT="scripts/pareto_plots.py"
 # Default input/output if not provided as arguments
-DEFAULT_CSV="benchmark_results/dataset_normalized_optimized.csv"
+DEFAULT_CSV="benchmark_results/results.csv"
 DEFAULT_OUT_DIR="plots"
 
 # Check if python3 is available
@@ -51,6 +51,7 @@ echo "Generating plots from $CSV_FILE to $OUT_DIR..."
 python3 "$PLOT_SCRIPT" "$CSV_FILE" "$OUT_DIR"
 
 echo "Done."
+
 
 
 
