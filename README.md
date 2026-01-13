@@ -57,23 +57,29 @@ The results will be saved in the `benchmark_results/` directory as text files.
 The datasets used for benchmarking are stored as a **split zip archive** to accommodate file size limits. They are managed via **Git LFS** and excluded from the default clone.
 
 ### Downloading and Extracting
-To get the datasets, you need to pull the archive files and then extract them.
+To get the datasets, you can use the provided helper script:
+
+```bash
+./install_datasets.sh
+```
+
+Alternatively, you can manually pull and extract them:
 
 1.  **Download the archive:**
     ```bash
-    git lfs pull --include="datasets_archive.*"
+    git lfs pull --include="datasets/datasets_archive.*"
     ```
 
 2.  **Extract the archive:**
     You need to combine the split files. Use `7z` or `unzip`:
     ```bash
     # Using 7zip (Recommended)
-    7z x datasets_archive.zip
+    7z x datasets/datasets_archive.zip
 
     # OR using unzip (if your version supports split archives)
-    unzip datasets_archive.zip
+    unzip datasets/datasets_archive.zip
     ```
-    This will create the `datasets/` directory containing all binary files.
+    This will extract the binary files into the `datasets/` directory.
 
 ### Dataset Credits
 We gratefully acknowledge the sources of the datasets used in this benchmark:
