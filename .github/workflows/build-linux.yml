@@ -40,6 +40,10 @@ jobs:
           REPO
           yum install -y bzip2 wget
 
+          # --- INSTALL RUST TOOLCHAIN (for sux-rs FFI) ---
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source "$HOME/.cargo/env"
+
           # --- INSTALL MICROMAMBA & COMPILERS ---
           wget -qO- https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C /usr/local/bin --strip-components=1 bin/micromamba
           export MAMBA_ROOT_PREFIX=/opt/conda
@@ -128,6 +132,7 @@ jobs:
             -DCMAKE_CXX_COMPILER="$ENV_PATH/bin/x86_64-conda-linux-gnu-g++" \
             -DNEATS_WITH_SQUASH=ON \
             -DNEATS_WITH_LECO=ON \
+            -DNEATS_WITH_INVERTED_INDEX=ON \
             -DNEATS_LECO_EXTRA_INCLUDES="$ENV_PATH/include;$ENV_PATH/include/eigen3" \
             -DNEATS_ALP_HYBRID_CLANG=ON \
             -DNEATS_ALP_CLANGXX="$ENV_PATH/bin/clang++" \
@@ -144,6 +149,7 @@ jobs:
             -DCMAKE_CXX_SCAN_FOR_MODULES=OFF \
             -DNEATS_WITH_SQUASH=ON \
             -DNEATS_WITH_LECO=ON \
+            -DNEATS_WITH_INVERTED_INDEX=ON \
             -DNEATS_LECO_EXTRA_INCLUDES="$ENV_PATH/include;$ENV_PATH/include/eigen3" \
             -DNEATS_ALP_HYBRID_CLANG=OFF \
             -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE
@@ -162,6 +168,11 @@ jobs:
           else
              echo "GCC binaries not found!" && exit 1
           fi
+          if [ -f "build-gcc/InvertedIndexBenchmark" ]; then
+             cp -v "build-gcc/InvertedIndexBenchmark" "$OUT/InvertedIndexBenchmark-gcc"
+          else
+             echo "GCC InvertedIndexBenchmark not found!" && exit 1
+          fi
 
           # Copy binaries from Clang build
           if [ -f "build-clang/LosslessBenchmarkFull" ]; then
@@ -170,12 +181,19 @@ jobs:
           else
              echo "Clang binaries not found!" && exit 1
           fi
+          if [ -f "build-clang/InvertedIndexBenchmark" ]; then
+             cp -v "build-clang/InvertedIndexBenchmark" "$OUT/InvertedIndexBenchmark-clang"
+          else
+             echo "Clang InvertedIndexBenchmark not found!" && exit 1
+          fi
 
           # Set RPATHs for all binaries
           patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFull-gcc"
           patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFullNoSIMD-gcc"
+          patchelf --set-rpath '$ORIGIN/lib' "$OUT/InvertedIndexBenchmark-gcc"
           patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFull-clang"
           patchelf --set-rpath '$ORIGIN/lib' "$OUT/LosslessBenchmarkFullNoSIMD-clang"
+          patchelf --set-rpath '$ORIGIN/lib' "$OUT/InvertedIndexBenchmark-clang"
 
           # 1. FLATTEN SQUASH PLUGINS
           mkdir -p "$OUT/lib/plugins"
@@ -196,7 +214,7 @@ jobs:
 
           # 2. RESOLVE DEPENDENCIES
           echo "Resolving dependencies..."
-          find "$OUT" -type f \( -name "LosslessBenchmarkFull*" -o -name "*.so" \) > binaries.txt
+          find "$OUT" -type f \( -name "LosslessBenchmarkFull*" -o -name "InvertedIndexBenchmark*" -o -name "*.so" \) > binaries.txt
           
           cat binaries.txt | xargs ldd | awk '{print $3}' | grep -E '^/' | sort -u > libs_to_copy.txt
           
@@ -243,6 +261,8 @@ jobs:
           create_run_script "gcc_nosimd" "LosslessBenchmarkFullNoSIMD-gcc"
           create_run_script "clang" "LosslessBenchmarkFull-clang"
           create_run_script "clang_nosimd" "LosslessBenchmarkFullNoSIMD-clang"
+          create_run_script "ii_gcc" "InvertedIndexBenchmark-gcc"
+          create_run_script "ii_clang" "InvertedIndexBenchmark-clang"
 
           # Default run.sh -> GCC optimized
           cp "$OUT/run_gcc.sh" "$OUT/run.sh"

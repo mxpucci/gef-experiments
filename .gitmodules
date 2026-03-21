@@ -7,3 +7,9 @@
 [submodule "lib/ALP"]
 	path = lib/ALP
 	url = https://github.com/cwida/ALP
+[submodule "lib/FastPFOR"]
+	path = lib/FastPFOR
+	url = https://github.com/lemire/FastPFOR.git
+[submodule "datasets/inverted-index"]
+	path = datasets/inverted-index
+	url = https://github.com/RoaringBitmap/real-roaring-datasets.git
