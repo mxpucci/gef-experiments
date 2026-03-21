@@ -78,24 +78,18 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(pasta)
 set(PASTA_INCLUDE_DIR ${pasta_SOURCE_DIR}/include)
 
-# --- GEF Library (Manual integration to avoid submodule CMake issues) ---
-add_library(gef STATIC 
-    lib/generalized-elias-fano/src/bgef_no_rle.cpp
-    lib/generalized-elias-fano/src/bgef.cpp
-    lib/generalized-elias-fano/src/rle_gef.cpp
-    lib/generalized-elias-fano/src/ugef.cpp
-)
-target_include_directories(gef PUBLIC 
-    lib/generalized-elias-fano/include
+# --- GEF Library (header-only since latest refactor) ---
+add_library(gef INTERFACE)
+target_include_directories(gef INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/generalized-elias-fano/include
     ${PASTA_INCLUDE_DIR}
 )
-target_link_libraries(gef PUBLIC sdsl sux pasta_bit_vector)
-# OpenMP is only used/beneficial for GEF; keep it scoped to this target.
+target_link_libraries(gef INTERFACE sdsl sux pasta_bit_vector)
+# OpenMP is only used/beneficial for GEF; keep it scoped to consumers.
 if(OpenMP_CXX_FOUND)
-    target_link_libraries(gef PUBLIC OpenMP::OpenMP_CXX)
+    target_link_libraries(gef INTERFACE OpenMP::OpenMP_CXX)
 endif()
-# Add required flags for GEF
-target_compile_options(gef PUBLIC -ffast-math -funroll-loops)
+target_compile_options(gef INTERFACE -ffast-math -funroll-loops)
 
 # --- ALP Library (vendored build, avoids ALP's standalone CMake restrictions) ---
 add_library(neats_alp STATIC
@@ -375,4 +369,76 @@ if(NEATS_WITH_SQUASH)
         endif()
         
     endif()
+endif()
+
+# ==============================================================================
+# Inverted Index Benchmark (GEF vs FastPFOR vs sux-rs)
+# ==============================================================================
+option(NEATS_WITH_INVERTED_INDEX "Build InvertedIndexBenchmark (requires Rust toolchain for sux-rs FFI)" OFF)
+
+if(NEATS_WITH_INVERTED_INDEX)
+    # --- FastPFOR ---
+    set(FASTPFOR_WITH_TEST OFF CACHE BOOL "" FORCE)
+    set(FASTPFOR_SIMD_MODE "native" CACHE STRING "" FORCE)
+    add_subdirectory(lib/FastPFOR EXCLUDE_FROM_ALL)
+    # On ARM, FastPFOR's CMake falls back to -msse4.2 which is invalid.
+    # Remove x86 SSE flags from the target on non-x86 architectures.
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
+        get_target_property(_fpfor_opts FastPFOR COMPILE_OPTIONS)
+        if(_fpfor_opts)
+            list(REMOVE_ITEM _fpfor_opts "-msse4.2" "-msse4.1" "-mavx" "-mavx2")
+            set_target_properties(FastPFOR PROPERTIES COMPILE_OPTIONS "${_fpfor_opts}")
+        endif()
+    endif()
+
+    # --- sux-rs FFI (Rust static library) ---
+    set(SUX_RS_FFI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/sux-rs-ffi")
+    set(SUX_RS_FFI_LIB "${SUX_RS_FFI_DIR}/target/release/libsux_rs_ffi.a")
+    set(SUX_RS_FFI_HEADER "${SUX_RS_FFI_DIR}/include/sux_rs_ffi.h")
+
+    find_program(CARGO_BIN cargo PATHS "$ENV{HOME}/.cargo/bin")
+    if(NOT CARGO_BIN)
+        message(FATAL_ERROR "NEATS_WITH_INVERTED_INDEX=ON but cargo (Rust) was not found. Install Rust: https://rustup.rs")
+    endif()
+    message(STATUS "Found cargo: ${CARGO_BIN}")
+
+    add_custom_command(
+        OUTPUT "${SUX_RS_FFI_LIB}"
+        COMMAND ${CMAKE_COMMAND} -E env "CARGO_TARGET_DIR=${SUX_RS_FFI_DIR}/target"
+                "${CARGO_BIN}" build --release --manifest-path "${SUX_RS_FFI_DIR}/Cargo.toml"
+        DEPENDS "${SUX_RS_FFI_DIR}/src/lib.rs" "${SUX_RS_FFI_DIR}/Cargo.toml"
+        WORKING_DIRECTORY "${SUX_RS_FFI_DIR}"
+        COMMENT "Building sux-rs FFI static library with cargo"
+        VERBATIM
+    )
+    add_custom_target(sux_rs_ffi_build DEPENDS "${SUX_RS_FFI_LIB}")
+
+    add_library(sux_rs_ffi STATIC IMPORTED GLOBAL)
+    set_target_properties(sux_rs_ffi PROPERTIES
+        IMPORTED_LOCATION "${SUX_RS_FFI_LIB}"
+        INTERFACE_INCLUDE_DIRECTORIES "${SUX_RS_FFI_DIR}/include"
+    )
+    add_dependencies(sux_rs_ffi sux_rs_ffi_build)
+
+    # Platform-specific link dependencies for Rust static libraries
+    if(APPLE)
+        set(SUX_RS_PLATFORM_LIBS "-framework Security" "-framework CoreFoundation" "-liconv")
+    else()
+        set(SUX_RS_PLATFORM_LIBS pthread dl m)
+    endif()
+
+    # --- InvertedIndexBenchmark executable ---
+    add_executable(InvertedIndexBenchmark
+        benchmark/inverted_index_benchmark.cpp
+    )
+    target_compile_definitions(InvertedIndexBenchmark PRIVATE GEF_DISABLE_OPENMP=1)
+    target_link_libraries(InvertedIndexBenchmark
+        PRIVATE
+            gef
+            sdsl
+            sux
+            FastPFOR
+            sux_rs_ffi
+            ${SUX_RS_PLATFORM_LIBS}
+    )
 endif()
