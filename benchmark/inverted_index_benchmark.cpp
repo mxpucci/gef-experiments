@@ -34,6 +34,11 @@
 
 #include "benchmark_common.hpp"
 
+// x86 SIMD intrinsics must be included before GEF headers which use AVX2
+#if defined(__x86_64__) || defined(_M_X64)
+#include <immintrin.h>
+#endif
+
 // GEF
 #include "gef/gef.hpp"
 
