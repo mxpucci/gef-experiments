@@ -13,3 +13,6 @@
 [submodule "datasets/inverted-index"]
 	path = datasets/inverted-index
 	url = https://github.com/RoaringBitmap/real-roaring-datasets.git
+[submodule "lib/ds2i"]
+	path = lib/ds2i
+	url = https://github.com/ot/ds2i.git

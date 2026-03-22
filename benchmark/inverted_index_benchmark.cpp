@@ -49,6 +49,10 @@
 // sux-rs FFI
 #include "sux_rs_ffi.h"
 
+// ds2i Partitioned Elias-Fano
+#include "partitioned_sequence.hpp"
+#include "indexed_sequence.hpp"
+
 // ============================================================================
 // Dataset loading
 // ============================================================================
@@ -564,6 +568,154 @@ benchmark_prefix_sum_int_list(const InvertedIndexDataset &dataset) {
 }
 
 // ============================================================================
+// ds2i Partitioned Elias-Fano Benchmark (on sorted posting lists)
+// ============================================================================
+
+IIBenchmarkResult
+benchmark_pef_ii(const InvertedIndexDataset &dataset) {
+    IIBenchmarkResult result;
+    result.compressor = "partitioned_ef";
+    result.dataset = dataset.name;
+    result.num_lists = dataset.lists.size();
+    result.total_ints = dataset.total_ints;
+    result.uncompressed_bits = dataset.total_ints * 32;
+
+    using pef_type = ds2i::partitioned_sequence<ds2i::indexed_sequence>;
+
+    size_t total_compressed_bits = 0;
+    double total_compression_ns = 0;
+    double total_decompression_ns = 0;
+    double total_ra_ns = 0;
+    size_t total_ra_queries = 0;
+
+    ds2i::global_parameters params;
+
+    std::mt19937 rng(42);
+
+    // Store compressed representations for decompression/random access
+    struct CompressedList {
+        succinct::bit_vector bv;
+        uint64_t universe;
+        uint64_t n;
+    };
+
+    std::vector<CompressedList> compressed_lists;
+    compressed_lists.reserve(dataset.lists.size());
+
+    for (const auto &pl : dataset.lists) {
+        if (pl.docids.size() < 2) continue;
+
+        size_t n = pl.docids.size();
+        uint64_t universe = pl.docids.back() + 1;
+
+        // Convert to uint64_t for ds2i
+        std::vector<uint64_t> values(pl.docids.begin(), pl.docids.end());
+
+        // Compress
+        succinct::bit_vector_builder bvb;
+
+        auto t1 = std::chrono::high_resolution_clock::now();
+        pef_type::write(bvb, values.begin(), universe, n, params);
+        compiler_barrier();
+        auto t2 = std::chrono::high_resolution_clock::now();
+
+        total_compression_ns +=
+            std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1)
+                .count();
+
+        total_compressed_bits += bvb.size();
+
+        CompressedList cl;
+        cl.bv = succinct::bit_vector(&bvb);
+        cl.universe = universe;
+        cl.n = n;
+        compressed_lists.push_back(std::move(cl));
+    }
+
+    // Decompression and random access
+    size_t list_idx = 0;
+    for (const auto &pl : dataset.lists) {
+        if (pl.docids.size() < 2) continue;
+
+        const auto &cl = compressed_lists[list_idx++];
+        size_t n = cl.n;
+
+        // Full decompression via sequential enumeration
+        auto t1 = std::chrono::high_resolution_clock::now();
+        auto enumerator = pef_type::enumerator(cl.bv, 0, cl.universe, n, params);
+        volatile uint64_t decomp_sum = 0;
+        auto val = enumerator.move(0);
+        decomp_sum += val.second;
+        for (size_t i = 1; i < n; ++i) {
+            val = enumerator.next();
+            decomp_sum += val.second;
+        }
+        compiler_barrier();
+        t1 = std::chrono::high_resolution_clock::now() - (std::chrono::high_resolution_clock::now() - t1);
+        auto t2 = std::chrono::high_resolution_clock::now();
+        do_not_optimize(decomp_sum);
+
+        // Re-do properly for timing
+        t1 = std::chrono::high_resolution_clock::now();
+        {
+            auto enum2 = pef_type::enumerator(cl.bv, 0, cl.universe, n, params);
+            volatile uint64_t s = 0;
+            auto v = enum2.move(0);
+            s += v.second;
+            for (size_t i = 1; i < n; ++i) {
+                v = enum2.next();
+                s += v.second;
+            }
+            compiler_barrier();
+            do_not_optimize(s);
+        }
+        t2 = std::chrono::high_resolution_clock::now();
+        total_decompression_ns +=
+            std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1)
+                .count();
+
+        // Random access
+        size_t n_queries = std::min<size_t>(1000, n);
+        std::uniform_int_distribution<size_t> dist(0, n - 1);
+        std::vector<size_t> ra_indices(n_queries);
+        for (auto &idx : ra_indices) idx = dist(rng);
+
+        volatile uint64_t ra_sum = 0;
+        t1 = std::chrono::high_resolution_clock::now();
+        for (auto idx : ra_indices) {
+            auto enum_ra = pef_type::enumerator(cl.bv, 0, cl.universe, n, params);
+            auto v = enum_ra.move(idx);
+            ra_sum += v.second;
+        }
+        compiler_barrier();
+        t2 = std::chrono::high_resolution_clock::now();
+        do_not_optimize(ra_sum);
+        total_ra_ns +=
+            std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1)
+                .count();
+        total_ra_queries += n_queries;
+    }
+
+    result.compressed_bits = total_compressed_bits;
+    result.bits_per_int =
+        static_cast<double>(total_compressed_bits) / dataset.total_ints;
+    result.compression_ratio =
+        static_cast<double>(total_compressed_bits) / result.uncompressed_bits;
+    result.compression_throughput_mbs =
+        (dataset.total_ints * sizeof(uint32_t) / 1024.0 / 1024.0) /
+        (total_compression_ns / 1e9);
+    result.decompression_throughput_mbs =
+        (dataset.total_ints * sizeof(uint32_t) / 1024.0 / 1024.0) /
+        (total_decompression_ns / 1e9);
+    result.random_access_ns =
+        total_ra_queries > 0
+            ? static_cast<double>(total_ra_ns) / total_ra_queries
+            : 0;
+
+    return result;
+}
+
+// ============================================================================
 // Main
 // ============================================================================
 
@@ -592,6 +744,7 @@ void print_usage(const char *prog_name) {
         << std::endl;
     std::cerr << "             sux-rs: comp_int_list, prefix_sum_int_list"
               << std::endl;
+    std::cerr << "             ds2i: partitioned_ef" << std::endl;
     std::cerr << "  -h         Show this help" << std::endl;
 }
 
@@ -623,6 +776,7 @@ int main(int argc, char *argv[]) {
         "fastpfor_simdbinarypacking",
         "comp_int_list",
         "prefix_sum_int_list",
+        "partitioned_ef",
     };
     std::string input_path;
 
@@ -745,6 +899,8 @@ int main(int argc, char *argv[]) {
                     result = benchmark_comp_int_list(dataset);
                 } else if (comp == "prefix_sum_int_list") {
                     result = benchmark_prefix_sum_int_list(dataset);
+                } else if (comp == "partitioned_ef") {
+                    result = benchmark_pef_ii(dataset);
                 } else {
                     std::cerr << " unknown compressor, skipping" << std::endl;
                     continue;

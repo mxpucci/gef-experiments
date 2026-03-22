@@ -432,6 +432,13 @@ if(NEATS_WITH_INVERTED_INDEX)
         benchmark/inverted_index_benchmark.cpp
     )
     target_compile_definitions(InvertedIndexBenchmark PRIVATE GEF_DISABLE_OPENMP=1)
+    # ds2i (Partitioned Elias-Fano) needs Boost headers (header-only, no linking)
+    find_package(Boost REQUIRED)
+    target_include_directories(InvertedIndexBenchmark PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/ds2i
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/ds2i/succinct
+    )
+    target_link_libraries(InvertedIndexBenchmark PRIVATE Boost::boost)
     target_link_libraries(InvertedIndexBenchmark
         PRIVATE
             gef
