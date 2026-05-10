@@ -1097,17 +1097,35 @@ BenchmarkResult benchmark_buff(const BenchmarkData &bench_data,
     result.compressor = "BUFF";
     result.dataset    = bench_data.filename;
 
-    const auto &data  = bench_data.double_data;
-    result.num_values = data.size();
+    const auto &double_input = bench_data.double_data;
+    result.num_values = double_input.size();
     result.uncompressed_bits = bench_data.uncompressed_bits;
 
-    const size_t n         = data.size();
+    const size_t n         = double_input.size();
     const size_t num_blocks = (n + block_size - 1) / block_size;
 
-    // scale = 10^decimals gives lossless round-trip for fixed-precision datasets
-    int64_t scale = 1;
-    for (int64_t d = 0; d < bench_data.decimals; ++d) scale *= 10;
-    if (scale <= 0) scale = 1;
+    // We feed BUFF the integer representation (raw_int as f64) with scale=1
+    // rather than `raw_int / 10^decimals` with scale=10^decimals.  Two reasons:
+    //
+    //   1. Lossless at the f64 level (for ints ≤ 2^53).  Decimal mode forces
+    //      BUFF to rescale by 2^dec_len / 10^decimals — an irrational ratio
+    //      that introduces ~0.5/10^decimals of binary-vs-decimal error.
+    //   2. Smaller deltas → better compression.  In decimal mode BUFF's
+    //      post-fetch_fixed_aligned deltas are ~3.3× larger than the
+    //      underlying integer deltas (since 2^dec_len ≈ 3.3 × 10^prec).
+    //
+    // BUFF's "decimal precision" feature isn't exercised in this mode, but
+    // BUFF's core delta + bit-pack pipeline runs identically.
+    int64_t scale_int = 1;
+    for (int64_t d = 0; d < bench_data.decimals; ++d) scale_int *= 10;
+    if (scale_int <= 0) scale_int = 1;
+    const double scale_d = static_cast<double>(scale_int);
+
+    std::vector<double> data(n);
+    for (size_t i = 0; i < n; ++i) {
+        data[i] = std::round(double_input[i] * scale_d);
+    }
+    const int64_t scale = 1;
 
     // ── Compression ──────────────────────────────────────────────────────────
     size_t total_compressed_bits = 0;
@@ -1146,14 +1164,12 @@ BenchmarkResult benchmark_buff(const BenchmarkData &bench_data,
     result.decompression_throughput_mbs =
         (n * sizeof(T) / 1024.0 / 1024.0) / (decomp_ns / 1e9);
 
-    // BUFF uses binary fixed-point (floor(v × 2^dlen)) internally, so the
-    // round-trip error for decimal data is bounded by 0.5/scale (half a ULP
-    // at the decimal precision level).  Exact f64 comparison would falsely
-    // flag values like 3.2399998 whose double representation differs from the
-    // BUFF reconstruction by ~30 ns but round to the same decimal integer.
-    const double buff_tolerance = 0.5 / static_cast<double>(scale);
+    // Round-trip is bit-exact: the integer-valued doubles in `data` come
+    // straight from raw_int (∈ ℤ ⊂ ℝ representable in f64 for |v| ≤ 2^53),
+    // and BUFF with scale=1 uses dec_len=0 / trunc-toward-zero which is the
+    // identity on integer-valued doubles.
     for (size_t i = 0; i < n; ++i) {
-        if (std::abs(data[i] - decompressed[i]) > buff_tolerance) {
+        if (data[i] != decompressed[i]) {
             std::cerr << "BUFF decompression error at " << i
                       << ": expected " << std::setprecision(20) << data[i]
                       << " got " << decompressed[i] << std::endl;
