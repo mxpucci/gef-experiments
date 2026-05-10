@@ -1146,8 +1146,14 @@ BenchmarkResult benchmark_buff(const BenchmarkData &bench_data,
     result.decompression_throughput_mbs =
         (n * sizeof(T) / 1024.0 / 1024.0) / (decomp_ns / 1e9);
 
+    // BUFF uses binary fixed-point (floor(v × 2^dlen)) internally, so the
+    // round-trip error for decimal data is bounded by 0.5/scale (half a ULP
+    // at the decimal precision level).  Exact f64 comparison would falsely
+    // flag values like 3.2399998 whose double representation differs from the
+    // BUFF reconstruction by ~30 ns but round to the same decimal integer.
+    const double buff_tolerance = 0.5 / static_cast<double>(scale);
     for (size_t i = 0; i < n; ++i) {
-        if (std::abs(data[i] - decompressed[i]) >= 1e-9) {
+        if (std::abs(data[i] - decompressed[i]) > buff_tolerance) {
             std::cerr << "BUFF decompression error at " << i
                       << ": expected " << std::setprecision(20) << data[i]
                       << " got " << decompressed[i] << std::endl;

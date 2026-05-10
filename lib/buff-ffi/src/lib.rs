@@ -14,12 +14,12 @@
 
 const FFI_HEADER: usize = 16;
 
-// ── Vendored BUFF compression (x86_64 only) ───────────────────────────────
+// ── Vendored BUFF compression ─────────────────────────────────────────────
 //
-// On other architectures all public entry points return an error value so the
-// benchmark simply skips BUFF.
+// The encode/decode logic is pure scalar — no SIMD intrinsics — so it builds
+// and runs on any 64-bit target.  The "simd256" name in upstream BUFF refers
+// to a separate code path that we did not vendor.
 
-#[cfg(target_arch = "x86_64")]
 mod inner {
     use super::FFI_HEADER;
     use std::mem;
@@ -29,6 +29,7 @@ mod inner {
     // Maps prec = log10(scale) → decimal bit-length used in fixed-point repr.
     fn dec_len_for_prec(prec: i32) -> Option<u64> {
         match prec {
+            0  => Some(0),  // integer datasets: encode with no decimal bits
             1  => Some(5),  2  => Some(8),  3  => Some(11), 4  => Some(15),
             5  => Some(18), 6  => Some(21), 7  => Some(25), 8  => Some(28),
             9  => Some(31), 10 => Some(35), 11 => Some(38), 12 => Some(50),
@@ -65,6 +66,13 @@ mod inner {
 
         #[inline]
         fn fetch_fixed_aligned(&self, bd: f64) -> i64 {
+            // dec_len = 0 path: integer datasets. The original BUFF formula
+            // shifts by `63 - exp - dec_len` bits, which overflows u64 when
+            // `exp < 0` and dec_len = 0 (e.g., values in [0, 1)). Trunc-toward-
+            // zero matches the formula's intent on integer-valued doubles.
+            if self.decimal_length == 0 {
+                return bd.trunc() as i64;
+            }
             let bdu  = unsafe { mem::transmute::<f64, u64>(bd) };
             let exp  = ((bdu & EXP_MASK) >> 52) as i32 - 1023;
             let sign = bdu & FIRST_ONE;
@@ -230,7 +238,7 @@ mod inner {
 
     // ── Scale validation ──────────────────────────────────────────────────
     fn valid_prec(scale: i64) -> Option<i32> {
-        if scale <= 1 { return None; }
+        if scale < 1 { return None; }
         let prec = (scale as f64).log10().round() as i32;
         dec_len_for_prec(prec)?;
         Some(prec)
@@ -260,11 +268,21 @@ mod inner {
 
         let t     = data.len() as u32;
         let delta = max.wrapping_sub(min);
-        if delta == 0 { return None; }  // constant block: nothing to encode
 
-        let cal_int_length = (delta as f64).log2().ceil();
-        let fixed_len = cal_int_length as usize;
-        if fixed_len < dec_len as usize { return None; }  // delta too small to split ilen/dlen
+        // Bit-length of delta (= ceil(log2(delta + 1))).  Equals 0 when
+        // delta = 0 (constant block).  Replaces the upstream
+        // `(delta as f64).log2().ceil()` which under-counts when delta is an
+        // exact power of 2 (e.g. delta = 128 needs 8 bits, not 7).
+        let cal_int_length: usize = {
+            let delta_u = delta as u64;
+            if delta_u == 0 { 0 } else { 64 - delta_u.leading_zeros() as usize }
+        };
+        // Pad up to dec_len bits per value so encode/decode stay in sync when
+        // the delta range is narrower than the requested decimal precision
+        // (or zero).  The extra bits are leading zeros — wastes a few bits
+        // per value but keeps the stream losslessly decodable.
+        let fixed_len = std::cmp::max(cal_int_length, dec_len as usize);
+        if fixed_len > 64 { return None; }
         let ilen = fixed_len - dec_len as usize;
         let dlen = dec_len as usize;
 
@@ -279,6 +297,14 @@ mod inner {
         bitpack_vec.write(t,       32);
         bitpack_vec.write(ilen as u32, 32);
         bitpack_vec.write(dlen as u32, 32);
+
+        // fixed_len = 0 ⇒ constant block with prec = 0 (integer dataset).
+        // Header alone is sufficient; the decoder broadcasts `base` to all
+        // positions.  Bypassing the per-value loop also avoids BitPack's
+        // 0-bit-write panic.
+        if fixed_len == 0 {
+            return Some(bitpack_vec.into_vec());
+        }
 
         let mut remain = fixed_len;
 
@@ -351,6 +377,14 @@ mod inner {
         let mut remain = dlen + ilen;
         let mut expected: Vec<f64>  = Vec::with_capacity(len);
         let mut fixed_vec: Vec<u64> = Vec::with_capacity(len);
+
+        // Constant-block fast path — must mirror the encoder's `fixed_len == 0`
+        // shortcut.  Reading 0 bits panics on an empty body, so handle it here.
+        if remain == 0 {
+            let value = base_int as f64 / dec_scl;
+            for _ in 0..len { expected.push(value); }
+            return Some(expected);
+        }
 
         if remain < 8 {
             for _ in 0..len {
@@ -436,18 +470,15 @@ mod inner {
 /// Upper bound on compressed output size (bytes) for `n` f64 values.
 #[no_mangle]
 pub extern "C" fn buff_max_compressed_size(n: usize) -> usize {
-    #[cfg(target_arch = "x86_64")]
-    { inner::max_size(n) }
-    #[cfg(not(target_arch = "x86_64"))]
-    { let _ = n; 0 }
+    inner::max_size(n)
 }
 
 /// Compress `n` f64 values.
 ///
-/// `scale` = 10^decimals (must be ≥ 10, i.e. at least 1 decimal place).
+/// `scale` = 10^decimals (must be ≥ 1).
 /// `output` must be at least `buff_max_compressed_size(n)` bytes.
 ///
-/// Returns bytes written, or -1 on error / unsupported platform.
+/// Returns bytes written, or -1 on error.
 #[no_mangle]
 pub extern "C" fn buff_compress_f64(
     input: *const f64,
@@ -456,23 +487,83 @@ pub extern "C" fn buff_compress_f64(
     output_capacity: usize,
     scale: i64,
 ) -> i64 {
-    #[cfg(target_arch = "x86_64")]
-    {
-        if input.is_null() || output.is_null() || n == 0 { return -1; }
-        let data = unsafe { std::slice::from_raw_parts(input, n) };
-        let out  = unsafe { std::slice::from_raw_parts_mut(output, output_capacity) };
-        match inner::compress(data, out, scale) {
-            Some(len) => len as i64,
-            None      => -1,
+    if input.is_null() || output.is_null() || n == 0 { return -1; }
+    let data = unsafe { std::slice::from_raw_parts(input, n) };
+    let out  = unsafe { std::slice::from_raw_parts_mut(output, output_capacity) };
+    match inner::compress(data, out, scale) {
+        Some(len) => len as i64,
+        None      => -1,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn roundtrip(values: &[f64], scale: i64) -> Vec<f64> {
+        let cap = buff_max_compressed_size(values.len());
+        let mut buf = vec![0u8; cap];
+        let written = buff_compress_f64(
+            values.as_ptr(), values.len(),
+            buf.as_mut_ptr(), buf.len(), scale,
+        );
+        assert!(written > 0, "compression failed (scale={}, n={})", scale, values.len());
+        let mut out = vec![0.0f64; values.len()];
+        let ok = buff_decompress_f64(buf.as_ptr(), written as usize,
+                                     out.as_mut_ptr(), out.len());
+        assert_eq!(ok, 0, "decompression failed");
+        out
+    }
+
+    #[test]
+    fn integer_dataset_scale1() {
+        // prec = 0 path: integer-valued doubles encode losslessly with dec_len = 0.
+        let v = [1.0, 2.0, 3.0, 100.0, 4242.0, -7.0, 0.0];
+        let out = roundtrip(&v, 1);
+        assert_eq!(out, v);
+    }
+
+    #[test]
+    fn constant_block_integer() {
+        // delta = 0 with prec = 0 ⇒ fixed_len = 0, header-only encoding.
+        let v = [42.0; 1000];
+        let out = roundtrip(&v, 1);
+        assert_eq!(out, v);
+    }
+
+    #[test]
+    fn constant_block_decimal() {
+        // delta = 0 with prec ≥ 1 ⇒ fixed_len = dec_len, all-zero per-value bits.
+        let v = [3.14; 500];
+        let out = roundtrip(&v, 100);
+        for o in &out { assert!((o - 3.14).abs() < 0.005, "got {o}"); }
+    }
+
+    #[test]
+    fn narrow_range_below_dec_len() {
+        // prec = 7 ⇒ dec_len = 25.  After fetch_fixed_aligned, delta only spans
+        // a few bits.  Previously rejected; now padded to dec_len bits/value.
+        let v = [3.2399998, 3.2399999, 3.2400000, 3.2400001, 3.2400002];
+        let out = roundtrip(&v, 10_000_000);
+        for (a, b) in v.iter().zip(out.iter()) {
+            assert!((a - b).abs() < 5e-8, "expected {a} got {b}");
         }
     }
-    #[cfg(not(target_arch = "x86_64"))]
-    { let _ = (input, n, output, output_capacity, scale); -1 }
+
+    #[test]
+    fn power_of_two_delta() {
+        // Upstream BUFF used log2(delta).ceil(), under-counting for exact
+        // powers of 2 (delta = 128 → 7 bits, drops top bit of 128).
+        // Bit-length formula encodes 8 bits, round-trips 0..=128.
+        let v: Vec<f64> = (0..=128).map(|x| x as f64).collect();
+        let out = roundtrip(&v, 1);
+        assert_eq!(out, v);
+    }
 }
 
 /// Decompress `n` f64 values from BUFF-compressed data.
 ///
-/// Returns 0 on success, -1 on error / unsupported platform.
+/// Returns 0 on success, -1 on error.
 #[no_mangle]
 pub extern "C" fn buff_decompress_f64(
     input: *const u8,
@@ -480,13 +571,8 @@ pub extern "C" fn buff_decompress_f64(
     output: *mut f64,
     n: usize,
 ) -> i32 {
-    #[cfg(target_arch = "x86_64")]
-    {
-        if input.is_null() || output.is_null() || n == 0 { return -1; }
-        let data = unsafe { std::slice::from_raw_parts(input, input_len) };
-        let out  = unsafe { std::slice::from_raw_parts_mut(output, n) };
-        if inner::decompress(data, out) { 0 } else { -1 }
-    }
-    #[cfg(not(target_arch = "x86_64"))]
-    { let _ = (input, input_len, output, n); -1 }
+    if input.is_null() || output.is_null() || n == 0 { return -1; }
+    let data = unsafe { std::slice::from_raw_parts(input, input_len) };
+    let out  = unsafe { std::slice::from_raw_parts_mut(output, n) };
+    if inner::decompress(data, out) { 0 } else { -1 }
 }
