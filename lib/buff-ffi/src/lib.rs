@@ -260,16 +260,32 @@ mod inner {
         let t     = data.len() as u32;
         let delta = max.wrapping_sub(min);
 
-        // One-line patch over upstream BUFF: pad `fixed_len` up to `dec_len`
-        // when the block's delta is too narrow to split into (ilen, dlen).
-        // Upstream `let ilen = fixed_len - dec_len` underflows u64 in this
-        // case (and `delta == 0` makes `log2()` return -∞, also reaching the
-        // same path).  With the clamp, narrow blocks are encoded with
-        // `dec_len - log2(delta)` leading-zero bits per value — strictly the
-        // same precision bound (1/2^dec_len) as upstream, zero overhead on
-        // wide-range blocks that satisfy the original assumption.
-        let cal_int_length = (delta as f64).log2().ceil();
-        let fixed_len = std::cmp::max(cal_int_length as usize, dec_len as usize);
+        // Two minimal fixes over upstream BUFF (no algorithm change, no
+        // format change):
+        //
+        //  (1) Bit-length instead of log2().ceil().  Upstream's
+        //      `(delta as f64).log2().ceil()` under-counts by 1 when delta
+        //      is an exact power of 2 (e.g. delta = 256 gives 8, but
+        //      encoding 0..=256 needs 9 bits).  The top bit is silently
+        //      truncated → decoded value is 2^dec_len smaller than encoded.
+        //      `64 - leading_zeros(delta)` gives the correct bit-length and
+        //      matches log2().ceil() exactly on every non-power-of-2 input.
+        //  (2) Pad fixed_len up to dec_len.  Upstream's
+        //      `let ilen = fixed_len - dec_len` underflows u64 when delta
+        //      is too narrow.  The clamp encodes narrow blocks with
+        //      leading-zero bits at the same precision bound (1/2^dec_len)
+        //      as wide blocks.
+        //
+        // Combined, the encoder is byte-identical to upstream on every
+        // block where (a) delta > 0, (b) delta is not a power of 2, and
+        // (c) bit_length(delta) >= dec_len — i.e., every block upstream
+        // would have encoded correctly.
+        let cal_int_length: usize = if delta == 0 {
+            0
+        } else {
+            64 - (delta as u64).leading_zeros() as usize
+        };
+        let fixed_len = std::cmp::max(cal_int_length, dec_len as usize);
         let ilen = fixed_len - dec_len as usize;  // safe: fixed_len ≥ dec_len
         let dlen = dec_len as usize;
 
@@ -519,5 +535,22 @@ mod patch_tests {
         let v = [3.14_f64; 100];
         let out = roundtrip(&v, 100);
         for o in &out { assert!((o - 3.14).abs() <= 0.5 / 100.0); }
+    }
+
+    #[test]
+    fn power_of_two_delta() {
+        // Block where fetch_fixed_aligned delta = 2^8 exactly: upstream
+        // log2().ceil() gives 8 bits, but encoding 0..=256 needs 9.  The
+        // off-by-one truncated the top bit → decoded value was 2^dec_len
+        // smaller than encoded (manifested as "off by 1.0" on the AP, ECG,
+        // GE, IT, US datasets).
+        let v = [17.0_f64, 17.5, 17.98, 18.5, 19.0];  // raw_int range chosen
+        // so fetch_fixed_aligned spans an exact power of 2.  Mirrors the
+        // pattern observed in production: expected 17.98, got 16.97...
+        let out = roundtrip(&v, 100);
+        for (a, b) in v.iter().zip(out.iter()) {
+            assert!((a - b).abs() <= 0.5 / 100.0,
+                    "expected {a} got {b} (delta {})", a - b);
+        }
     }
 }
