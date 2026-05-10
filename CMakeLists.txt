@@ -112,6 +112,49 @@ target_compile_options(neats_alp PUBLIC -fPIC)
 set(NEATS_ALP_BENCH_OBJ "${CMAKE_CURRENT_BINARY_DIR}/alp_benchmark_clang.o")
 set(NEATS_ALP_BENCH_SRC "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/alp_benchmark.cpp")
 
+# --- BUFF compressor (Rust FFI, no external Rust dependencies) ---
+# The Rust crate in lib/buff-ffi is compiled with `cargo build --release` and linked
+# as a static library.  If cargo is not found the compressor is silently omitted.
+option(NEATS_WITH_BUFF "Build with BUFF compressor (requires Rust/cargo)" ON)
+
+if(NEATS_WITH_BUFF)
+    find_program(CARGO_EXECUTABLE cargo)
+    if(CARGO_EXECUTABLE)
+        message(STATUS "Found cargo: ${CARGO_EXECUTABLE} — BUFF compressor enabled")
+
+        set(BUFF_FFI_SRC_DIR  "${CMAKE_CURRENT_SOURCE_DIR}/lib/buff-ffi")
+        set(BUFF_FFI_CARGO_TARGET_DIR "${CMAKE_CURRENT_BINARY_DIR}/buff-ffi-cargo-target")
+        set(BUFF_FFI_LIB "${BUFF_FFI_CARGO_TARGET_DIR}/release/libbuff_ffi.a")
+
+        add_custom_command(
+            OUTPUT  "${BUFF_FFI_LIB}"
+            COMMAND ${CMAKE_COMMAND} -E env
+                        "CARGO_TARGET_DIR=${BUFF_FFI_CARGO_TARGET_DIR}"
+                    "${CARGO_EXECUTABLE}" build --release
+                        --manifest-path "${BUFF_FFI_SRC_DIR}/Cargo.toml"
+            DEPENDS "${BUFF_FFI_SRC_DIR}/Cargo.toml"
+                    "${BUFF_FFI_SRC_DIR}/src/lib.rs"
+            COMMENT "Building BUFF FFI Rust library"
+            VERBATIM
+        )
+        add_custom_target(buff_ffi_build DEPENDS "${BUFF_FFI_LIB}")
+
+        add_library(buff_ffi STATIC IMPORTED GLOBAL)
+        set_target_properties(buff_ffi PROPERTIES IMPORTED_LOCATION "${BUFF_FFI_LIB}")
+        add_dependencies(buff_ffi buff_ffi_build)
+
+        # System libraries the Rust runtime needs on Linux (already linked on macOS)
+        if(UNIX AND NOT APPLE)
+            set(BUFF_SYSTEM_LIBS pthread dl m)
+        else()
+            set(BUFF_SYSTEM_LIBS)
+        endif()
+    else()
+        message(WARNING "NEATS_WITH_BUFF=ON but cargo not found; BUFF compressor disabled")
+        set(NEATS_WITH_BUFF OFF)
+    endif()
+endif()
+
 # Comprehensive lossless compressor benchmark (with squash - optional)
 option(NEATS_WITH_SQUASH "Build LosslessBenchmarkFull with Squash" ON)
 option(NEATS_WITH_LECO "Build LeCo support (requires Boost headers + Eigen; compiled with GCC 11)" OFF)
@@ -229,6 +272,11 @@ add_executable(LosslessBenchmark benchmark/lossless_benchmark.cpp
         benchmark/NeaTS/NeaTS.hpp
         benchmark/NeaTS/algorithms.hpp)
 target_link_libraries(LosslessBenchmark sdsl sux gef neats_alp)
+if(NEATS_WITH_BUFF AND TARGET buff_ffi)
+    target_link_libraries(LosslessBenchmark PRIVATE buff_ffi ${BUFF_SYSTEM_LIBS})
+    target_compile_definitions(LosslessBenchmark PRIVATE NEATS_ENABLE_BUFF=1)
+    target_include_directories(LosslessBenchmark PRIVATE benchmark/Buff)
+endif()
 if(TARGET neats_alp_bench_obj)
     add_dependencies(LosslessBenchmark neats_alp_bench_obj)
     target_sources(LosslessBenchmark PRIVATE "${NEATS_ALP_BENCH_OBJ}")
@@ -320,6 +368,12 @@ if(NEATS_WITH_SQUASH)
                 target_sources(LosslessBenchmarkFull PRIVATE "${NEATS_LECO_BENCH_OBJ}")
             endif()
         endif()
+        # --- Optional BUFF integration ---
+        if(NEATS_WITH_BUFF AND TARGET buff_ffi)
+            target_link_libraries(LosslessBenchmarkFull PRIVATE buff_ffi ${BUFF_SYSTEM_LIBS})
+            target_compile_definitions(LosslessBenchmarkFull PRIVATE NEATS_ENABLE_BUFF=1)
+            target_include_directories(LosslessBenchmarkFull PRIVATE benchmark/Buff)
+        endif()
         # Add RPATH so it looks in ./lib relative to binary
         target_link_options(LosslessBenchmarkFull PRIVATE "-Wl,-rpath,\$ORIGIN/lib")
         
@@ -373,6 +427,11 @@ if(NEATS_WITH_SQUASH)
                 target_sources(LosslessBenchmarkFullNoSIMD PRIVATE "${NEATS_LECO_BENCH_OBJ}")
             endif()
         endif()
-        
+        if(NEATS_WITH_BUFF AND TARGET buff_ffi)
+            target_link_libraries(LosslessBenchmarkFullNoSIMD PRIVATE buff_ffi ${BUFF_SYSTEM_LIBS})
+            target_compile_definitions(LosslessBenchmarkFullNoSIMD PRIVATE NEATS_ENABLE_BUFF=1)
+            target_include_directories(LosslessBenchmarkFullNoSIMD PRIVATE benchmark/Buff)
+        endif()
+
     endif()
 endif()

@@ -53,6 +53,7 @@ jobs:
             ragel patchelf \
             brotli zlib lz4-c zstd snappy xz bzip2 \
             liblzma-devel \
+            rust \
             boost-cpp gmp eigen
 
           # --- ACTIVATE ENVIRONMENT ---
@@ -118,7 +119,7 @@ jobs:
           
           # Patch 2: Remove deprecated 'register' keyword
           sed -i 's/register uint64_t/uint64_t/g' lib/Learn-to-Compress/headers/popcount.h
-          
+
           # --- BUILD PROJECT (GCC) ---
           echo "Building with GCC..."
           cmake -S . -B build-gcc -G Ninja \
@@ -131,6 +132,7 @@ jobs:
             -DNEATS_LECO_EXTRA_INCLUDES="$ENV_PATH/include;$ENV_PATH/include/eigen3" \
             -DNEATS_ALP_HYBRID_CLANG=ON \
             -DNEATS_ALP_CLANGXX="$ENV_PATH/bin/clang++" \
+            -DNEATS_WITH_BUFF=ON \
             -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE
           cmake --build build-gcc -j
 
@@ -146,6 +148,7 @@ jobs:
             -DNEATS_WITH_LECO=ON \
             -DNEATS_LECO_EXTRA_INCLUDES="$ENV_PATH/include;$ENV_PATH/include/eigen3" \
             -DNEATS_ALP_HYBRID_CLANG=OFF \
+            -DNEATS_WITH_BUFF=ON \
             -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE
           cmake --build build-clang -j
 

@@ -7,3 +7,6 @@
 [submodule "lib/ALP"]
 	path = lib/ALP
 	url = https://github.com/cwida/ALP
+[submodule "lib/buff"]
+	path = lib/buff
+	url = https://github.com/Tranway1/buff
