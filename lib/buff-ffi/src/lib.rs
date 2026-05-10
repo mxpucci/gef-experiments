@@ -260,8 +260,9 @@ mod inner {
 
         let t     = data.len() as u32;
         let delta = max.wrapping_sub(min);
+        if delta == 0 { return None; }  // constant block: 0-bit writes corrupt BitPack state
 
-        let cal_int_length = if delta == 0 { 0.0f64 } else { (delta as f64).log2().ceil() };
+        let cal_int_length = (delta as f64).log2().ceil();
         let fixed_len = cal_int_length as usize;
         let ilen      = fixed_len.saturating_sub(dec_len as usize);
         let dlen      = dec_len as usize;
