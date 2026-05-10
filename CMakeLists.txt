@@ -271,7 +271,7 @@ endif()
 add_executable(LosslessBenchmark benchmark/lossless_benchmark.cpp
         benchmark/NeaTS/NeaTS.hpp
         benchmark/NeaTS/algorithms.hpp)
-target_link_libraries(LosslessBenchmark sdsl sux gef neats_alp)
+target_link_libraries(LosslessBenchmark PRIVATE sdsl sux gef neats_alp)
 if(NEATS_WITH_BUFF AND TARGET buff_ffi)
     target_link_libraries(LosslessBenchmark PRIVATE buff_ffi ${BUFF_SYSTEM_LIBS})
     target_compile_definitions(LosslessBenchmark PRIVATE NEATS_ENABLE_BUFF=1)
