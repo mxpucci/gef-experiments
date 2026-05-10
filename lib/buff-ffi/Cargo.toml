@@ -7,10 +7,8 @@ edition = "2021"
 name = "buff_ffi"
 crate-type = ["staticlib"]
 
-# Use the actual buff Rust implementation only on x86_64 (buff_simd256_encode/decode
-# use raw AVX-256 intrinsics; the buff crate has no ARM support).
-[target.'cfg(target_arch = "x86_64")'.dependencies]
-buff = { path = "../buff/database" }
+# No external dependencies: the encode/decode algorithm is self-contained.
+# Vendored from https://github.com/Tranway1/buff (MIT).
 
 [profile.release]
 opt-level = 3
