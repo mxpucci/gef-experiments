@@ -1,0 +1,19 @@
+[package]
+name = "buff-ffi"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "buff_ffi"
+crate-type = ["staticlib"]
+
+# Use the actual buff Rust implementation only on x86_64 (buff_simd256_encode/decode
+# use raw AVX-256 intrinsics; the buff crate has no ARM support).
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+buff = { path = "../buff/database" }
+
+[profile.release]
+opt-level = 3
+lto = false
+codegen-units = 1
+panic = "abort"
