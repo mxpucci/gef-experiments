@@ -31,6 +31,16 @@ int64_t buff_compress_f64(const double *input, size_t n,
 int32_t buff_decompress_f64(const uint8_t *input, size_t input_len,
                              double *output, size_t n);
 
+/**
+ * Extract a single f64 value at position idx from a BUFF-compressed block
+ * without decoding the whole block.  Reads ~ceil(fixed_len/8) bytes (one
+ * byte per byte-plane) plus a few trailing bits.  No allocation.
+ *
+ * Returns 0 on success (writes the value to *output), -1 on error.
+ */
+int32_t buff_extract_f64(const uint8_t *input, size_t input_len,
+                         size_t idx, double *output);
+
 #ifdef __cplusplus
 }
 #endif

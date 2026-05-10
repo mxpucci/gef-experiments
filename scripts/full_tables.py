@@ -42,7 +42,8 @@ NAME_MAPPING_FULL = {
     "chimp": "Chimp", "chimp128": "Chimp128", "lz4": "Lz4",
     "zstd": "Zstd", "brotli": "Brotli", "snappy": "Snappy",
     "xz": "Xz", "leco": "LeCo", "alp": "ALP", "elf": "ELF",
-    "tsxor": "TSXor"
+    "tsxor": "TSXor", "buff": "BUFF",
+    "camel": "Camel", "falcon": "Falcon"
 }
 
 # 4. LaTeX Names (Simplified for Decomp/RA)

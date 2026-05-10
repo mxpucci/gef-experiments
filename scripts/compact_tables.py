@@ -44,7 +44,8 @@ NAME_MAPPING = {
     "chimp": "Chimp", "chimp128": "Chimp128", "tsxor": "TSXor",
     "elf": "ELF", "camel": "Camel", "falcon": "Falcon",
     "lz4": "Lz4", "zstd": "Zstd", "brotli": "Brotli",
-    "snappy": "Snappy", "xz": "Xz", "leco": "LeCo", "alp": "ALP"
+    "snappy": "Snappy", "xz": "Xz", "leco": "LeCo", "alp": "ALP",
+    "buff": "BUFF"
 }
 
 GEF_COLUMN_ORDER = [

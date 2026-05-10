@@ -423,6 +423,90 @@ mod inner {
         Some(expected)
     }
 
+    // ── Single-value extraction (random access) ───────────────────────────
+    //
+    // BUFF's byte-major layout makes O(1)-per-query random access natural:
+    // value `i` is reconstructed by reading byte `i` from each byte-plane
+    // (one byte per plane in the block) plus a few trailing bits (if any).
+    // Cost: ~ceil(fixed_len/8) byte reads, no full-block decode, no alloc.
+    //
+    // Mirrors `buff_decode`'s two regimes:
+    //   • fixed_len < 8: the body is bit-packed `fixed_len` bits per value
+    //     starting at byte 20.
+    //   • fixed_len >= 8: byte planes [byte 20, +len, +2·len, …] each
+    //     `len` bytes long, followed (if fixed_len % 8 != 0) by the
+    //     trailing bits packed continuously starting at byte 20+K·len.
+    fn buff_extract(bytes: &[u8], scale: i64, idx: usize) -> Option<f64> {
+        let _prec = valid_prec(scale)?;
+        if bytes.len() < 20 { return None; }
+
+        let read_u32 = |off: usize| -> u32 {
+            u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]])
+        };
+        let lower    = read_u32(0);
+        let higher   = read_u32(4);
+        let ubase    = (lower as u64) | ((higher as u64) << 32);
+        let base_int = unsafe { mem::transmute::<u64, i64>(ubase) };
+        let len      = read_u32(8) as usize;
+        let ilen     = read_u32(12);
+        let dlen     = read_u32(16);
+
+        if idx >= len { return None; }
+
+        let fixed_len = (ilen + dlen) as usize;
+        let dec_scl   = 2.0f64.powi(dlen as i32);
+        let body      = 20usize;
+
+        let cur: u64 = if fixed_len == 0 {
+            0
+        } else if fixed_len < 8 {
+            let bit_offset = idx * fixed_len;
+            read_bits_at(bytes, body + bit_offset / 8, bit_offset % 8, fixed_len)?
+        } else {
+            let num_planes = fixed_len / 8;
+            let trailing   = fixed_len % 8;
+            let mut acc: u64 = 0;
+            for k in 0..num_planes {
+                let pos = body + k * len + idx;
+                if pos >= bytes.len() { return None; }
+                let unflipped = bytes[pos] ^ 0x80;  // inverse of flip()
+                let shift = trailing + (num_planes - 1 - k) * 8;
+                acc |= (unflipped as u64) << shift;
+            }
+            if trailing > 0 {
+                let trailing_byte_start = body + num_planes * len;
+                let bit_offset = idx * trailing;
+                let byte_idx = trailing_byte_start + bit_offset / 8;
+                let bit_idx  = bit_offset % 8;
+                acc |= read_bits_at(bytes, byte_idx, bit_idx, trailing)?;
+            }
+            acc
+        };
+
+        Some((base_int + cur as i64) as f64 / dec_scl)
+    }
+
+    fn read_bits_at(bytes: &[u8], byte_idx: usize, bit_idx: usize, n_bits: usize) -> Option<u64> {
+        if n_bits == 0 { return Some(0); }
+        if byte_idx >= bytes.len() { return None; }
+        let mut result: u64 = 0;
+        let mut taken = 0;
+        let mut byte = byte_idx;
+        let mut bit  = bit_idx;
+        while taken < n_bits {
+            if byte >= bytes.len() { return None; }
+            let avail = 8 - bit;
+            let take  = std::cmp::min(n_bits - taken, avail);
+            let mask  = if take == 64 { !0u64 } else { (1u64 << take) - 1 };
+            let chunk = ((bytes[byte] as u64) >> bit) & mask;
+            result |= chunk << taken;
+            taken += take;
+            byte  += 1;
+            bit    = 0;
+        }
+        Some(result)
+    }
+
     // ── Public helpers called from C ABI ──────────────────────────────────
 
     pub fn max_size(n: usize) -> usize {
@@ -449,6 +533,12 @@ mod inner {
             Some(dec) if dec.len() == n => { out.copy_from_slice(&dec); true }
             _ => false,
         }
+    }
+
+    pub fn extract(input: &[u8], idx: usize) -> Option<f64> {
+        if input.len() < FFI_HEADER { return None; }
+        let scale = i64::from_le_bytes(input[8..16].try_into().unwrap());
+        buff_extract(&input[FFI_HEADER..], scale, idx)
     }
 }
 
@@ -497,6 +587,26 @@ pub extern "C" fn buff_decompress_f64(
     let data = unsafe { std::slice::from_raw_parts(input, input_len) };
     let out  = unsafe { std::slice::from_raw_parts_mut(output, n) };
     if inner::decompress(data, out) { 0 } else { -1 }
+}
+
+/// Extract a single f64 value at position `idx` from a BUFF-compressed block
+/// without decoding the whole block.  Reads ~ceil(fixed_len/8) bytes (one byte
+/// per byte-plane) plus a few trailing bits.  No allocation.
+///
+/// Returns 0 on success (writes the value to *output), -1 on error.
+#[no_mangle]
+pub extern "C" fn buff_extract_f64(
+    input: *const u8,
+    input_len: usize,
+    idx: usize,
+    output: *mut f64,
+) -> i32 {
+    if input.is_null() || output.is_null() { return -1; }
+    let data = unsafe { std::slice::from_raw_parts(input, input_len) };
+    match inner::extract(data, idx) {
+        Some(v) => { unsafe { *output = v; } 0 }
+        None    => -1,
+    }
 }
 
 #[cfg(test)]
@@ -551,6 +661,46 @@ mod patch_tests {
         for (a, b) in v.iter().zip(out.iter()) {
             assert!((a - b).abs() <= 0.5 / 100.0,
                     "expected {a} got {b} (delta {})", a - b);
+        }
+    }
+
+    fn extract_via_ffi(values: &[f64], scale: i64) -> Vec<f64> {
+        let cap = buff_max_compressed_size(values.len());
+        let mut buf = vec![0u8; cap];
+        let written = buff_compress_f64(values.as_ptr(), values.len(),
+                                        buf.as_mut_ptr(), buf.len(), scale);
+        assert!(written > 0, "compression failed");
+        let mut out = vec![0.0f64; values.len()];
+        for i in 0..values.len() {
+            let mut v = 0.0f64;
+            let ok = buff_extract_f64(buf.as_ptr(), written as usize, i, &mut v as *mut f64);
+            assert_eq!(ok, 0, "extract failed at idx {i}");
+            out[i] = v;
+        }
+        out
+    }
+
+    #[test]
+    fn extract_matches_decompress() {
+        // All three layout regimes:
+        //   (a) fixed_len < 8: narrow data, prec=1, dec_len=5
+        //   (b) fixed_len >= 8 with trailing bits: prec=2, dec_len=8, varied data
+        //   (c) fixed_len multiple of 8: prec=2, dec_len=8, exactly 16-bit deltas
+        let cases: &[(&[f64], i64)] = &[
+            (&[3.1, 3.2, 3.3, 3.4, 3.5, 3.6], 10),
+            (&[25.78, 26.5, 27.2, 28.1, 29.0, 30.5], 100),
+            (&[100.5, 200.5, 300.5, 400.5, 500.5], 100),
+            (&[17.0, 17.5, 17.98, 18.5, 19.0], 100),  // power-of-2 delta case
+        ];
+        for (vals, scale) in cases {
+            let extracted = extract_via_ffi(vals, *scale);
+            let decompressed = roundtrip(vals, *scale);
+            assert_eq!(extracted.len(), decompressed.len());
+            for (a, b) in extracted.iter().zip(decompressed.iter()) {
+                assert_eq!(a.to_bits(), b.to_bits(),
+                    "extract vs decompress mismatch on {:?} (scale={}): {a} vs {b}",
+                    vals, scale);
+            }
         }
     }
 }

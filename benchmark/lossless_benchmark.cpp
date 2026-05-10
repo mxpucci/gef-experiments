@@ -1165,7 +1165,11 @@ BenchmarkResult benchmark_buff(const BenchmarkData &bench_data,
         }
     }
 
-    // ── Random access (decompress enclosing block) ───────────────────────────
+    // ── Random access ────────────────────────────────────────────────────────
+    // BUFF's byte-major layout supports O(ceil(fixed_len/8))-byte single-value
+    // extraction without decoding the whole block — this is exactly the
+    // primitive BUFF was designed for.  Implemented in lib/buff-ffi as
+    // `buff_extract_f64`; see CompressorBuff.hpp::get_value_at.
     const size_t num_ra_queries = 10000;
     t1 = std::chrono::high_resolution_clock::now();
     volatile T ra_sum = 0;
@@ -1174,10 +1178,7 @@ BenchmarkResult benchmark_buff(const BenchmarkData &bench_data,
         if (q_count++ >= num_ra_queries) break;
         const size_t ib  = idx / block_size;
         const size_t off = idx % block_size;
-        const size_t bs  = std::min(block_size, n - ib * block_size);
-        std::vector<T> blk(bs);
-        buff::decompress_block(compressed_blocks[ib], blk.data());
-        ra_sum += blk[off];
+        ra_sum += buff::get_value_at(compressed_blocks[ib], off);
     }
     compiler_barrier();
     t2 = std::chrono::high_resolution_clock::now();
