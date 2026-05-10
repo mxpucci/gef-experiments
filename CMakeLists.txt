@@ -78,24 +78,17 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(pasta)
 set(PASTA_INCLUDE_DIR ${pasta_SOURCE_DIR}/include)
 
-# --- GEF Library (Manual integration to avoid submodule CMake issues) ---
-add_library(gef STATIC 
-    lib/generalized-elias-fano/src/bgef_no_rle.cpp
-    lib/generalized-elias-fano/src/bgef.cpp
-    lib/generalized-elias-fano/src/rle_gef.cpp
-    lib/generalized-elias-fano/src/ugef.cpp
-)
-target_include_directories(gef PUBLIC 
+# --- GEF Library (header-only since src/ was removed) ---
+add_library(gef INTERFACE)
+target_include_directories(gef INTERFACE
     lib/generalized-elias-fano/include
     ${PASTA_INCLUDE_DIR}
 )
-target_link_libraries(gef PUBLIC sdsl sux pasta_bit_vector)
-# OpenMP is only used/beneficial for GEF; keep it scoped to this target.
+target_link_libraries(gef INTERFACE sdsl sux pasta_bit_vector)
 if(OpenMP_CXX_FOUND)
-    target_link_libraries(gef PUBLIC OpenMP::OpenMP_CXX)
+    target_link_libraries(gef INTERFACE OpenMP::OpenMP_CXX)
 endif()
-# Add required flags for GEF
-target_compile_options(gef PUBLIC -ffast-math -funroll-loops)
+target_compile_options(gef INTERFACE -ffast-math -funroll-loops)
 
 # --- ALP Library (vendored build, avoids ALP's standalone CMake restrictions) ---
 add_library(neats_alp STATIC
