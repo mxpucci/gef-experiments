@@ -14,12 +14,11 @@
 
 const FFI_HEADER: usize = 16;
 
-// ── Vendored BUFF compression (x86_64 only) ───────────────────────────────
+// ── Vendored BUFF compression ─────────────────────────────────────────────
 //
-// On other architectures all public entry points return an error value so the
-// benchmark simply skips BUFF.
+// Pure scalar; builds on any 64-bit target.  Upstream's "simd256" name
+// refers to a separate AVX-256 code path we did not vendor.
 
-#[cfg(target_arch = "x86_64")]
 mod inner {
     use super::FFI_HEADER;
     use std::mem;
@@ -260,19 +259,18 @@ mod inner {
 
         let t     = data.len() as u32;
         let delta = max.wrapping_sub(min);
-        // Two minimum guards retained from upstream-as-vendored.  Both prevent
-        // BUFF from misbehaving on inputs the upstream code can't handle:
-        //   • delta == 0 → BitPack panics on 0-bit writes (constant block)
-        //   • fixed_len < dec_len → encode writes fewer bits/value than decode
-        //     reads → silent corruption.
-        // Blocks hitting either case are reported as compression failures so
-        // the C++ wrapper can record an N/A for the dataset.
-        if delta == 0 { return None; }
 
+        // One-line patch over upstream BUFF: pad `fixed_len` up to `dec_len`
+        // when the block's delta is too narrow to split into (ilen, dlen).
+        // Upstream `let ilen = fixed_len - dec_len` underflows u64 in this
+        // case (and `delta == 0` makes `log2()` return -∞, also reaching the
+        // same path).  With the clamp, narrow blocks are encoded with
+        // `dec_len - log2(delta)` leading-zero bits per value — strictly the
+        // same precision bound (1/2^dec_len) as upstream, zero overhead on
+        // wide-range blocks that satisfy the original assumption.
         let cal_int_length = (delta as f64).log2().ceil();
-        let fixed_len = cal_int_length as usize;
-        if fixed_len < dec_len as usize { return None; }
-        let ilen = fixed_len - dec_len as usize;
+        let fixed_len = std::cmp::max(cal_int_length as usize, dec_len as usize);
+        let ilen = fixed_len - dec_len as usize;  // safe: fixed_len ≥ dec_len
         let dlen = dec_len as usize;
 
         bound.set_length(ilen as u64, dlen as u64);
@@ -443,10 +441,7 @@ mod inner {
 /// Upper bound on compressed output size (bytes) for `n` f64 values.
 #[no_mangle]
 pub extern "C" fn buff_max_compressed_size(n: usize) -> usize {
-    #[cfg(target_arch = "x86_64")]
-    { inner::max_size(n) }
-    #[cfg(not(target_arch = "x86_64"))]
-    { let _ = n; 0 }
+    inner::max_size(n)
 }
 
 /// Compress `n` f64 values.
@@ -454,7 +449,7 @@ pub extern "C" fn buff_max_compressed_size(n: usize) -> usize {
 /// `scale` = 10^decimals (must be ≥ 10, i.e. at least 1 decimal place).
 /// `output` must be at least `buff_max_compressed_size(n)` bytes.
 ///
-/// Returns bytes written, or -1 on error / unsupported platform.
+/// Returns bytes written, or -1 on error.
 #[no_mangle]
 pub extern "C" fn buff_compress_f64(
     input: *const f64,
@@ -463,18 +458,13 @@ pub extern "C" fn buff_compress_f64(
     output_capacity: usize,
     scale: i64,
 ) -> i64 {
-    #[cfg(target_arch = "x86_64")]
-    {
-        if input.is_null() || output.is_null() || n == 0 { return -1; }
-        let data = unsafe { std::slice::from_raw_parts(input, n) };
-        let out  = unsafe { std::slice::from_raw_parts_mut(output, output_capacity) };
-        match inner::compress(data, out, scale) {
-            Some(len) => len as i64,
-            None      => -1,
-        }
+    if input.is_null() || output.is_null() || n == 0 { return -1; }
+    let data = unsafe { std::slice::from_raw_parts(input, n) };
+    let out  = unsafe { std::slice::from_raw_parts_mut(output, output_capacity) };
+    match inner::compress(data, out, scale) {
+        Some(len) => len as i64,
+        None      => -1,
     }
-    #[cfg(not(target_arch = "x86_64"))]
-    { let _ = (input, n, output, output_capacity, scale); -1 }
 }
 
 /// Decompress `n` f64 values from BUFF-compressed data.
@@ -487,13 +477,47 @@ pub extern "C" fn buff_decompress_f64(
     output: *mut f64,
     n: usize,
 ) -> i32 {
-    #[cfg(target_arch = "x86_64")]
-    {
-        if input.is_null() || output.is_null() || n == 0 { return -1; }
-        let data = unsafe { std::slice::from_raw_parts(input, input_len) };
-        let out  = unsafe { std::slice::from_raw_parts_mut(output, n) };
-        if inner::decompress(data, out) { 0 } else { -1 }
+    if input.is_null() || output.is_null() || n == 0 { return -1; }
+    let data = unsafe { std::slice::from_raw_parts(input, input_len) };
+    let out  = unsafe { std::slice::from_raw_parts_mut(output, n) };
+    if inner::decompress(data, out) { 0 } else { -1 }
+}
+
+#[cfg(test)]
+mod patch_tests {
+    use super::*;
+
+    fn roundtrip(values: &[f64], scale: i64) -> Vec<f64> {
+        let cap = buff_max_compressed_size(values.len());
+        let mut buf = vec![0u8; cap];
+        let written = buff_compress_f64(values.as_ptr(), values.len(),
+                                        buf.as_mut_ptr(), buf.len(), scale);
+        assert!(written > 0, "compression failed");
+        let mut out = vec![0.0f64; values.len()];
+        let ok = buff_decompress_f64(buf.as_ptr(), written as usize,
+                                     out.as_mut_ptr(), out.len());
+        assert_eq!(ok, 0);
+        out
     }
-    #[cfg(not(target_arch = "x86_64"))]
-    { let _ = (input, input_len, output, n); -1 }
+
+    #[test]
+    fn us_bin_narrow_range() {
+        // Mirrors US.bin: prec=2 (decimals=2), values with raw_int range ~8.
+        let raw = [2584i64, 2584, 2584, 2586, 2584, 2581, 2583, 2584,
+                   2584, 2585, 2584, 2586, 2584, 2578];
+        let v: Vec<f64> = raw.iter().map(|&x| x as f64 / 100.0).collect();
+        let out = roundtrip(&v, 100);
+        // Verify within BUFF's 0.5/scale tolerance.
+        for (a, b) in v.iter().zip(out.iter()) {
+            assert!((a - b).abs() <= 0.5 / 100.0, "expected {a} got {b}");
+        }
+    }
+
+    #[test]
+    fn delta_zero_block() {
+        // Constant block: previously rejected, now pads to dec_len bits.
+        let v = [3.14_f64; 100];
+        let out = roundtrip(&v, 100);
+        for o in &out { assert!((o - 3.14).abs() <= 0.5 / 100.0); }
+    }
 }
