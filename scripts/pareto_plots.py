@@ -68,7 +68,7 @@ STYLES = {
     # --- COLUMN 1 & 2 Candidates (Standard) ---
     "ALP":      {"m": "D", "c": "#F8BBD0", "label": "ALP"},
     "Brotli":   {"m": "h", "c": "#3B7C26", "label": "Brotli"},
-    "BUFF":     {"m": "P", "c": "#00897B", "label": "BUFF"},
+    "BUFF":     {"m": (8, 1, 0), "c": "#00897B", "label": "BUFF"},
     "Camel":    {"m": "8", "c": "#FF5722", "label": "Camel"},
     "Chimp":    {"m": "<", "c": "#8D4E4B", "label": "Chimp"},
     "Chimp128": {"m": "^", "c": "#6A1B9A", "label": "Chimp128"},

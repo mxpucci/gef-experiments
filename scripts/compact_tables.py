@@ -24,7 +24,7 @@ GEF_VARIANTS = [
 
 # Compressors with Random Access Support
 RA_COMPRESSORS = {
-    "alp", "leco", "neats", "sneats", "leats", "dac",
+    "alp", "buff", "leco", "neats", "sneats", "leats", "dac",
     *GEF_VARIANTS 
 }
 
@@ -315,6 +315,48 @@ def generate_latex_table(
 
         latex.append(" & ".join(row_str) + r" \\")
 
+    # Average row
+    avg_no_ra_map = {}
+    avg_ra_map = {}
+    for c in no_ra_compressors:
+        vals = [df[(df['dataset'] == ds) & (df['compressor'] == c)][metric_col].mean() for ds in datasets]
+        valid = [v for v in vals if not pd.isna(v)]
+        avg_no_ra_map[c] = np.mean(valid) if valid else np.nan
+    for _, sub_cols in ra_display_cols:
+        for c in sub_cols:
+            vals = [df[(df['dataset'] == ds) & (df['compressor'] == c)][metric_col].mean() for ds in datasets]
+            valid = [v for v in vals if not pd.isna(v)]
+            avg_ra_map[c] = np.mean(valid) if valid else np.nan
+
+    valid_avg_no_ra = [v for v in avg_no_ra_map.values() if not pd.isna(v)]
+    valid_avg_ra = [v for v in avg_ra_map.values() if not pd.isna(v)]
+    valid_avg_all = valid_avg_no_ra + valid_avg_ra
+
+    avg_row = [r"\textbf{Average}"]
+    if valid_avg_all:
+        if is_min_best:
+            best_avg_no_ra = min(valid_avg_no_ra) if valid_avg_no_ra else np.nan
+            best_avg_ra = min(valid_avg_ra) if valid_avg_ra else np.nan
+            best_avg_global = min(valid_avg_all)
+        else:
+            best_avg_no_ra = max(valid_avg_no_ra) if valid_avg_no_ra else np.nan
+            best_avg_ra = max(valid_avg_ra) if valid_avg_ra else np.nan
+            best_avg_global = max(valid_avg_all)
+        for c in no_ra_compressors:
+            fmt = get_rank_formatting(avg_no_ra_map[c], valid_avg_all, best_avg_no_ra, best_avg_global, is_ratio, "split", is_min_best, conversion_factor)
+            avg_row.append(fmt)
+        for _, sub_cols in ra_display_cols:
+            parts = []
+            for raw_col in sub_cols:
+                fmt = get_rank_formatting(avg_ra_map[raw_col], valid_avg_all, best_avg_ra, best_avg_global, is_ratio, "split", is_min_best, conversion_factor)
+                parts.append(fmt)
+            avg_row.append(" / ".join(parts))
+    else:
+        avg_row += ["-"] * (len(no_ra_compressors) + len(ra_display_cols))
+
+    latex.append(r"\midrule")
+    latex.append(" & ".join(avg_row) + r" \\")
+
     latex.append(r"\bottomrule")
     latex.append(r"\end{tabular*}") # Note the *
     if width_command == r"\textwidth":
@@ -453,8 +495,57 @@ def generate_combined_table(
                             parts.append("-")
                             
                 row_str.append(" / ".join(parts))
-                
+
             latex.append(" & ".join(row_str) + r" \\")
+
+        # Average row for this section
+        avg_nr = {}
+        avg_ra_sec = {}
+        for c in no_ra_compressors:
+            vals = [df[(df['dataset'] == ds) & (df['compressor'] == c)][metric].mean() for ds in datasets]
+            valid = [v for v in vals if not pd.isna(v)]
+            avg_nr[c] = np.mean(valid) if valid else np.nan
+        for c in ra_src_list:
+            vals = [df[(df['dataset'] == ds) & (df['compressor'] == c)][metric].mean() for ds in datasets]
+            valid = [v for v in vals if not pd.isna(v)]
+            avg_ra_sec[c] = np.mean(valid) if valid else np.nan
+
+        valid_avg_nr = [v for v in avg_nr.values() if not pd.isna(v)]
+        valid_avg_r = [v for v in avg_ra_sec.values() if not pd.isna(v)]
+        valid_avg_all_sec = valid_avg_nr + valid_avg_r
+
+        avg_row = [r"\textbf{Average}"]
+        if valid_avg_all_sec:
+            if is_min:
+                best_avg_g = min(valid_avg_all_sec)
+                best_avg_nr = min(valid_avg_nr) if valid_avg_nr else np.nan
+                best_avg_r = min(valid_avg_r) if valid_avg_r else np.nan
+            else:
+                best_avg_g = max(valid_avg_all_sec)
+                best_avg_nr = max(valid_avg_nr) if valid_avg_nr else np.nan
+                best_avg_r = max(valid_avg_r) if valid_avg_r else np.nan
+            for c in no_ra_compressors:
+                fmt = get_rank_formatting(avg_nr[c], valid_avg_all_sec, best_avg_nr, best_avg_g, is_ratio, "split", is_min, conversion_factor)
+                avg_row.append(fmt)
+            for h, cols in ra_display_cols_master:
+                parts = []
+                active_sub_cols = [c for c in cols if c in ra_src_list]
+                if not active_sub_cols:
+                    parts.append("-")
+                else:
+                    target_cols = cols if merge_flag else active_sub_cols
+                    for c in target_cols:
+                        if c in active_sub_cols:
+                            fmt = get_rank_formatting(avg_ra_sec.get(c, np.nan), valid_avg_all_sec, best_avg_r, best_avg_g, is_ratio, "split", is_min, conversion_factor)
+                            parts.append(fmt)
+                        else:
+                            parts.append("-")
+                avg_row.append(" / ".join(parts))
+        else:
+            avg_row += ["-"] * (total_cols - 1)
+
+        latex.append(r"\midrule")
+        latex.append(" & ".join(avg_row) + r" \\")
 
         latex.append(r"\midrule")
 
