@@ -125,19 +125,20 @@ jobs:
           # Patch 2: Remove deprecated 'register' keyword
           sed -i 's/register uint64_t/uint64_t/g' lib/Learn-to-Compress/headers/popcount.h
 
-          # Execute tests on a portable build: GitHub runners need not support
-          # the Skylake AVX-512 instructions used by the destination bundles.
-          echo "Building and testing portable GCC binaries..."
-          cmake -S . -B build-test-portable -G Ninja \
+          # Execute tests for this runner's CPU. GEF's existing rank/select
+          # code requires SSE4.1, while runners need not support the server's
+          # Skylake AVX-512 instructions. Native flags satisfy both constraints.
+          echo "Building and testing GCC binaries for the CI runner..."
+          cmake -S . -B build-test-runner -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DARCH_FLAGS="-march=x86-64 -mtune=generic" \
+            -DARCH_FLAGS="-march=native -mtune=native" \
             -DCMAKE_C_COMPILER="$ENV_PATH/bin/x86_64-conda-linux-gnu-gcc" \
             -DCMAKE_CXX_COMPILER="$ENV_PATH/bin/x86_64-conda-linux-gnu-g++" \
             -DNEATS_WITH_SQUASH=OFF -DNEATS_WITH_LECO=OFF \
             -DNEATS_ALP_HYBRID_CLANG=OFF -DNEATS_WITH_BUFF=ON \
             -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE -DBUILD_TESTING=ON
-          cmake --build build-test-portable -j2
-          ctest --test-dir build-test-portable --output-on-failure
+          cmake --build build-test-runner -j2
+          ctest --test-dir build-test-runner --output-on-failure
 
           # --- BUILD PROJECT (GCC) ---
           echo "Building with GCC..."
