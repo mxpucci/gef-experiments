@@ -24,7 +24,8 @@ if [[ ! -x "$toolchain_root/envs/build/bin/x86_64-conda-linux-gnu-g++" ||
 fi
 export PATH="$toolchain_root/envs/build/bin:$PATH"
 export CC=x86_64-conda-linux-gnu-gcc CXX=x86_64-conda-linux-gnu-g++
-git -C "$repo_dir" submodule update --init --recursive
+# CentOS 7 ships Git 1.8.3, before git -C was introduced.
+(cd "$repo_dir" && git submodule update --init --recursive)
 cmake -S "$repo_dir" -B "$repo_dir/build" -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \
     -DNEATS_WITH_SQUASH=OFF -DNEATS_WITH_LECO=OFF -DNEATS_WITH_BUFF=ON \
