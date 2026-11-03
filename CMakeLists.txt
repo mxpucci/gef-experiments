@@ -101,6 +101,20 @@ add_library(neats_alp STATIC
 target_include_directories(neats_alp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/ALP/include)
 target_compile_options(neats_alp PUBLIC -fPIC)
 
+# Correct two vector-type typos in the pinned ALP header in the build tree.
+# The load/store intrinsics copy index bits unchanged; matching their vector
+# types makes the native AVX-512 path compile with GCC as well as Clang.
+set(NEATS_ALP_COMPAT_INCLUDE "${CMAKE_CURRENT_BINARY_DIR}/alp-compat")
+file(MAKE_DIRECTORY "${NEATS_ALP_COMPAT_INCLUDE}/alp")
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/lib/ALP/include/" DESTINATION "${NEATS_ALP_COMPAT_INCLUDE}")
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/lib/ALP/include/alp/encoder.hpp" NEATS_ALP_ENCODER)
+string(REPLACE "__m512i index        = _mm512_loadu_pd" "__m512d index        = _mm512_loadu_pd"
+    NEATS_ALP_ENCODER "${NEATS_ALP_ENCODER}")
+string(REPLACE "__m512i  index        = _mm512_loadu_si512" "__m512  index        = _mm512_loadu_ps"
+    NEATS_ALP_ENCODER "${NEATS_ALP_ENCODER}")
+file(WRITE "${NEATS_ALP_COMPAT_INCLUDE}/alp/encoder.hpp" "${NEATS_ALP_ENCODER}")
+target_include_directories(neats_alp BEFORE PUBLIC "${NEATS_ALP_COMPAT_INCLUDE}")
+
 # --- ALP benchmark TU (optional clang++ hybrid build) ---
 set(NEATS_ALP_BENCH_OBJ "${CMAKE_CURRENT_BINARY_DIR}/alp_benchmark_clang.o")
 set(NEATS_ALP_BENCH_SRC "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/alp_benchmark.cpp")
@@ -191,6 +205,7 @@ if(NEATS_ALP_HYBRID_CLANG)
                     -c "${NEATS_ALP_BENCH_SRC}"
                     -o "${NEATS_ALP_BENCH_OBJ}"
                     "-I${CMAKE_CURRENT_SOURCE_DIR}/benchmark"
+                    "-I${NEATS_ALP_COMPAT_INCLUDE}"
                     "-I${CMAKE_CURRENT_SOURCE_DIR}/lib/ALP/include"
                     ${NEATS_ALP_ARCH_FLAGS_LIST}
                     ${NEATS_ALP_COMMON_OPT_FLAGS_LIST}
@@ -427,4 +442,17 @@ if(NEATS_WITH_SQUASH)
         endif()
 
     endif()
+endif()
+
+# New compressors use strict IEEE arithmetic independently of GEF's fast-math flags.
+include(cmake/RecentCompressors.cmake)
+foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
+    if(TARGET ${bench_target})
+        target_link_libraries(${bench_target} PRIVATE gef_recent_compressors)
+    endif()
+endforeach()
+
+include(CTest)
+if(BUILD_TESTING)
+    add_subdirectory(tests/recent)
 endif()

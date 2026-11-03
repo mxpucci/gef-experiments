@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.22)
+project(ElfStarTest LANGUAGES CXX)
+enable_testing()
+include(../../cmake/ElfStar.cmake)
+add_executable(elfstar_roundtrip ../elfstar_roundtrip.cpp)
+target_link_libraries(elfstar_roundtrip PRIVATE gef_elfstar)
+add_test(NAME elfstar_roundtrip COMMAND elfstar_roundtrip)

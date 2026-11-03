@@ -135,6 +135,7 @@ jobs:
             -DNEATS_WITH_BUFF=ON \
             -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE
           cmake --build build-gcc -j
+          ctest --test-dir build-gcc --output-on-failure
 
           # --- BUILD PROJECT (Clang) ---
           echo "Building with Clang..."
@@ -151,6 +152,7 @@ jobs:
             -DNEATS_WITH_BUFF=ON \
             -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE
           cmake --build build-clang -j
+          ctest --test-dir build-clang --output-on-failure
 
           # --- BUNDLE ---
           OUT="NeaTS-CentOS7-Skylake"

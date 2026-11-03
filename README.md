@@ -9,7 +9,8 @@ The core implementation of Generalized Elias Fano is available here:
 
 *   **CMake** (3.22 or higher)
 *   **C++ Compiler** with C++20/23 support (GCC 11+, Clang 14+)
-*   **Python 3** (for generating plots and tables)
+*   **Rust/Cargo 1.87+** (Pcodec, Fauna/Macaque; dependencies are locked)
+*   **Python 3** (for smoke tests, plots and tables)
 *   **Squash** (optional, for comparing against a wide range of compressors)
 
 ## 📥 Cloning the Repository
@@ -41,6 +42,59 @@ make -j
 This will produce the benchmark executables, primarily:
 *   `LosslessBenchmark`: Minimal benchmark binary.
 *   `LosslessBenchmarkFull`: Full benchmark suite including comparisons with other compressors (requires Squash).
+
+## Recent compressor integrations
+
+The new entries are available in `LosslessBenchmark` and the optional Full
+variants. Native dependencies are imported at pinned revisions; the Java-only
+algorithms have documented C++ ports.
+
+| CLI name | Implementation | Input |
+| --- | --- | --- |
+| `fauna`, `macaque` | Official Rust Fauna and standalone MacaqueV | Float32; double inputs must be exactly representable |
+| `dexor` | C++ port of official DeXOR | Float64 |
+| `pcodec` | Official Rust Pcodec 1.0.2 | Float64 |
+| `pcodec_i64` | Same official Pcodec | Original int64 values |
+| `elfstar`, `selfstar` | C++ ports of official Elf*/SElf* | Float64 |
+| `flea` | Official C++ FLEA with FFTW | Original scaled int64 values |
+
+**Kangaroo and EAS are pending author source artifacts**, not implemented.
+Their source searches and the details missing from the papers are recorded in
+[docs/kangaroo.md](docs/kangaroo.md) and [docs/eas.md](docs/eas.md).
+
+For example:
+
+```sh
+./build/LosslessBenchmark -c dexor,pcodec,pcodec_i64,elfstar,selfstar,flea -b 1000 data.bin
+ctest --test-dir build --output-on-failure
+```
+
+Fauna/Macaque never silently narrow doubles. Their adapters reject values such
+as double `0.1`; use them only on eligible datasets. FLEA explicitly rejects
+blocks outside the imported implementation's safe numeric envelope. Every new
+benchmark performs a bit-exact round-trip check before writing a result. A
+failed or unknown requested compressor gives a nonzero exit status.
+
+SElf* carries adaptation across blocks and stores counted checkpoints for
+independent block decoding. Point/range access is an enclosing block mechanism,
+not a claim of native individual access. Sizes include codec headers and the
+block directory. See [docs/recent-compressors.md](docs/recent-compressors.md)
+for measurement conventions and links to each implementation's provenance,
+input restrictions and tests.
+
+On the Linux x86-64 server, the following builds with a user-owned GCC 13.4 and
+Rust 1.87 toolchain (no root access or GitHub Actions required):
+
+```sh
+./scripts/build_remote.sh
+```
+
+This helper builds the main benchmark with all new codecs and BUFF. Optional
+Squash and LeCo are disabled because they require additional system libraries;
+their existing build options remain available. Native CPU flags target the
+build machine. CMake and network access are needed initially. To build without
+individual fetched codecs, set `GEF_WITH_PCODEC`, `GEF_WITH_FAUNA`, or
+`GEF_WITH_FLEA` to `OFF`. Full test builds default to `BUILD_TESTING=ON`.
 
 ## 🚀 Running Benchmarks
 

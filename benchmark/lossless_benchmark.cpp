@@ -40,6 +40,7 @@
 #include "NeaTS/NeaTS.hpp"
 #include "NeaTS/algorithms.hpp"
 #include "benchmark_common.hpp"
+#include "recent_compressors.hpp"
 
 // Streaming compressors
 #include "Chimp/CompressorChimp.hpp"
@@ -1476,6 +1477,9 @@ void print_usage(const char *prog_name) {
 #endif
     std::cerr << ")" << std::endl;
 #endif
+    std::cerr << "                 Additional: ";
+    for (const auto& name : recent_compressor_names()) std::cerr << name << " ";
+    std::cerr << std::endl;
     std::cerr << "  -r <list>      Comma-separated list of range sizes (default: 10,100,1000,10000,100000)" << std::endl;
     std::cerr << "  -b <size>      Block size for block-based compressors (default: 1000)" << std::endl;
     std::cerr << "                 (Note: *_gef compressors use fixed UniformedPartitioner block size = " << GEF_UNIFORM_PARTITION_SIZE << ")" << std::endl;
@@ -1518,10 +1522,13 @@ int main(int argc, char *argv[]) {
 #endif
                                             };
 #endif
+    const auto recent = recent_compressor_names();
+    compressors.insert(compressors.end(), recent.begin(), recent.end());
     std::vector<size_t> range_sizes = {10, 100, 1000, 10000, 100000};
     size_t block_size = 1000;
     uint8_t max_bpc = 32;
     std::string input_path;
+    size_t failures = 0;
     
     // Parse command line arguments
     for (int64_t i = 1; i < argc; ++i) {
@@ -1619,6 +1626,10 @@ int main(int argc, char *argv[]) {
         std::vector<std::string> double_data_compressors;  // gorilla, chimp, etc.
         
         for (const auto &comp : compressors) {
+            if (recent_compressor_uses_integers(comp)) {
+                raw_data_compressors.push_back(comp);
+                continue;
+            }
 #if HAS_SQUASH
             if (comp == "lz4" || comp == "zstd" || comp == "brotli" || 
                 comp == "xz" || comp == "snappy") {
@@ -1639,15 +1650,19 @@ int main(int argc, char *argv[]) {
             }
         }
         
-        // Phase 0: Run compressors that need raw_data (SQUASH compressors)
-#if HAS_SQUASH
+        // Phase 0: Run compressors that need exact unshifted integers.
         for (const auto &comp : raw_data_compressors) {
             std::cerr << "  Running " << comp << "..." << std::flush;
             
             BenchmarkResult result;
             
             try {
-                result = benchmark_squash<int64_t>(comp, bench_data, range_sizes, block_size);
+                if (recent_compressor_uses_integers(comp)) {
+                    result = benchmark_recent_compressor(comp, bench_data, range_sizes, block_size);
+                }
+#if HAS_SQUASH
+                else result = benchmark_squash<int64_t>(comp, bench_data, range_sizes, block_size);
+#endif
                 
                 if (!header_printed) {
                     result.print_header(*out);
@@ -1657,11 +1672,11 @@ int main(int argc, char *argv[]) {
                 std::cerr << " done" << std::endl;
                 
             } catch (const std::exception &e) {
+                ++failures;
                 std::cerr << " error: " << e.what() << std::endl;
             }
         }
-#endif
-        
+
         // Convert raw_data to shifted_data and free raw_data
         if (!shifted_data_compressors.empty() || !double_data_compressors.empty()) {
             if (!bench_data.raw_data.empty()) {
@@ -1717,6 +1732,7 @@ int main(int argc, char *argv[]) {
                     using UP_B_STAR = gef::B_STAR_GEF<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
                     result = benchmark_gef<UP_B_STAR, int64_t>("b_star_gef_optimal", bench_data, range_sizes);
                 } else {
+                    ++failures;
                     std::cerr << " unknown compressor, skipping" << std::endl;
                     continue;
                 }
@@ -1729,6 +1745,7 @@ int main(int argc, char *argv[]) {
                 std::cerr << " done" << std::endl;
                 
             } catch (const std::exception &e) {
+                ++failures;
                 std::cerr << " error: " << e.what() << std::endl;
             }
         }
@@ -1747,7 +1764,9 @@ int main(int argc, char *argv[]) {
             BenchmarkResult result;
             
             try {
-                if (comp == "gorilla") {
+                if (is_recent_compressor(comp)) {
+                    result = benchmark_recent_compressor(comp, bench_data, range_sizes, block_size);
+                } else if (comp == "gorilla") {
                     result = benchmark_bitstream_compressor<CompressorGorilla<double>, DecompressorGorilla<double>, double>(
                         "Gorilla", bench_data, range_sizes, block_size);
                 } else if (comp == "chimp") {
@@ -1773,6 +1792,7 @@ int main(int argc, char *argv[]) {
                     result = benchmark_buff<double>(bench_data, range_sizes, block_size);
 #endif
                 } else {
+                    ++failures;
                     std::cerr << " unknown compressor, skipping" << std::endl;
                     continue;
                 }
@@ -1785,6 +1805,7 @@ int main(int argc, char *argv[]) {
                 std::cerr << " done" << std::endl;
                 
             } catch (const std::exception &e) {
+                ++failures;
                 std::cerr << " error: " << e.what() << std::endl;
             }
         }
@@ -1794,5 +1815,5 @@ int main(int argc, char *argv[]) {
         file_out.close();
     }
     
-    return 0;
+    return failures ? 1 : 0;
 }

@@ -10,3 +10,7 @@ build/
 .vscode/
 __pycache__/
 datasets/
+
+# Local adapter validation builds and Rust artifacts
+/build-*/
+**/target/
