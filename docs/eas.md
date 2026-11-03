@@ -1,5 +1,8 @@
 # EAS: implementation pending an author artifact
 
+Deferred at the user’s request on 3 November 2026. The source audit below is
+retained for a future integration and does not block the current scope.
+
 EAS is **not implemented or registered** in the benchmark yet. The paper is
 available and has been read; the missing material is a usable implementation
 or a sufficiently complete executable specification. No ALP wrapper, generic

@@ -1,8 +1,9 @@
 # Recent compressors: integration and measurement
 
-The implementation goal is partially complete. Fauna/Macaque, DeXOR, Pcodec,
-Elf*, SElf* and FLEA have buildable adapters and benchmark entries. Kangaroo and
-EAS require author source artifacts; they have no placeholder implementation.
+Fauna/Macaque, DeXOR, Pcodec, Elf*, SElf* and FLEA have buildable adapters and
+benchmark entries. Kangaroo and EAS are deferred at the user’s request and are
+outside the current integration scope. Their source audits are retained for
+future work; neither has a placeholder implementation.
 
 | Entry | Source and provenance | Representation | Access through this adapter |
 | --- | --- | --- | --- |

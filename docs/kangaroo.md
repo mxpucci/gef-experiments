@@ -1,5 +1,8 @@
 # Kangaroo: source needed before benchmark integration
 
+Deferred at the user’s request on 3 November 2026. The source audit below is
+retained for a future integration and does not block the current scope.
+
 Status (2026-11-03): **not implemented or registered as a benchmark**. The paper
 is available and has been read. The remaining dependency is the authors' source
 artifact, preferably the C++ version explicitly mentioned in the paper.

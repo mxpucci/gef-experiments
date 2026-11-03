@@ -58,8 +58,9 @@ algorithms have documented C++ ports.
 | `elfstar`, `selfstar` | C++ ports of official Elf*/SElf* | Float64 |
 | `flea` | Official C++ FLEA with FFTW | Original scaled int64 values |
 
-**Kangaroo and EAS are pending author source artifacts**, not implemented.
-Their source searches and the details missing from the papers are recorded in
+**Kangaroo and EAS are deferred at the user’s request** and are outside this
+integration’s current scope. Their source searches and the details missing
+from the papers are recorded in
 [docs/kangaroo.md](docs/kangaroo.md) and [docs/eas.md](docs/eas.md).
 
 For example:

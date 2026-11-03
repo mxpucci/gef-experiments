@@ -6,6 +6,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Push and PR events for the same branch share one expensive native build.
+concurrency:
+  group: build-linux-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   build-centos7-skylake:
     runs-on: ubuntu-latest
