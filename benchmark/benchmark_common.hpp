@@ -25,6 +25,13 @@ struct BenchmarkResult {
     double random_access_ns{};
     double random_access_mbs{};
     std::vector<std::pair<size_t, double>> range_query_throughputs; // (range_size, MB/s)
+    std::string input_conversion{"none"};
+    size_t input_changed_values{};
+    size_t roundtrip_mismatches{};
+    std::string validation_status{"not_checked"};
+    std::string access_layout{"unspecified"};
+    size_t compression_unit_values{};
+    size_t native_page_values{};
 
     void print_header(std::ostream &out) const;
     void print(std::ostream &out) const;
@@ -44,25 +51,9 @@ struct BenchmarkData {
     // Map range size to indices
     std::map<size_t, std::vector<size_t>> range_query_indices;
 
-    // Convert shifted_data to double_data and free shifted_data
-    void convert_shifted_to_double() {
-        if (shifted_data.empty()) return;
-
-        int64_t divisor_int = 1;
-        for (int64_t d = 0; d < decimals; ++d) divisor_int *= 10;
-        double divisor = static_cast<double>(divisor_int);
-
-        double_data.resize(shifted_data.size());
-        for (size_t i = 0; i < shifted_data.size(); ++i) {
-            // raw_data[i] = shifted_data[i] + min_val
-            // double_data[i] = raw_data[i] / divisor
-            double_data[i] = static_cast<double>(shifted_data[i] + min_val) / divisor;
-        }
-
-        // Free shifted_data
-        shifted_data.clear();
-        shifted_data.shrink_to_fit();
-    }
+    // Defined in a strict-IEEE, non-LTO translation unit: callers may use
+    // fast-math, but reciprocal multiplication changes the decimal input bits.
+    void convert_shifted_to_double();
 };
 
 template<class T>
@@ -94,5 +85,4 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
 
 // LeCo: compiled with GCC 11 due to GCC 13 std::is_integral<__uint128_t> conflict
 BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
-                               const std::vector<size_t> &range_sizes,
-                               size_t block_size = 1000);
+                               const std::vector<size_t> &range_sizes);

@@ -119,7 +119,7 @@ target_include_directories(neats_alp BEFORE PUBLIC "${NEATS_ALP_COMPAT_INCLUDE}"
 set(NEATS_ALP_BENCH_OBJ "${CMAKE_CURRENT_BINARY_DIR}/alp_benchmark_clang.o")
 set(NEATS_ALP_BENCH_SRC "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/alp_benchmark.cpp")
 
-# --- BUFF compressor (Rust FFI, no external Rust dependencies) ---
+# --- BUFF compressor (authors' Rust method bodies through a thin FFI) ---
 # The Rust crate in lib/buff-ffi is compiled with `cargo build --release` and linked
 # as a static library.  If cargo is not found the compressor is silently omitted.
 option(NEATS_WITH_BUFF "Build with BUFF compressor (requires Rust/cargo)" ON)
@@ -140,7 +140,9 @@ if(NEATS_WITH_BUFF)
                     "${CARGO_EXECUTABLE}" build --release
                         --manifest-path "${BUFF_FFI_SRC_DIR}/Cargo.toml"
             DEPENDS "${BUFF_FFI_SRC_DIR}/Cargo.toml"
+                    "${BUFF_FFI_SRC_DIR}/Cargo.lock"
                     "${BUFF_FFI_SRC_DIR}/src/lib.rs"
+                    "${BUFF_FFI_SRC_DIR}/src/upstream.rs"
             COMMENT "Building BUFF FFI Rust library"
             VERBATIM
         )
@@ -266,6 +268,7 @@ if(NEATS_WITH_LECO)
                 -std=gnu++17
                 -fPIC
             DEPENDS "${NEATS_LECO_BENCH_SRC}" "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/benchmark_common.hpp"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/LeCo/NativeTuning.hpp"
             VERBATIM
         )
         add_custom_target(neats_leco_bench_obj DEPENDS "${NEATS_LECO_BENCH_OBJ}")
