@@ -1,0 +1,28 @@
+{
+  "elfstar": {
+    "datasets": 16,
+    "mean_old_bits_per_value": 26.641489329902242,
+    "mean_new_bits_per_value": 14.66535841057085,
+    "mean_old_compressed_percent": 41.627327077972254,
+    "mean_new_compressed_percent": 22.914622516516953,
+    "mean_old_compression_mib_s": 76.65725,
+    "mean_new_compression_mib_s": 91.29475000000001,
+    "mean_old_decompression_mib_s": 190.39644375,
+    "mean_new_decompression_mib_s": 231.5347125,
+    "mean_old_point_mib_s": 0.33985,
+    "mean_new_point_mib_s": 0.39935625
+  },
+  "selfstar": {
+    "datasets": 16,
+    "mean_old_bits_per_value": 27.10731499488027,
+    "mean_new_bits_per_value": 15.229718604015202,
+    "mean_old_compressed_percent": 42.355179679500424,
+    "mean_new_compressed_percent": 23.796435318773753,
+    "mean_old_compression_mib_s": 79.7859,
+    "mean_new_compression_mib_s": 96.05881875,
+    "mean_old_decompression_mib_s": 174.678925,
+    "mean_new_decompression_mib_s": 216.1296875,
+    "mean_old_point_mib_s": 0.32651875,
+    "mean_new_point_mib_s": 0.40091875
+  }
+}

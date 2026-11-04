@@ -1,0 +1,956 @@
+2026-11-03T15:46:12.491767+00:00 Validating all datasets; full input, no sampling
+2026-11-03T15:46:15.058958+00:00 Verified AP: 137721453 values, decimals=5
+2026-11-03T15:46:15.060060+00:00 Verified BM: 17964 values, decimals=5
+2026-11-03T15:46:15.060286+00:00 Verified BP: 6782 values, decimals=4
+2026-11-03T15:46:15.063021+00:00 Verified BT: 129669 values, decimals=9
+2026-11-03T15:46:15.065504+00:00 Verified BW: 129669 values, decimals=7
+2026-11-03T15:46:15.121159+00:00 Verified CT: 2826654 values, decimals=1
+2026-11-03T15:46:15.223486+00:00 Verified DP: 5413914 values, decimals=3
+2026-11-03T15:46:15.230452+00:00 Verified DU: 334880 values, decimals=3
+2026-11-03T15:46:19.404171+00:00 Verified ECG: 225750000 values, decimals=3
+2026-11-03T15:46:20.214630+00:00 Verified GE: 43565657 values, decimals=3
+2026-11-03T15:46:29.042008+00:00 Verified IT: 477050760 values, decimals=2
+2026-11-03T15:46:29.520853+00:00 Verified LAT: 24876978 values, decimals=4
+2026-11-03T15:46:29.984631+00:00 Verified LON: 24876978 values, decimals=4
+2026-11-03T15:46:31.112044+00:00 Verified UK: 59305325 values, decimals=1
+2026-11-03T15:46:36.372346+00:00 Verified US: 282076178 values, decimals=2
+2026-11-03T15:46:40.048477+00:00 Verified WD: 198898762 values, decimals=2
+2026-11-03T15:46:40.241930+00:00 START 1/144 BP__b_star_gef_approximate
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c b_star_gef_approximate -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BP__b_star_gef_approximate.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+  Converting raw_data to shifted_data... done
+  Running b_star_gef_approximate... done
+2026-11-03T15:46:45.254224+00:00 END BP__b_star_gef_approximate status=OK seconds=5.0 
+2026-11-03T15:46:45.254391+00:00 START 2/144 BP__dexor
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c dexor -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BP__dexor.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running dexor... done
+2026-11-03T15:46:50.266332+00:00 END BP__dexor status=OK seconds=5.0 
+2026-11-03T15:46:50.266535+00:00 START 3/144 BP__elfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c elfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BP__elfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running elfstar... done
+2026-11-03T15:46:55.277427+00:00 END BP__elfstar status=OK seconds=5.0 
+2026-11-03T15:46:55.277527+00:00 START 4/144 BP__selfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c selfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BP__selfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running selfstar... done
+2026-11-03T15:47:00.292373+00:00 END BP__selfstar status=OK seconds=5.0 
+2026-11-03T15:47:00.292616+00:00 START 5/144 BP__pcodec
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BP__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T15:47:05.304108+00:00 END BP__pcodec status=OK seconds=5.0 
+2026-11-03T15:47:05.304204+00:00 START 6/144 BP__pcodec_i64
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec_i64 -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BP__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+  Running pcodec_i64... done
+2026-11-03T15:47:10.315184+00:00 END BP__pcodec_i64 status=OK seconds=5.0 
+2026-11-03T15:47:10.315273+00:00 START 7/144 BP__flea
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c flea -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BP__flea.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+  Running flea... done
+2026-11-03T15:47:15.325897+00:00 END BP__flea status=OK seconds=5.0 
+2026-11-03T15:47:15.325975+00:00 START 8/144 BP__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BP__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:47:20.336706+00:00 END BP__fauna status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:47:20.336821+00:00 START 9/144 BP__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BP__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:47:25.351178+00:00 END BP__macaque status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:47:25.351282+00:00 START 10/144 BM__b_star_gef_approximate
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c b_star_gef_approximate -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BM__b_star_gef_approximate.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+  Converting raw_data to shifted_data... done
+  Running b_star_gef_approximate... done
+2026-11-03T15:47:30.363311+00:00 END BM__b_star_gef_approximate status=OK seconds=5.0 
+2026-11-03T15:47:30.363653+00:00 START 11/144 BM__dexor
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c dexor -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BM__dexor.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running dexor... done
+2026-11-03T15:47:35.376056+00:00 END BM__dexor status=OK seconds=5.0 
+2026-11-03T15:47:35.376159+00:00 START 12/144 BM__elfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c elfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BM__elfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running elfstar... done
+2026-11-03T15:47:40.388760+00:00 END BM__elfstar status=OK seconds=5.0 
+2026-11-03T15:47:40.388877+00:00 START 13/144 BM__selfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c selfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BM__selfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running selfstar... done
+2026-11-03T15:47:45.400490+00:00 END BM__selfstar status=OK seconds=5.0 
+2026-11-03T15:47:45.400573+00:00 START 14/144 BM__pcodec
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BM__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T15:47:50.412212+00:00 END BM__pcodec status=OK seconds=5.0 
+2026-11-03T15:47:50.412315+00:00 START 15/144 BM__pcodec_i64
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec_i64 -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BM__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+  Running pcodec_i64... done
+2026-11-03T15:47:55.424555+00:00 END BM__pcodec_i64 status=OK seconds=5.0 
+2026-11-03T15:47:55.424657+00:00 START 16/144 BM__flea
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c flea -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BM__flea.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+  Running flea... done
+2026-11-03T15:48:00.436032+00:00 END BM__flea status=OK seconds=5.0 
+2026-11-03T15:48:00.436120+00:00 START 17/144 BM__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BM__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:48:05.448058+00:00 END BM__fauna status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:48:05.448178+00:00 START 18/144 BM__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BM__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:48:10.458898+00:00 END BM__macaque status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:48:10.458999+00:00 START 19/144 BT__b_star_gef_approximate
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c b_star_gef_approximate -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BT__b_star_gef_approximate.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+  Converting raw_data to shifted_data... done
+  Running b_star_gef_approximate... done
+2026-11-03T15:48:20.475971+00:00 END BT__b_star_gef_approximate status=OK seconds=10.0 
+2026-11-03T15:48:20.476046+00:00 START 20/144 BT__dexor
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c dexor -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BT__dexor.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running dexor... done
+2026-11-03T15:48:30.488983+00:00 END BT__dexor status=OK seconds=10.0 
+2026-11-03T15:48:30.489074+00:00 START 21/144 BT__elfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c elfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BT__elfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running elfstar... done
+2026-11-03T15:48:40.504832+00:00 END BT__elfstar status=OK seconds=10.0 
+2026-11-03T15:48:40.504907+00:00 START 22/144 BT__selfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c selfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BT__selfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running selfstar... done
+2026-11-03T15:48:50.521297+00:00 END BT__selfstar status=OK seconds=10.0 
+2026-11-03T15:48:50.521383+00:00 START 23/144 BT__pcodec
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BT__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T15:48:55.530662+00:00 END BT__pcodec status=OK seconds=5.0 
+2026-11-03T15:48:55.530735+00:00 START 24/144 BT__pcodec_i64
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec_i64 -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BT__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+  Running pcodec_i64... done
+2026-11-03T15:49:00.538774+00:00 END BT__pcodec_i64 status=OK seconds=5.0 
+2026-11-03T15:49:00.538847+00:00 START 25/144 BT__flea
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c flea -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BT__flea.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+  Running flea... done
+2026-11-03T15:49:10.552573+00:00 END BT__flea status=OK seconds=10.0 
+2026-11-03T15:49:10.552653+00:00 START 26/144 BT__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BT__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:49:15.562122+00:00 END BT__fauna status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:49:15.562206+00:00 START 27/144 BT__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BT__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:49:20.569886+00:00 END BT__macaque status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:49:20.570001+00:00 START 28/144 BW__b_star_gef_approximate
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c b_star_gef_approximate -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BW__b_star_gef_approximate.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+  Converting raw_data to shifted_data... done
+  Running b_star_gef_approximate... done
+2026-11-03T15:49:30.583608+00:00 END BW__b_star_gef_approximate status=OK seconds=10.0 
+2026-11-03T15:49:30.583690+00:00 START 29/144 BW__dexor
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c dexor -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BW__dexor.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running dexor... done
+2026-11-03T15:49:40.600147+00:00 END BW__dexor status=OK seconds=10.0 
+2026-11-03T15:49:40.600220+00:00 START 30/144 BW__elfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c elfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BW__elfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running elfstar... done
+2026-11-03T15:49:50.616939+00:00 END BW__elfstar status=OK seconds=10.0 
+2026-11-03T15:49:50.617043+00:00 START 31/144 BW__selfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c selfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BW__selfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running selfstar... done
+2026-11-03T15:50:00.632125+00:00 END BW__selfstar status=OK seconds=10.0 
+2026-11-03T15:50:00.632204+00:00 START 32/144 BW__pcodec
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BW__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T15:50:05.643593+00:00 END BW__pcodec status=OK seconds=5.0 
+2026-11-03T15:50:05.643681+00:00 START 33/144 BW__pcodec_i64
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec_i64 -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BW__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+  Running pcodec_i64... done
+2026-11-03T15:50:10.650433+00:00 END BW__pcodec_i64 status=OK seconds=5.0 
+2026-11-03T15:50:10.650510+00:00 START 34/144 BW__flea
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c flea -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BW__flea.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+  Running flea... done
+2026-11-03T15:50:20.665461+00:00 END BW__flea status=OK seconds=10.0 
+2026-11-03T15:50:20.665541+00:00 START 35/144 BW__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BW__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:50:25.675353+00:00 END BW__fauna status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:50:25.675440+00:00 START 36/144 BW__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/BW__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:50:30.682849+00:00 END BW__macaque status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:50:30.682949+00:00 START 37/144 DU__b_star_gef_approximate
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c b_star_gef_approximate -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/DU__b_star_gef_approximate.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+  Converting raw_data to shifted_data... done
+  Running b_star_gef_approximate... done
+2026-11-03T15:50:40.697715+00:00 END DU__b_star_gef_approximate status=OK seconds=10.0 
+2026-11-03T15:50:40.697820+00:00 START 38/144 DU__dexor
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c dexor -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/DU__dexor.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running dexor... done
+2026-11-03T15:50:45.707984+00:00 END DU__dexor status=OK seconds=5.0 
+2026-11-03T15:50:45.708059+00:00 START 39/144 DU__elfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c elfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/DU__elfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running elfstar... done
+2026-11-03T15:50:55.721867+00:00 END DU__elfstar status=OK seconds=10.0 
+2026-11-03T15:50:55.721940+00:00 START 40/144 DU__selfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c selfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/DU__selfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running selfstar... done
+2026-11-03T15:51:05.738382+00:00 END DU__selfstar status=OK seconds=10.0 
+2026-11-03T15:51:05.738452+00:00 START 41/144 DU__pcodec
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/DU__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T15:51:10.747337+00:00 END DU__pcodec status=OK seconds=5.0 
+2026-11-03T15:51:10.747416+00:00 START 42/144 DU__pcodec_i64
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec_i64 -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/DU__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+  Running pcodec_i64... done
+2026-11-03T15:51:15.756144+00:00 END DU__pcodec_i64 status=OK seconds=5.0 
+2026-11-03T15:51:15.756215+00:00 START 43/144 DU__flea
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c flea -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/DU__flea.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+  Running flea... done
+2026-11-03T15:51:20.766152+00:00 END DU__flea status=OK seconds=5.0 
+2026-11-03T15:51:20.766227+00:00 START 44/144 DU__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/DU__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:51:25.779100+00:00 END DU__fauna status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:51:25.779187+00:00 START 45/144 DU__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/DU__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:51:30.791524+00:00 END DU__macaque status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:51:30.791624+00:00 START 46/144 CT__b_star_gef_approximate
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c b_star_gef_approximate -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/CT__b_star_gef_approximate.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+  Converting raw_data to shifted_data... done
+  Running b_star_gef_approximate... done
+2026-11-03T15:51:40.809516+00:00 END CT__b_star_gef_approximate status=OK seconds=10.0 
+2026-11-03T15:51:40.809591+00:00 START 47/144 CT__dexor
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c dexor -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/CT__dexor.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running dexor... done
+2026-11-03T15:51:50.828897+00:00 END CT__dexor status=OK seconds=10.0 
+2026-11-03T15:51:50.828967+00:00 START 48/144 CT__elfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c elfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/CT__elfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running elfstar... done
+2026-11-03T15:52:00.846931+00:00 END CT__elfstar status=OK seconds=10.0 
+2026-11-03T15:52:00.847025+00:00 START 49/144 CT__selfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c selfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/CT__selfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running selfstar... done
+2026-11-03T15:52:10.866142+00:00 END CT__selfstar status=OK seconds=10.0 
+2026-11-03T15:52:10.866213+00:00 START 50/144 CT__pcodec
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/CT__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T15:52:15.878937+00:00 END CT__pcodec status=OK seconds=5.0 
+2026-11-03T15:52:15.879011+00:00 START 51/144 CT__pcodec_i64
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec_i64 -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/CT__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+  Running pcodec_i64... done
+2026-11-03T15:52:20.890957+00:00 END CT__pcodec_i64 status=OK seconds=5.0 
+2026-11-03T15:52:20.891050+00:00 START 52/144 CT__flea
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c flea -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/CT__flea.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+  Running flea... done
+2026-11-03T15:52:25.903310+00:00 END CT__flea status=OK seconds=5.0 
+2026-11-03T15:52:25.903409+00:00 START 53/144 CT__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/CT__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:52:30.915150+00:00 END CT__fauna status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:52:30.915249+00:00 START 54/144 CT__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/CT__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:52:35.927797+00:00 END CT__macaque status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:52:35.927880+00:00 START 55/144 DP__b_star_gef_approximate
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c b_star_gef_approximate -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/DP__b_star_gef_approximate.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+  Converting raw_data to shifted_data... done
+  Running b_star_gef_approximate... done
+2026-11-03T15:52:45.947032+00:00 END DP__b_star_gef_approximate status=OK seconds=10.0 
+2026-11-03T15:52:45.947106+00:00 START 56/144 DP__dexor
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c dexor -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/DP__dexor.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running dexor... done
+2026-11-03T15:52:55.966754+00:00 END DP__dexor status=OK seconds=10.0 
+2026-11-03T15:52:55.966828+00:00 START 57/144 DP__elfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c elfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/DP__elfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running elfstar... done
+2026-11-03T15:53:05.986522+00:00 END DP__elfstar status=OK seconds=10.0 
+2026-11-03T15:53:05.986624+00:00 START 58/144 DP__selfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c selfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/DP__selfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running selfstar... done
+2026-11-03T15:53:16.007008+00:00 END DP__selfstar status=OK seconds=10.0 
+2026-11-03T15:53:16.007082+00:00 START 59/144 DP__pcodec
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/DP__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T15:53:21.019969+00:00 END DP__pcodec status=OK seconds=5.0 
+2026-11-03T15:53:21.020041+00:00 START 60/144 DP__pcodec_i64
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec_i64 -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/DP__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+  Running pcodec_i64... done
+2026-11-03T15:53:26.033957+00:00 END DP__pcodec_i64 status=OK seconds=5.0 
+2026-11-03T15:53:26.034047+00:00 START 61/144 DP__flea
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c flea -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/DP__flea.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+  Running flea... done
+2026-11-03T15:53:31.047157+00:00 END DP__flea status=OK seconds=5.0 
+2026-11-03T15:53:31.047235+00:00 START 62/144 DP__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/DP__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:53:36.060805+00:00 END DP__fauna status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:53:36.060901+00:00 START 63/144 DP__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/DP__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:53:41.073143+00:00 END DP__macaque status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:53:41.073247+00:00 START 64/144 LAT__b_star_gef_approximate
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c b_star_gef_approximate -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/LAT__b_star_gef_approximate.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+  Converting raw_data to shifted_data... done
+  Running b_star_gef_approximate... done
+2026-11-03T15:53:51.093141+00:00 END LAT__b_star_gef_approximate status=OK seconds=10.0 
+2026-11-03T15:53:51.093232+00:00 START 65/144 LAT__dexor
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c dexor -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/LAT__dexor.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running dexor... done
+2026-11-03T15:54:06.120469+00:00 END LAT__dexor status=OK seconds=15.0 
+2026-11-03T15:54:06.120547+00:00 START 66/144 LAT__elfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c elfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/LAT__elfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running elfstar... done
+2026-11-03T15:54:21.145091+00:00 END LAT__elfstar status=OK seconds=15.0 
+2026-11-03T15:54:21.145196+00:00 START 67/144 LAT__selfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c selfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/LAT__selfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running selfstar... done
+2026-11-03T15:54:36.170378+00:00 END LAT__selfstar status=OK seconds=15.0 
+2026-11-03T15:54:36.170450+00:00 START 68/144 LAT__pcodec
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/LAT__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T15:54:46.187060+00:00 END LAT__pcodec status=OK seconds=10.0 
+2026-11-03T15:54:46.187134+00:00 START 69/144 LAT__pcodec_i64
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec_i64 -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/LAT__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+  Running pcodec_i64... done
+2026-11-03T15:54:56.203828+00:00 END LAT__pcodec_i64 status=OK seconds=10.0 
+2026-11-03T15:54:56.203898+00:00 START 70/144 LAT__flea
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c flea -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/LAT__flea.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+  Running flea... done
+2026-11-03T15:55:06.219444+00:00 END LAT__flea status=OK seconds=10.0 
+2026-11-03T15:55:06.219519+00:00 START 71/144 LAT__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/LAT__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:55:11.227957+00:00 END LAT__fauna status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:55:11.228042+00:00 START 72/144 LAT__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/LAT__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:55:16.237146+00:00 END LAT__macaque status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:55:16.237230+00:00 START 73/144 LON__b_star_gef_approximate
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c b_star_gef_approximate -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/LON__b_star_gef_approximate.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+  Converting raw_data to shifted_data... done
+  Running b_star_gef_approximate... done
+2026-11-03T15:55:26.253735+00:00 END LON__b_star_gef_approximate status=OK seconds=10.0 
+2026-11-03T15:55:26.253813+00:00 START 74/144 LON__dexor
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c dexor -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/LON__dexor.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running dexor... done
+2026-11-03T15:55:41.275554+00:00 END LON__dexor status=OK seconds=15.0 
+2026-11-03T15:55:41.275651+00:00 START 75/144 LON__elfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c elfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/LON__elfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running elfstar... done
+2026-11-03T15:55:56.299769+00:00 END LON__elfstar status=OK seconds=15.0 
+2026-11-03T15:55:56.299847+00:00 START 76/144 LON__selfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c selfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/LON__selfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running selfstar... done
+2026-11-03T15:56:11.322837+00:00 END LON__selfstar status=OK seconds=15.0 
+2026-11-03T15:56:11.322910+00:00 START 77/144 LON__pcodec
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/LON__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T15:56:21.339873+00:00 END LON__pcodec status=OK seconds=10.0 
+2026-11-03T15:56:21.339948+00:00 START 78/144 LON__pcodec_i64
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec_i64 -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/LON__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+  Running pcodec_i64... done
+2026-11-03T15:56:31.355562+00:00 END LON__pcodec_i64 status=OK seconds=10.0 
+2026-11-03T15:56:31.355637+00:00 START 79/144 LON__flea
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c flea -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/LON__flea.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+  Running flea... done
+2026-11-03T15:56:41.371959+00:00 END LON__flea status=OK seconds=10.0 
+2026-11-03T15:56:41.372052+00:00 START 80/144 LON__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/LON__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:56:46.381634+00:00 END LON__fauna status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:56:46.381714+00:00 START 81/144 LON__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/LON__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:56:51.393838+00:00 END LON__macaque status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:56:51.393919+00:00 START 82/144 GE__b_star_gef_approximate
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c b_star_gef_approximate -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/GE__b_star_gef_approximate.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+  Converting raw_data to shifted_data... done
+  Running b_star_gef_approximate... done
+2026-11-03T15:57:06.413477+00:00 END GE__b_star_gef_approximate status=OK seconds=15.0 
+2026-11-03T15:57:06.413547+00:00 START 83/144 GE__dexor
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c dexor -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/GE__dexor.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running dexor... done
+2026-11-03T15:57:21.436691+00:00 END GE__dexor status=OK seconds=15.0 
+2026-11-03T15:57:21.436761+00:00 START 84/144 GE__elfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c elfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/GE__elfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running elfstar... done
+2026-11-03T15:57:36.461971+00:00 END GE__elfstar status=OK seconds=15.0 
+2026-11-03T15:57:36.462043+00:00 START 85/144 GE__selfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c selfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/GE__selfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running selfstar... done
+2026-11-03T15:57:56.493129+00:00 END GE__selfstar status=OK seconds=20.0 
+2026-11-03T15:57:56.493209+00:00 START 86/144 GE__pcodec
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/GE__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T15:58:06.508637+00:00 END GE__pcodec status=OK seconds=10.0 
+2026-11-03T15:58:06.508729+00:00 START 87/144 GE__pcodec_i64
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec_i64 -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/GE__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+  Running pcodec_i64... done
+2026-11-03T15:58:16.525944+00:00 END GE__pcodec_i64 status=OK seconds=10.0 
+2026-11-03T15:58:16.526019+00:00 START 88/144 GE__flea
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c flea -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/GE__flea.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+  Running flea... done
+2026-11-03T15:58:26.541617+00:00 END GE__flea status=OK seconds=10.0 
+2026-11-03T15:58:26.541694+00:00 START 89/144 GE__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/GE__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:58:31.554546+00:00 END GE__fauna status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:58:31.554624+00:00 START 90/144 GE__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/GE__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T15:58:36.568009+00:00 END GE__macaque status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T15:58:36.568090+00:00 START 91/144 UK__b_star_gef_approximate
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c b_star_gef_approximate -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/UK__b_star_gef_approximate.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+  Converting raw_data to shifted_data... done
+  Running b_star_gef_approximate... done
+2026-11-03T15:58:51.591215+00:00 END UK__b_star_gef_approximate status=OK seconds=15.0 
+2026-11-03T15:58:51.591307+00:00 START 92/144 UK__dexor
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c dexor -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/UK__dexor.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running dexor... done
+2026-11-03T15:59:06.614831+00:00 END UK__dexor status=OK seconds=15.0 
+2026-11-03T15:59:06.614905+00:00 START 93/144 UK__elfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c elfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/UK__elfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running elfstar... done
+2026-11-03T15:59:26.638138+00:00 END UK__elfstar status=OK seconds=20.0 
+2026-11-03T15:59:26.638228+00:00 START 94/144 UK__selfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c selfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/UK__selfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running selfstar... done
+2026-11-03T15:59:46.668226+00:00 END UK__selfstar status=OK seconds=20.0 
+2026-11-03T15:59:46.668319+00:00 START 95/144 UK__pcodec
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/UK__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T16:00:01.690426+00:00 END UK__pcodec status=OK seconds=15.0 
+2026-11-03T16:00:01.690520+00:00 START 96/144 UK__pcodec_i64
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec_i64 -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/UK__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+  Running pcodec_i64... done
+2026-11-03T16:00:11.708553+00:00 END UK__pcodec_i64 status=OK seconds=10.0 
+2026-11-03T16:00:11.708644+00:00 START 97/144 UK__flea
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c flea -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/UK__flea.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+  Running flea... done
+2026-11-03T16:00:21.724521+00:00 END UK__flea status=OK seconds=10.0 
+2026-11-03T16:00:21.724597+00:00 START 98/144 UK__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/UK__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T16:00:26.733842+00:00 END UK__fauna status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T16:00:26.733942+00:00 START 99/144 UK__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/UK__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T16:00:31.746673+00:00 END UK__macaque status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T16:00:31.746753+00:00 START 100/144 AP__b_star_gef_approximate
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c b_star_gef_approximate -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/AP__b_star_gef_approximate.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+  Converting raw_data to shifted_data... done
+  Running b_star_gef_approximate... done
+2026-11-03T16:00:51.772606+00:00 END AP__b_star_gef_approximate status=OK seconds=20.0 
+2026-11-03T16:00:51.772686+00:00 START 101/144 AP__dexor
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c dexor -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/AP__dexor.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running dexor... done
+2026-11-03T16:01:21.815362+00:00 END AP__dexor status=OK seconds=30.0 
+2026-11-03T16:01:21.815440+00:00 START 102/144 AP__elfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c elfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/AP__elfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running elfstar... done
+2026-11-03T16:01:56.867741+00:00 END AP__elfstar status=OK seconds=35.0 
+2026-11-03T16:01:56.867810+00:00 START 103/144 AP__selfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c selfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/AP__selfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running selfstar... done
+2026-11-03T16:02:31.924530+00:00 END AP__selfstar status=OK seconds=35.0 
+2026-11-03T16:02:31.924621+00:00 START 104/144 AP__pcodec
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/AP__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T16:03:01.971711+00:00 END AP__pcodec status=OK seconds=30.0 
+2026-11-03T16:03:01.971788+00:00 START 105/144 AP__pcodec_i64
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec_i64 -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/AP__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+  Running pcodec_i64... done
+2026-11-03T16:03:27.016801+00:00 END AP__pcodec_i64 status=OK seconds=25.0 
+2026-11-03T16:03:27.016894+00:00 START 106/144 AP__flea
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c flea -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/AP__flea.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+  Running flea... done
+2026-11-03T16:03:47.050464+00:00 END AP__flea status=OK seconds=20.0 
+2026-11-03T16:03:47.050541+00:00 START 107/144 AP__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/AP__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T16:03:52.061738+00:00 END AP__fauna status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T16:03:52.061822+00:00 START 108/144 AP__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/AP__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T16:03:57.075137+00:00 END AP__macaque status=UNSUPPORTED seconds=5.0 exit status 1
+2026-11-03T16:03:57.075241+00:00 START 109/144 WD__b_star_gef_approximate
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c b_star_gef_approximate -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/WD__b_star_gef_approximate.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+  Converting raw_data to shifted_data... done
+  Running b_star_gef_approximate... done
+2026-11-03T16:04:22.107459+00:00 END WD__b_star_gef_approximate status=OK seconds=25.0 
+2026-11-03T16:04:22.107535+00:00 START 110/144 WD__dexor
+2026-11-03T16:05:22.197243+00:00 RUNNING WD__dexor pid=133161 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c dexor -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/WD__dexor.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running dexor... done
+2026-11-03T16:05:22.199630+00:00 END WD__dexor status=OK seconds=60.1 
+2026-11-03T16:05:22.199699+00:00 START 111/144 WD__elfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c elfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/WD__elfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running elfstar... done
+2026-11-03T16:06:17.287494+00:00 END WD__elfstar status=OK seconds=55.1 
+2026-11-03T16:06:17.287569+00:00 START 112/144 WD__selfstar
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c selfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/WD__selfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running selfstar... done
+2026-11-03T16:07:12.378430+00:00 END WD__selfstar status=OK seconds=55.1 
+2026-11-03T16:07:12.378509+00:00 START 113/144 WD__pcodec
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/WD__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T16:08:07.467099+00:00 END WD__pcodec status=OK seconds=55.1 
+2026-11-03T16:08:07.467174+00:00 START 114/144 WD__pcodec_i64
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec_i64 -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/WD__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+  Running pcodec_i64... done
+2026-11-03T16:08:52.532008+00:00 END WD__pcodec_i64 status=OK seconds=45.1 
+2026-11-03T16:08:52.532100+00:00 START 115/144 WD__flea
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c flea -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/WD__flea.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+  Running flea... done
+2026-11-03T16:09:17.566477+00:00 END WD__flea status=OK seconds=25.0 
+2026-11-03T16:09:17.566569+00:00 START 116/144 WD__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/WD__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T16:09:27.586646+00:00 END WD__fauna status=UNSUPPORTED seconds=10.0 exit status 1
+2026-11-03T16:09:27.586727+00:00 START 117/144 WD__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/WD__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T16:09:37.606232+00:00 END WD__macaque status=UNSUPPORTED seconds=10.0 exit status 1
+2026-11-03T16:09:37.606316+00:00 START 118/144 ECG__b_star_gef_approximate
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c b_star_gef_approximate -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/ECG__b_star_gef_approximate.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+  Converting raw_data to shifted_data... done
+  Running b_star_gef_approximate... done
+2026-11-03T16:10:02.640753+00:00 END ECG__b_star_gef_approximate status=OK seconds=25.0 
+2026-11-03T16:10:02.640845+00:00 START 119/144 ECG__dexor
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c dexor -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/ECG__dexor.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running dexor... done
+2026-11-03T16:10:52.701713+00:00 END ECG__dexor status=OK seconds=50.1 
+2026-11-03T16:10:52.701788+00:00 START 120/144 ECG__elfstar
+2026-11-03T16:11:52.770569+00:00 RUNNING ECG__elfstar pid=138930 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c elfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/ECG__elfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running elfstar... done
+2026-11-03T16:11:57.779513+00:00 END ECG__elfstar status=OK seconds=65.1 
+2026-11-03T16:11:57.779617+00:00 START 121/144 ECG__selfstar
+2026-11-03T16:12:57.875101+00:00 RUNNING ECG__selfstar pid=139894 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c selfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/ECG__selfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running selfstar... done
+2026-11-03T16:13:02.887759+00:00 END ECG__selfstar status=OK seconds=65.1 
+2026-11-03T16:13:02.887849+00:00 START 122/144 ECG__pcodec
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/ECG__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T16:13:52.952211+00:00 END ECG__pcodec status=OK seconds=50.1 
+2026-11-03T16:13:52.952285+00:00 START 123/144 ECG__pcodec_i64
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec_i64 -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/ECG__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+  Running pcodec_i64... done
+2026-11-03T16:14:33.004565+00:00 END ECG__pcodec_i64 status=OK seconds=40.0 
+2026-11-03T16:14:33.004648+00:00 START 124/144 ECG__flea
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c flea -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/ECG__flea.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+  Running flea... done
+2026-11-03T16:15:03.050544+00:00 END ECG__flea status=OK seconds=30.0 
+2026-11-03T16:15:03.050619+00:00 START 125/144 ECG__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/ECG__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T16:15:13.071139+00:00 END ECG__fauna status=UNSUPPORTED seconds=10.0 exit status 1
+2026-11-03T16:15:13.071220+00:00 START 126/144 ECG__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/ECG__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T16:15:23.090703+00:00 END ECG__macaque status=UNSUPPORTED seconds=10.0 exit status 1
+2026-11-03T16:15:23.090787+00:00 START 127/144 US__b_star_gef_approximate
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c b_star_gef_approximate -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/US__b_star_gef_approximate.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+  Converting raw_data to shifted_data... done
+  Running b_star_gef_approximate... done
+2026-11-03T16:16:13.156879+00:00 END US__b_star_gef_approximate status=OK seconds=50.1 
+2026-11-03T16:16:13.156953+00:00 START 128/144 US__dexor
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c dexor -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/US__dexor.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running dexor... done
+2026-11-03T16:17:08.232350+00:00 END US__dexor status=OK seconds=55.1 
+2026-11-03T16:17:08.232428+00:00 START 129/144 US__elfstar
+2026-11-03T16:18:08.330440+00:00 RUNNING US__elfstar pid=144476 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c elfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/US__elfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running elfstar... done
+2026-11-03T16:18:08.333417+00:00 END US__elfstar status=OK seconds=60.1 
+2026-11-03T16:18:08.333506+00:00 START 130/144 US__selfstar
+2026-11-03T16:19:08.438898+00:00 RUNNING US__selfstar pid=145362 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c selfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/US__selfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running selfstar... done
+2026-11-03T16:19:08.441827+00:00 END US__selfstar status=OK seconds=60.1 
+2026-11-03T16:19:08.441916+00:00 START 131/144 US__pcodec
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/US__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T16:19:58.533942+00:00 END US__pcodec status=OK seconds=50.1 
+2026-11-03T16:19:58.534015+00:00 START 132/144 US__pcodec_i64
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec_i64 -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/US__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+  Running pcodec_i64... done
+2026-11-03T16:20:38.592740+00:00 END US__pcodec_i64 status=OK seconds=40.1 
+2026-11-03T16:20:38.592835+00:00 START 133/144 US__flea
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c flea -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/US__flea.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+  Running flea... done
+2026-11-03T16:21:08.640519+00:00 END US__flea status=OK seconds=30.0 
+2026-11-03T16:21:08.640594+00:00 START 134/144 US__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/US__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T16:21:18.662536+00:00 END US__fauna status=UNSUPPORTED seconds=10.0 exit status 1
+2026-11-03T16:21:18.662615+00:00 START 135/144 US__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/US__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T16:21:28.683273+00:00 END US__macaque status=UNSUPPORTED seconds=10.0 exit status 1
+2026-11-03T16:21:28.683369+00:00 START 136/144 IT__b_star_gef_approximate
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c b_star_gef_approximate -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/IT__b_star_gef_approximate.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+  Converting raw_data to shifted_data... done
+  Running b_star_gef_approximate... done
+2026-11-03T16:22:13.744966+00:00 END IT__b_star_gef_approximate status=OK seconds=45.1 
+2026-11-03T16:22:13.745060+00:00 START 137/144 IT__dexor
+2026-11-03T16:23:13.818405+00:00 RUNNING IT__dexor pid=2334 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c dexor -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/IT__dexor.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running dexor... done
+2026-11-03T16:23:58.869019+00:00 END IT__dexor status=OK seconds=105.1 
+2026-11-03T16:23:58.869114+00:00 START 138/144 IT__elfstar
+2026-11-03T16:24:58.941389+00:00 RUNNING IT__elfstar pid=4258 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c elfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/IT__elfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running elfstar... done
+2026-11-03T16:25:48.995867+00:00 END IT__elfstar status=OK seconds=110.1 
+2026-11-03T16:25:48.995940+00:00 START 139/144 IT__selfstar
+2026-11-03T16:26:49.069051+00:00 RUNNING IT__selfstar pid=5984 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c selfstar -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/IT__selfstar.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running selfstar... done
+2026-11-03T16:27:39.124395+00:00 END IT__selfstar status=OK seconds=110.1 
+2026-11-03T16:27:39.124473+00:00 START 140/144 IT__pcodec
+2026-11-03T16:28:39.198302+00:00 RUNNING IT__pcodec pid=7614 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/IT__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T16:29:24.247627+00:00 END IT__pcodec status=OK seconds=105.1 
+2026-11-03T16:29:24.247722+00:00 START 141/144 IT__pcodec_i64
+2026-11-03T16:30:24.317127+00:00 RUNNING IT__pcodec_i64 pid=9175 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c pcodec_i64 -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/IT__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+  Running pcodec_i64... done
+2026-11-03T16:30:49.346453+00:00 END IT__pcodec_i64 status=OK seconds=85.1 
+2026-11-03T16:30:49.346526+00:00 START 142/144 IT__flea
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c flea -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/IT__flea.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+  Running flea... done
+2026-11-03T16:31:44.417608+00:00 END IT__flea status=OK seconds=55.1 
+2026-11-03T16:31:44.417685+00:00 START 143/144 IT__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/IT__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T16:32:04.449850+00:00 END IT__fauna status=UNSUPPORTED seconds=20.0 exit status 1
+2026-11-03T16:32:04.449933+00:00 START 144/144 IT__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-recent/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-recent/cases/IT__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque... error: Fauna/Macaque upstream supports f32 only; input is not exactly representable
+2026-11-03T16:32:24.482928+00:00 END IT__macaque status=UNSUPPORTED seconds=20.0 exit status 1
+2026-11-03T16:32:24.483174+00:00 FINISHED {"finished": "2026-11-03T16:32:24.482963+00:00", "total": 144, "counts": {"OK": 112, "UNSUPPORTED": 32, "FAILED": 0}}

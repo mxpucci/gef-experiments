@@ -1,0 +1,15 @@
+PASS: BUFF original encoder vs integrated encoder: all 16 native payloads
+byte-identical on 156,782 input values (separate authors-code diagnostic).
+PASS: corrected original selective decoder matches original full decode on every
+sample value and tested ranges; all outputs satisfy configured precision bound.
+PASS: targeted partial-byte Rust regression on macOS and GCC/Rust Linux build.
+PASS: LeCo native compression/full/point validation on all 16 dataset prefixes
+(up to 30,000 values each), plus a 50,123-value synthetic partition-selection test.
+PASS: production CLI with -b 17 vs -b 1000 yields identical compressed sizes,
+native layout, selected sizes and validation metadata for both codecs on full BP.
+  BUFF: 190184 bits; native_columns; unit=6782; precision_bounded;
+        6771/6782 input/output binary64 bit patterns differ, 0 exceed bound.
+  LeCo: 168928 bits; native_fixed_partitions_tuned; unit=200; passed; 0 mismatches.
+CLI checks used CPU 18 for validation only; their timing values are not included
+in final benchmark measurements. The full 32-case rerun uses CPU 2 and waits
+for the ongoing suite to finish. Its rows replace only BUFF and LeCo.

@@ -1,0 +1,9 @@
+   Compiling buff-ffi v0.1.0 (/Users/michelangelopucci/Downloads/gef-experiments/lib/buff-ffi)
+    Finished `release` profile [optimized] target(s) in 2.12s
+     Running unittests src/lib.rs (lib/buff-ffi/target/release/deps/buff_ffi-a132719d00a03c34)
+
+running 1 test
+test tests::original_selective_decoder_matches_full_at_non_byte_width ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

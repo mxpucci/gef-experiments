@@ -1,0 +1,7 @@
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+  Converting raw_data to shifted_data... done
+  Running leco... LeCo native partition size=200 (authors' 1% sampler) done
+  Converting shifted_data to double_data... done
+  Running buff...
+Warning: BUFF uses the authors' bounded-precision representation; 6771/6782 binary64 values differ; 0 exceed the configured precision bound.
+ done

@@ -1,0 +1,2 @@
+#!/bin/bash
+exec "/home/testPF/.local/share/gef-toolchain/envs/build/bin/x86_64-conda-linux-gnu-g++" -I"/dev/shm/testPF-gef-extra-20261104/leco-headers" "$@"

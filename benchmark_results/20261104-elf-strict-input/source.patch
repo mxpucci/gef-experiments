@@ -1,0 +1,810 @@
+diff --git a/README.md b/README.md
+index 1ef1784..3593b52 100644
+--- a/README.md
++++ b/README.md
+@@ -51,7 +51,7 @@ algorithms have documented C++ ports.
+ 
+ | CLI name | Implementation | Input |
+ | --- | --- | --- |
+-| `fauna`, `macaque` | Official Rust Fauna and standalone MacaqueV | Float32; double inputs must be exactly representable |
++| `fauna`, `macaque` | Official Rust Fauna and standalone MacaqueV | Float32 conversion; changed values produce warnings and flagged metrics |
+ | `dexor` | C++ port of official DeXOR | Float64 |
+ | `pcodec` | Official Rust Pcodec 1.0.2 | Float64 |
+ | `pcodec_i64` | Same official Pcodec | Original int64 values |
+@@ -70,16 +70,26 @@ For example:
+ ctest --test-dir build --output-on-failure
+ ```
+ 
+-Fauna/Macaque never silently narrow doubles. Their adapters reject values such
+-as double `0.1`; use them only on eligible datasets. FLEA explicitly rejects
+-blocks outside the imported implementation's safe numeric envelope. Every new
+-benchmark performs a bit-exact round-trip check before writing a result. A
+-failed or unknown requested compressor gives a nonzero exit status.
+-
+-SElf* carries adaptation across blocks and stores counted checkpoints for
+-independent block decoding. Point/range access is an enclosing block mechanism,
+-not a claim of native individual access. Sizes include codec headers and the
+-block directory. See [docs/recent-compressors.md](docs/recent-compressors.md)
++The Fauna/Macaque benchmark explicitly narrows doubles to float32 and continues
++with metrics when values change. It logs a warning and records `input_conversion`
++and `input_changed_values` in CSV. Validation checks the actual converted input;
++passing that check does not imply preservation of the original float64 values.
++All recent codecs report `validation_status` and `roundtrip_mismatches`; value
++mismatches warn and still emit measured metrics. The standalone codec APIs remain
++strict. FLEA rejects blocks outside its safe numeric envelope. Hard API errors,
++malformed decoded lengths and unknown codecs fail the affected case and give a
++nonzero exit status while the CLI continues subsequent cases. Unmeasurable
++operations do not receive invented metrics.
++
++Full Fauna and both Pcodec entries now use native segment/page access. `-b`
++does not split their compression units: Fauna defaults to 65,536-value fitting
++batches; Pcodec defaults to 262,144-value chunks/pages. Use
++`--fauna-batch-size`, `--pcodec-chunk-size` and `--pcodec-page-size` to configure
++these separately. CSV records the layout and native limits. All stored
++directories and metadata count toward compressed size.
++
++SElf* carries adaptation across external blocks and stores counted checkpoints
++for independent decoding. Sequential codecs retain the external `-b` wrapper. See [docs/recent-compressors.md](docs/recent-compressors.md)
+ for measurement conventions and links to each implementation's provenance,
+ input restrictions and tests.
+ 
+diff --git a/benchmark/benchmark_common.hpp b/benchmark/benchmark_common.hpp
+index b567eae..e94c40d 100644
+--- a/benchmark/benchmark_common.hpp
++++ b/benchmark/benchmark_common.hpp
+@@ -25,6 +25,13 @@ struct BenchmarkResult {
+     double random_access_ns{};
+     double random_access_mbs{};
+     std::vector<std::pair<size_t, double>> range_query_throughputs; // (range_size, MB/s)
++    std::string input_conversion{"none"};
++    size_t input_changed_values{};
++    size_t roundtrip_mismatches{};
++    std::string validation_status{"not_checked"};
++    std::string access_layout{"unspecified"};
++    size_t compression_unit_values{};
++    size_t native_page_values{};
+ 
+     void print_header(std::ostream &out) const;
+     void print(std::ostream &out) const;
+@@ -44,25 +51,9 @@ struct BenchmarkData {
+     // Map range size to indices
+     std::map<size_t, std::vector<size_t>> range_query_indices;
+ 
+-    // Convert shifted_data to double_data and free shifted_data
+-    void convert_shifted_to_double() {
+-        if (shifted_data.empty()) return;
+-
+-        int64_t divisor_int = 1;
+-        for (int64_t d = 0; d < decimals; ++d) divisor_int *= 10;
+-        double divisor = static_cast<double>(divisor_int);
+-
+-        double_data.resize(shifted_data.size());
+-        for (size_t i = 0; i < shifted_data.size(); ++i) {
+-            // raw_data[i] = shifted_data[i] + min_val
+-            // double_data[i] = raw_data[i] / divisor
+-            double_data[i] = static_cast<double>(shifted_data[i] + min_val) / divisor;
+-        }
+-
+-        // Free shifted_data
+-        shifted_data.clear();
+-        shifted_data.shrink_to_fit();
+-    }
++    // Defined in a strict-IEEE, non-LTO translation unit: callers may use
++    // fast-math, but reciprocal multiplication changes the decimal input bits.
++    void convert_shifted_to_double();
+ };
+ 
+ template<class T>
+diff --git a/benchmark/lossless_benchmark.cpp b/benchmark/lossless_benchmark.cpp
+index be485ba..8ec22d4 100644
+--- a/benchmark/lossless_benchmark.cpp
++++ b/benchmark/lossless_benchmark.cpp
+@@ -179,6 +179,8 @@ void BenchmarkResult::print_header(std::ostream &out) const {
+     for (const auto &[range, _] : range_query_throughputs) {
+         out << ",range_" << range << "_mbs";
+     }
++    out << ",input_conversion,input_changed_values,roundtrip_mismatches,validation_status"
++        << ",access_layout,compression_unit_values,native_page_values";
+     out << std::endl;
+ }
+ 
+@@ -191,6 +193,9 @@ void BenchmarkResult::print(std::ostream &out) const {
+     for (const auto &[_, throughput] : range_query_throughputs) {
+         out << "," << throughput;
+     }
++    out << "," << input_conversion << "," << input_changed_values
++        << "," << roundtrip_mismatches << "," << validation_status
++        << "," << access_layout << "," << compression_unit_values << "," << native_page_values;
+     out << std::endl;
+ }
+ 
+@@ -1482,6 +1487,10 @@ void print_usage(const char *prog_name) {
+     std::cerr << std::endl;
+     std::cerr << "  -r <list>      Comma-separated list of range sizes (default: 10,100,1000,10000,100000)" << std::endl;
+     std::cerr << "  -b <size>      Block size for block-based compressors (default: 1000)" << std::endl;
++    std::cerr << "                 Does not control Fauna or Pcodec native layouts." << std::endl;
++    std::cerr << "  --fauna-batch-size <N>   Native fitting batch (default: 65536)" << std::endl;
++    std::cerr << "  --pcodec-chunk-size <N>  Native compression chunk maximum (default: 262144)" << std::endl;
++    std::cerr << "  --pcodec-page-size <N>   Native page maximum (default: 262144)" << std::endl;
+     std::cerr << "                 (Note: *_gef compressors use fixed UniformedPartitioner block size = " << GEF_UNIFORM_PARTITION_SIZE << ")" << std::endl;
+     std::cerr << "  -m <bpc>       Max bits per correction for NeaTS (default: 32)" << std::endl;
+     std::cerr << "  -h             Show this help" << std::endl;
+@@ -1526,6 +1535,7 @@ int main(int argc, char *argv[]) {
+     compressors.insert(compressors.end(), recent.begin(), recent.end());
+     std::vector<size_t> range_sizes = {10, 100, 1000, 10000, 100000};
+     size_t block_size = 1000;
++    NativeAccessOptions native_options;
+     uint8_t max_bpc = 32;
+     std::string input_path;
+     size_t failures = 0;
+@@ -1545,6 +1555,12 @@ int main(int argc, char *argv[]) {
+             }
+         } else if (arg == "-b" && i + 1 < argc) {
+             block_size = std::stoull(argv[++i]);
++        } else if (arg == "--fauna-batch-size" && i + 1 < argc) {
++            native_options.fauna_batch_size = std::stoull(argv[++i]);
++        } else if (arg == "--pcodec-chunk-size" && i + 1 < argc) {
++            native_options.pcodec_chunk_size = std::stoull(argv[++i]);
++        } else if (arg == "--pcodec-page-size" && i + 1 < argc) {
++            native_options.pcodec_page_size = std::stoull(argv[++i]);
+         } else if (arg == "-m" && i + 1 < argc) {
+             max_bpc = std::stoi(argv[++i]);
+         } else if (arg == "-h") {
+@@ -1658,7 +1674,7 @@ int main(int argc, char *argv[]) {
+             
+             try {
+                 if (recent_compressor_uses_integers(comp)) {
+-                    result = benchmark_recent_compressor(comp, bench_data, range_sizes, block_size);
++                    result = benchmark_recent_compressor(comp, bench_data, range_sizes, block_size, native_options);
+                 }
+ #if HAS_SQUASH
+                 else result = benchmark_squash<int64_t>(comp, bench_data, range_sizes, block_size);
+@@ -1765,7 +1781,7 @@ int main(int argc, char *argv[]) {
+             
+             try {
+                 if (is_recent_compressor(comp)) {
+-                    result = benchmark_recent_compressor(comp, bench_data, range_sizes, block_size);
++                    result = benchmark_recent_compressor(comp, bench_data, range_sizes, block_size, native_options);
+                 } else if (comp == "gorilla") {
+                     result = benchmark_bitstream_compressor<CompressorGorilla<double>, DecompressorGorilla<double>, double>(
+                         "Gorilla", bench_data, range_sizes, block_size);
+diff --git a/benchmark/recent_compressors.cpp b/benchmark/recent_compressors.cpp
+index 669ddfd..6261b6a 100644
+--- a/benchmark/recent_compressors.cpp
++++ b/benchmark/recent_compressors.cpp
+@@ -5,9 +5,11 @@
+ #include <memory>
+ #ifdef GEF_WITH_FAUNA
+ #include "Fauna/Fauna.hpp"
++#include "Fauna/Indexed.hpp"
+ #endif
+ #ifdef GEF_WITH_PCODEC
+ #include "Pcodec/Pcodec.hpp"
++#include "Pcodec/Indexed.hpp"
+ #endif
+ #ifdef GEF_WITH_FLEA
+ #include "FLEA/FLEA.hpp"
+@@ -15,6 +17,7 @@
+ #include <chrono>
+ #include <cstring>
+ #include <functional>
++#include <iostream>
+ #include <limits>
+ #include <stdexcept>
+ 
+@@ -26,6 +29,7 @@ template<class T> struct Codec {
+     std::function<Bytes(const Values<T>&)> encode;
+     std::function<Values<T>(const Bytes&, size_t)> decode;
+     std::function<Values<T>(const Bytes&, size_t, size_t)> decode_prefix;
++    bool float32_input = false;
+ };
+ std::vector<Codec<double>> codecs() {
+     auto stream = std::make_shared<gef_compressors::selfstar::Encoder>();
+@@ -33,8 +37,8 @@ std::vector<Codec<double>> codecs() {
+         {"selfstar", [stream](const Values<double>& values) { return stream->compress_block(values); },
+             gef_compressors::selfstar::decompress, gef_compressors::selfstar::decompress_prefix},
+ #ifdef GEF_WITH_FAUNA
+-        {"fauna", gef_compressors::fauna::compress, gef_compressors::fauna::decompress},
+-        {"macaque", gef_compressors::macaque::compress, gef_compressors::macaque::decompress},
++        {"fauna", gef_compressors::fauna::compress, gef_compressors::fauna::decompress, {}, true},
++        {"macaque", gef_compressors::macaque::compress, gef_compressors::macaque::decompress, {}, true},
+ #endif
+         {"elfstar", gef_compressors::elfstar::compress, gef_compressors::elfstar::decompress, gef_compressors::elfstar::decompress_prefix},
+         {"dexor", gef_compressors::dexor::compress, gef_compressors::dexor::decompress, gef_compressors::dexor::decompress_prefix},
+@@ -57,10 +61,26 @@ using Clock = std::chrono::steady_clock;
+ double seconds(Clock::time_point start) {
+     return std::max(std::chrono::duration<double>(Clock::now() - start).count(), 1e-9);
+ }
+-template<class T> void check_equal(const Values<T>& expected, const Values<T>& actual) {
+-    if (expected.size() != actual.size() ||
+-        (!expected.empty() && std::memcmp(expected.data(), actual.data(), expected.size()*sizeof(T))))
+-        throw std::runtime_error("codec failed bit-exact round-trip validation");
++template<class T> size_t count_differences(const Values<T>& expected, const Values<T>& actual) {
++    if (expected.size() != actual.size())
++        throw std::runtime_error("codec decoded the wrong number of values; queries cannot be measured safely");
++    if (expected.empty() || !std::memcmp(expected.data(), actual.data(), expected.size()*sizeof(T)))
++        return 0;
++    size_t mismatches = 0;
++    for (size_t i=0; i<expected.size(); ++i)
++        mismatches += std::memcmp(&expected[i], &actual[i], sizeof(T)) != 0;
++    return mismatches;
++}
++// Explicit benchmark preprocessing, kept separate from the strict codec API.
++// Count changes before encoding and validate against exactly this converted input.
++template<class T> size_t convert_to_float32(Values<T>& values) {
++    size_t changed = 0;
++    for (auto& value : values) {
++        const T converted = static_cast<T>(static_cast<float>(value));
++        changed += std::memcmp(&value, &converted, sizeof(T)) != 0;
++        value = converted;
++    }
++    return changed;
+ }
+ }
+ 
+@@ -97,23 +117,39 @@ BenchmarkResult benchmark_blocks(const Codec<T>& codec, const Values<T>& values,
+     result.dataset = data.filename;
+     result.num_values = n;
+     result.uncompressed_bits = data.uncompressed_bits;
++    result.input_conversion = codec.float32_input ? "float32" : "none";
++    result.access_layout = "external_blocks";
++    result.compression_unit_values = block_size;
+     auto start = Clock::now();
+     for (size_t b = 0; b < nb; ++b) {
+         const size_t first = b * block_size;
+         Values<T> input(values.begin() + first, values.begin() + std::min(n, first + block_size));
++        if (codec.float32_input) result.input_changed_values += convert_to_float32(input);
+         blocks.push_back(codec.encode(input));
+         offsets.push_back(offsets.back() + blocks.back().size());
+     }
+     const double encode_time = seconds(start);
++    if (result.input_changed_values) {
++        std::cerr << "\nWarning: " << codec.name << " converted " << result.input_changed_values
++                  << "/" << n << " input values to float32; emitting metrics for the converted input. "
++                  << "Original float64 bits are not preserved; see input_conversion and input_changed_values.\n";
++    }
+     result.compressed_bits = (16 + offsets.size()*sizeof(uint64_t) + offsets.back())*8;
+     result.compression_ratio = double(result.compressed_bits)/result.uncompressed_bits;
+     const double mib = double(n)*sizeof(T)/(1024.0*1024.0);
+     result.compression_throughput_mbs = mib/encode_time;
+-    // Validate outside timing. Never emit successful metrics for a lossy result.
++    // Validate outside timing. Value mismatches warn and remain visible in CSV;
++    // malformed output/counts still fail the case instead of timing invalid queries.
+     for (size_t b = 0; b < nb; ++b) {
+         const size_t first = b*block_size, count = std::min(block_size, n-first);
+         Values<T> expected(values.begin()+first, values.begin()+first+count);
+-        check_equal(expected, codec.decode(blocks[b], count));
++        if (codec.float32_input) convert_to_float32(expected);
++        result.roundtrip_mismatches += count_differences(expected, codec.decode(blocks[b], count));
++    }
++    result.validation_status = result.roundtrip_mismatches ? "failed" : "passed";
++    if (result.roundtrip_mismatches) {
++        std::cerr << "\nWarning: " << codec.name << " reconstructed " << result.roundtrip_mismatches
++                  << "/" << n << " values incorrectly; emitting timing metrics with validation_status=failed.\n";
+     }
+     start = Clock::now();
+     for (size_t b = 0; b < nb; ++b) {
+@@ -164,8 +200,93 @@ BenchmarkResult benchmark_blocks(const Codec<T>& codec, const Values<T>& values,
+     return result;
+ }
+ 
++template<class T,class Factory>
++BenchmarkResult benchmark_indexed(const std::string& name,const Values<T>& values,
++    const BenchmarkData& data,const std::vector<size_t>& ranges,Factory make,
++    bool float32_input,const std::string& layout,size_t unit_size,size_t page_size) {
++    if(values.empty()) throw std::invalid_argument("empty benchmark dataset");
++    const size_t n=values.size();
++    BenchmarkResult result{};
++    result.compressor=name;result.dataset=data.filename;result.num_values=n;
++    result.uncompressed_bits=data.uncompressed_bits;
++    result.input_conversion=float32_input?"float32":"none";
++    result.access_layout=layout;result.compression_unit_values=unit_size;result.native_page_values=page_size;
++    auto start=Clock::now();
++    auto index=make();
++    const double encode_time=seconds(start);
++    if(index.size()!=n) throw std::runtime_error("indexed codec count mismatch");
++    result.input_changed_values=index.changed_values();
++    if(result.input_changed_values) {
++        std::cerr << "\nWarning: " << name << " converted " << result.input_changed_values << "/" << n
++                  << " input values to float32; emitting metrics for the converted input. "
++                  << "Original float64 bits are not preserved; see input_conversion and input_changed_values.\n";
++    }
++    result.compressed_bits=index.size_in_bytes()*8;
++    result.compression_ratio=double(result.compressed_bits)/result.uncompressed_bits;
++    const double mib=double(n)*sizeof(T)/(1024.0*1024.0);
++    result.compression_throughput_mbs=mib/encode_time;
++    // Whole-input validation is untimed. Temporary validation windows do NOT
++    // define compressed storage or point-access granularity.
++    for(size_t first=0;first<n;first+=65536) {
++        const size_t count=std::min<size_t>(65536,n-first);
++        Values<T> expected(values.begin()+first,values.begin()+first+count),decoded(count);
++        if(float32_input) convert_to_float32(expected);
++        index.read(first,count,decoded.data());
++        result.roundtrip_mismatches+=count_differences(expected,decoded);
++    }
++    result.validation_status=result.roundtrip_mismatches?"failed":"passed";
++    if(result.roundtrip_mismatches) {
++        std::cerr << "\nWarning: " << name << " reconstructed " << result.roundtrip_mismatches << "/" << n
++                  << " values incorrectly; emitting timing metrics with validation_status=failed.\n";
++    }
++    start=Clock::now();
++    {
++        Values<T> decoded(n);
++        index.read(0,n,decoded.data());
++        do_not_optimize(decoded);
++    }
++    result.decompression_throughput_mbs=mib/seconds(start);
++    const size_t nq=std::min<size_t>(100000,data.random_indices.size());
++    start=Clock::now();
++    for(size_t q=0;q<nq;++q) {
++        T value{};
++        index.read(data.random_indices[q],1,&value);
++        do_not_optimize(value);
++    }
++    const double access_time=seconds(start);
++    result.random_access_ns=nq?access_time*1e9/nq:0;
++    result.random_access_mbs=nq*sizeof(T)/(1024.0*1024.0)/access_time;
++    for(size_t range:ranges) {
++        if(range>=n||!range) continue;
++        const auto& indices=data.range_query_indices.at(range);
++        const size_t queries=std::min<size_t>(1000,indices.size());
++        Values<T> output(range);
++        start=Clock::now();
++        for(size_t q=0;q<queries;++q) {
++            index.read(indices[q],range,output.data());
++            do_not_optimize(output);
++        }
++        result.range_query_throughputs.emplace_back(range,double(queries)*range*sizeof(T)/(1024.0*1024.0)/seconds(start));
++    }
++    return result;
++}
++
+ BenchmarkResult benchmark_recent_compressor(const std::string& name,
+-    const BenchmarkData& data, const std::vector<size_t>& ranges, size_t block_size) {
++    const BenchmarkData& data, const std::vector<size_t>& ranges, size_t block_size,
++    const NativeAccessOptions& native) {
++#ifdef GEF_WITH_FAUNA
++    if(name=="fauna") return benchmark_indexed(name,data.double_data,data,ranges,
++        [&]{return gef_compressors::fauna::Indexed(data.double_data,native.fauna_batch_size);},
++        true,"native_segments",native.fauna_batch_size,0);
++#endif
++#ifdef GEF_WITH_PCODEC
++    if(name=="pcodec") return benchmark_indexed(name,data.double_data,data,ranges,
++        [&]{return gef_compressors::pcodec::Indexed<double>(data.double_data,native.pcodec_chunk_size,native.pcodec_page_size);},
++        false,"native_pages",native.pcodec_chunk_size,native.pcodec_page_size);
++    if(name=="pcodec_i64") return benchmark_indexed(name,data.raw_data,data,ranges,
++        [&]{return gef_compressors::pcodec::Indexed<int64_t>(data.raw_data,native.pcodec_chunk_size,native.pcodec_page_size);},
++        false,"native_pages",native.pcodec_chunk_size,native.pcodec_page_size);
++#endif
+     for (const auto& codec : integer_codecs())
+         if (codec.name == name) return benchmark_blocks(codec, data.raw_data, data, ranges, block_size);
+     for (const auto& codec : codecs())
+diff --git a/benchmark/recent_compressors.hpp b/benchmark/recent_compressors.hpp
+index 43b45bb..20111c8 100644
+--- a/benchmark/recent_compressors.hpp
++++ b/benchmark/recent_compressors.hpp
+@@ -8,5 +8,11 @@
+ std::vector<std::string> recent_compressor_names();
+ bool recent_compressor_uses_integers(const std::string& name);
+ bool is_recent_compressor(const std::string& name);
++struct NativeAccessOptions {
++    size_t fauna_batch_size=65536;
++    size_t pcodec_chunk_size=262144;
++    size_t pcodec_page_size=262144;
++};
+ BenchmarkResult benchmark_recent_compressor(const std::string& name,
+-    const BenchmarkData& data, const std::vector<size_t>& ranges, size_t block_size);
++    const BenchmarkData& data, const std::vector<size_t>& ranges, size_t block_size,
++    const NativeAccessOptions& native=NativeAccessOptions{});
+diff --git a/cmake/Fauna.cmake b/cmake/Fauna.cmake
+index 3653097..73492c9 100644
+--- a/cmake/Fauna.cmake
++++ b/cmake/Fauna.cmake
+@@ -20,6 +20,7 @@ add_custom_command(OUTPUT "${GEF_FAUNA_LIBRARY}"
+     COMMAND "${CMAKE_COMMAND}" -E env "GEF_FAUNA_UPSTREAM=${GEF_FAUNA_UPSTREAM}"
+         "${CARGO_EXECUTABLE}" build --release --locked --manifest-path "${GEF_FAUNA_CRATE}/Cargo.toml"
+     DEPENDS "${GEF_FAUNA_FFI_SOURCE}/src/lib.rs" "${GEF_FAUNA_CRATE}/build.rs"
++        "${GEF_FAUNA_FFI_SOURCE}/src/indexed.rs"
+         "${GEF_FAUNA_CRATE}/Cargo.toml" "${GEF_FAUNA_CRATE}/Cargo.lock"
+     COMMENT "Building official Fauna/Macaque Rust implementation" VERBATIM)
+ add_custom_target(gef_fauna_build DEPENDS "${GEF_FAUNA_LIBRARY}")
+diff --git a/cmake/Pcodec.cmake b/cmake/Pcodec.cmake
+index 8d551f8..f68467a 100644
+--- a/cmake/Pcodec.cmake
++++ b/cmake/Pcodec.cmake
+@@ -13,6 +13,7 @@ add_custom_command(OUTPUT "${GEF_PCODEC_LIBRARY}"
+     DEPENDS "${GEF_PCODEC_MANIFEST}"
+         "${GEF_PCODEC_ROOT}/lib/pcodec-ffi/Cargo.lock"
+         "${GEF_PCODEC_ROOT}/lib/pcodec-ffi/src/lib.rs"
++        "${GEF_PCODEC_ROOT}/lib/pcodec-ffi/src/indexed.rs"
+     COMMENT "Building official Pcodec 1.0.2 Rust dependency and C ABI adapter"
+     VERBATIM)
+ add_custom_target(gef_pcodec_build DEPENDS "${GEF_PCODEC_LIBRARY}")
+diff --git a/cmake/RecentCompressors.cmake b/cmake/RecentCompressors.cmake
+index 585a041..7f4d374 100644
+--- a/cmake/RecentCompressors.cmake
++++ b/cmake/RecentCompressors.cmake
+@@ -1,9 +1,11 @@
+ include_guard(GLOBAL)
++include("${CMAKE_CURRENT_LIST_DIR}/BenchmarkInput.cmake")
+ add_library(gef_recent_compressors STATIC
+     "${CMAKE_CURRENT_LIST_DIR}/../benchmark/recent_compressors.cpp")
+ target_compile_features(gef_recent_compressors PUBLIC cxx_std_17)
+ target_compile_options(gef_recent_compressors PRIVATE -fno-fast-math -ffp-contract=off)
+ target_include_directories(gef_recent_compressors PUBLIC "${CMAKE_CURRENT_LIST_DIR}/../benchmark")
++target_link_libraries(gef_recent_compressors PUBLIC gef_benchmark_input)
+ 
+ option(GEF_WITH_PCODEC "Build official Rust Pcodec adapter" ON)
+ if(GEF_WITH_PCODEC)
+diff --git a/docs/fauna.md b/docs/fauna.md
+index c234395..00e97fe 100644
+--- a/docs/fauna.md
++++ b/docs/fauna.md
+@@ -26,21 +26,39 @@ The paper and implementation use **float32**. Both namespaces provide native
+ `compress_f32(vector<float>)` / `decompress_f32(bytes, count)` functions. The
+ `vector<double>` adapters accept only values that survive a float32 round trip
+ bit for bit. A value such as double `0.1`, or integer `16777217`, is rejected;
+-no rounding, quantization or fallback compressor is used. The benchmark should
+-report an unsupported input rather than produce a misleading result when a
+-dataset fails eligibility. Fauna's model fitting treats signed zero and NaNs
++no rounding, quantization or fallback compressor is used by that strict API.
++The benchmark explicitly converts its input to float32 before calling
++the API. Inexact conversions produce one warning per dataset/codec and metrics
++are still emitted, with `input_conversion=float32` and `input_changed_values`
++recording how many original float64 values changed. This preprocessing is timed.
++Validation compares decoded values against the converted float32 input, expanded
++to the benchmark's double representation. A passing validation therefore does
++not claim lossless preservation of the original float64 or fixed-decimal input.
++The conversion can lose decimal digits as well as changing binary precision.
++Fauna's model fitting treats signed zero and NaNs
+ numerically, so its adapter additionally rejects negative zero and nonfinite
+ values. Standalone MacaqueV's native float32 API preserves their bit patterns.
+ 
+ The value-series adapter supplies synthetic regular timestamps `0..n-1` because
+ the GEF files contain values, not original timestamps. Fauna still encodes its
+ timestamp information using the author's implementation. No claim about
+-compression of a dataset's real timestamps is made. Neither adapter claims
+-native random access; an individual access needs block decompression.
++compression of a dataset's real timestamps is made. Full Fauna now uses its native segments for point/range access. Its default
++fitting batch is 65,536 values, matching the original ModelarDB ingestion
++batch. `--fauna-batch-size` changes that batch; external `-b` does not.
++A counted positional directory selects only overlapping segments. Constant
++(PMC) and linear (Swing) models evaluate only the requested synthetic timestamps
++through the authors' original model functions. Macaque/Gorilla segments decode
++the necessary prefix of that segment. Residual tails decode their necessary
++prefix using the model's last value as the original predictor seed. A whole
++batch may be a Gorilla fallback, so this is native segment access, not uniform
++constant-time access to every value. No decoded values are retained between
++queries. Decoder allocation, prefix work and output expansion are timed.
++
++Standalone MacaqueV remains sequential and uses external `-b` blocks.
+ 
+ ## Byte accounting
+ 
+-MacaqueV uses a 16-byte magic/version/count header followed by the exact upstream
++The standalone serialization APIs retain their original frames. MacaqueV uses a 16-byte magic/version/count header followed by the exact upstream
+ compressed bytes. Fauna uses a 24-byte magic/version/count/segment-count header.
+ Every segment stores its model id (1 byte), start/end timestamps (16 bytes),
+ minimum/maximum (8 bytes), and three byte vectors (timestamps, model values,
+@@ -51,6 +69,15 @@ zero, and these fields are not needed to decode values. This is a self-contained
+ codec frame, not an Arrow or Parquet file; no Arrow allocation overhead is
+ misreported as encoded storage.
+ 
++
++The benchmark's indexed Fauna container instead has a 32-byte header and a
++32-byte directory entry per native segment (first global position, batch base,
++payload offset and payload length), followed by the unchanged 49-byte-plus-payload
++segment representations. All bytes count; there is no additional external
++1,000-value block wrapper. CSV records `access_layout=native_segments`, the
++configured batch limit in `compression_unit_values`, and `native_page_values=0`.
++Older full-block Fauna measurements are superseded for this comparison.
++
+ ## Building and tests
+ 
+ Include `cmake/Fauna.cmake` and link the target `gef_fauna`. Rust 1.87 is the
+@@ -69,3 +96,8 @@ validation. Round trips should also be checked on every benchmark dataset.
+ The FFI catches upstream Rust panics and returns an error; it does not silently
+ substitute another compressor. As with the research implementation, its frame
+ decoder is intended for trusted benchmark output, not hostile files.
++
++`tests/recent/native_access.cpp` compares indexed queries with original full
++Fauna decoding on the same fitting batches, including explicit PMC/Swing
++residual-tail fixtures, segment/batch boundaries and serialized reopening.
++The CLI test checks that external `-b` does not affect Fauna's native layout.
+diff --git a/docs/pcodec.md b/docs/pcodec.md
+index 69ab9b5..66e48ed 100644
+--- a/docs/pcodec.md
++++ b/docs/pcodec.md
+@@ -39,18 +39,37 @@ the stream remains independently decodable by upstream tools. All f64 bits,
+ including signed zeros, infinities, subnormals, and NaN payloads, are preserved.
+ The integer API avoids loss from converting int64 values to double.
+ 
+-Compression uses upstream `ChunkConfig::default()`: level 8, automatic mode
+-and delta selection, and at most 262,144 values per chunk/page. The benchmark
+-may pass smaller blocks, but should record their size: the authors recommend
+-more than 10,000 values per chunk for good compression. Compression writes
+-directly to the C++ output buffer; decompression writes directly to its output
+-vector. Allocation and size-bound calculation are included by these APIs.
++## Native page access in the benchmark
+ 
+-This integration does **not** claim native point access. Paper §2.4 describes
+-independently decodable pages when paired with chunk metadata, whereas the
+-standalone API conflates each chunk and page. An enclosing benchmark may
+-index independent compressed blocks and decompress the requested block,
+-charging that index to its size and reporting the access mechanism honestly.
++The benchmark uses `Pcodec/Indexed.hpp` and the original **wrapped** API,
++for both `pcodec` (f64) and `pcodec_i64`. The standalone functions above remain
++available, but are no longer used to implement benchmark point/range queries.
++The compression layout matches the pinned authors' `pco_cli/src/bench/codecs/pcopage.rs`:
++level 8, automatic mode/delta selection, balanced chunks and balanced pages
++using `PagingSpec::EqualPagesUpTo`. Both native size limits default to 262,144.
++`--pcodec-chunk-size` controls statistical chunks and `--pcodec-page-size`
++controls independently decodable pages within them. External `-b` does not
++change either size. Smaller native pages can be evaluated without forcing
++1,000-value statistical chunks; the chosen settings must accompany results.
++
++A counted directory locates the requested page and its shared chunk metadata.
++The original `PageDecompressor` starts at that page and consumes only the
++necessary prefix, in its required 256-value batches. It cannot seek directly
++to an arbitrary value inside a page. Full pages and contiguous requested spans
++are decoded directly into the output buffer. Each query includes native
++metadata/decoder initialization; chunk metadata is reused across pages within
++a range query. No expanded decoder tables or decoded values persist between
++queries. Allocation, prefix decoding and result copying are timed.
++
++The self-contained indexed frame contains a 64-byte header, 48 bytes per
++chunk, 40 bytes per page, the original wrapped file header, original chunk
++metadata and original page bytes. All of these bytes count toward compressed
++size. This container is new integration code, not the standalone `.pco` file
++format; the compression and decompression algorithms are unchanged upstream.
++`access_layout=native_pages`, `compression_unit_values` and `native_page_values`
++record the layout and configured limits in CSV (actual balanced sizes may be
++smaller). Older benchmark runs using external 1,000-value standalone streams
++are superseded for this comparison.
+ 
+ ## Build and checks
+ 
+@@ -72,3 +91,9 @@ integers, all floating-point bit classes, random raw 64-bit patterns, decimal
+ sequences, and data crossing the default chunk boundary. It also rejects
+ wrong types/counts, every truncated prefix of a valid small file, and trailing
+ bytes. It uses explicit checks that remain active in release builds.
++
++The main/recent build also runs `native_access`: out-of-order point/range reads,
++multiple pages per chunk, default-size boundaries, f64 bit patterns, int64
++extremes, reopening from serialized bytes, and reading a later page after an
++earlier page's payload is damaged. The CLI test verifies that changing `-b`
++does not change native compressed size.
+diff --git a/docs/recent-compressors.md b/docs/recent-compressors.md
+index 98ff4c8..3eea4b8 100644
+--- a/docs/recent-compressors.md
++++ b/docs/recent-compressors.md
+@@ -7,11 +7,11 @@ future work; neither has a placeholder implementation.
+ 
+ | Entry | Source and provenance | Representation | Access through this adapter |
+ | --- | --- | --- | --- |
+-| `fauna` | [Official Rust import](fauna.md) | Exact float32 subset of input doubles | Full block, original models |
+-| `macaque` | [Official Rust import](fauna.md) | Exact float32 subset of input doubles | Full block, standalone MacaqueV |
++| `fauna` | [Official Rust import](fauna.md) | Float32 conversion of input doubles, warning on changes | Native segments; direct models / residual prefix |
++| `macaque` | [Official Rust import](fauna.md) | Float32 conversion of input doubles, warning on changes | Full block, standalone MacaqueV |
+ | `dexor` | [C++ port of official Java](dexor.md) | Float64 | Prefix scan within block |
+-| `pcodec` | [Official Rust crate](pcodec.md) | Float64 | Full block |
+-| `pcodec_i64` | [Official Rust crate](pcodec.md) | Unshifted int64 | Full block |
++| `pcodec` | [Official Rust crate](pcodec.md) | Float64 | Native pages / in-page prefix |
++| `pcodec_i64` | [Official Rust crate](pcodec.md) | Unshifted int64 | Native pages / in-page prefix |
+ | `elfstar` | [C++ port of official Java](elfstar.md) | Float64 | Prefix scan within block |
+ | `selfstar` | [C++ port of official Java](selfstar.md) | Float64 | Checkpoint restoration and prefix scan |
+ | `flea` | [Official C++ import](flea.md) | Unshifted, already scaled int64 | Full block/FFT |
+@@ -29,16 +29,26 @@ versions or commit/checksum pins. Java is not needed to run any benchmark.
+ subtracts a minimum or converts fixed-decimal values to doubles. The other
+ entries receive the same float64 view as existing floating-point competitors.
+ The new harness validates decoded values bit for bit before emitting a CSV
+-result. This does not redefine the pre-existing int64-to-float64 conversion:
++result. Value mismatches produce a warning and metrics with
++`validation_status=failed` and `roundtrip_mismatches`; valid round trips are
++marked `passed`. Legacy entries default to `not_checked` in this new field;
++their existing validation paths are unchanged. This does not redefine the
++pre-existing int64-to-float64 conversion:
+ values not exactly representable by that view should be evaluated using an
+ integer entry when preservation of original int64 values matters.
+ 
+-Fauna/Macaque remain float32 implementations. Their double adapters explicitly
+-reject inexact narrowing. Full Fauna also rejects negative zero and nonfinite
++Fauna/Macaque remain float32 implementations. The benchmark explicitly narrows
++each block, logs one warning when values change, and emits metrics with
++`input_conversion=float32` and the total `input_changed_values`. It validates
++against this converted input; a passing codec round trip does not imply that
++the original float64 or fixed-decimal values were preserved. The standalone
++double APIs still reject inexact narrowing. Full Fauna also rejects negative zero and nonfinite
+ values because its original model fitting does not preserve those bit patterns.
+ FLEA has documented count and magnitude bounds protecting unchecked upstream
+-integer arithmetic. Unsupported inputs produce an error and a nonzero process
+-status, rather than another codec's result. All new CSV entries therefore have
++integer arithmetic. Hard API errors and malformed decoded lengths fail only the
++affected case; the CLI continues with subsequent codecs/datasets and returns
++nonzero for those errors. Metrics are not invented when encoding or decoding
++cannot complete. All new CSV entries therefore have
+ explicit representation limits; an absent result is not a zero-size result.
+ 
+ Full Fauna imports the original fitting/model pipeline and supplies synthetic
+@@ -47,7 +57,14 @@ encoded timestamp/model metadata and Macaque residual bytes count.
+ 
+ ## Measurement conventions
+ 
+-Independent blocks follow the existing `-b` option (default 1,000). Compressed
++Sequential codecs use independent blocks following `-b` (default 1,000).
++Full Fauna and both Pcodec entries use their native layouts, independently of
++`-b`: Fauna fitting batches default to 65,536, and Pcodec chunks/pages each
++default to 262,144. The flags `--fauna-batch-size`, `--pcodec-chunk-size` and
++`--pcodec-page-size` expose those settings. Their directories and native
++metadata are fully counted; see the per-codec format documents.
++
++For the external-block entries, compressed
+ size includes every returned codec byte plus an explicit block directory:
+ 16 bytes for total count and block size, and `8*(number_of_blocks+1)` bytes for
+ byte offsets. Allocator capacity and temporary scratch buffers are excluded.
+@@ -62,9 +79,11 @@ Every independently decoded block stores all required decoder state, and that
+ checkpoint counts toward its size. Its internal adaptation score excludes the
+ access wrapper, as in the official streaming encoder. See its format document.
+ 
+-Point/range access uses a block directory. DeXOR/Elf*/SElf* stop decoding at the
++Point/range access uses a directory for the relevant native unit or external block. DeXOR/Elf*/SElf* stop decoding at the
+ requested index/end, matching the existing streaming competitors' prefix-scan
+-approach. Pcodec, Fauna/Macaque and FLEA currently use their full-block APIs.
++approach. Full Fauna selects native model/residual segments; Pcodec selects native pages
++and decodes the required prefix using the original wrapped API. Standalone
++Macaque and FLEA use their full-block APIs.
+ None of these wrappers is described as native constant-time individual access.
+ Reported query counts are the actual number executed. Range output copying and
+ all API allocations are timed. Full decompression is separately timed after an
+@@ -75,14 +94,15 @@ FFI/conversion costs and codec framing. Decompression includes output allocation
+ and adapter expansion to the benchmark representation. These are reproducible
+ adapter-inclusive timings, not the papers' isolated core-kernel rates. Float
+ throughput uses the harness's 8-byte logical input/output view, including for
+-Fauna/Macaque's eligible float32 values; it is not their native float32 byte
++Fauna/Macaque's converted float32 values; it is not their native float32 byte
+ throughput. Consult per-codec documents for further restrictions.
+ 
+-The default 1,000-value block can substantially penalize Pcodec's compression
+-ratio; its authors recommend larger chunks. Use an additional larger-block
+-experiment for full-scan compression (for example `-b 262144`), and report that
+-block size and access cost, rather than treating it as equivalent to the
+-1,000-value access experiment.
++CSV fields `access_layout`, `compression_unit_values` and `native_page_values`
++identify these layouts and their configured limits. Legacy entries default to
++`unspecified`/zero in these new fields. Native Pcodec defaults follow the
++original paginated benchmark; a smaller-page tradeoff is a separate, explicitly
++configured experiment. Earlier results using externally blocked Fauna/Pcodec
++must not be presented as the corrected native-access measurements.
+ 
+ New numerical codecs compile in a separate translation unit with
+ `-fno-fast-math -ffp-contract=off`. Those options do not propagate to GEF. The
+@@ -116,7 +136,7 @@ ctest --test-dir build-recent --output-on-failure
+ 
+ The full build additionally runs `recent_cli_smoke`: all eight new CLI entries,
+ short final blocks, cross-block queries, CSV rows, the exact int64 route,
+-float32 eligibility errors, and unknown-codec failure. Codec tests cover source
++float32 conversion warnings with continued metrics, and unknown-codec failure. Codec tests cover source
+ bitstream fixtures where available, special numerical values, changing SElf*
+ windows, prefix access and invalid inputs. Rust and FLEA tests exercise the
+ actual pinned upstream implementations. Checks remain active in Release.
+diff --git a/lib/fauna-ffi/src/lib.rs b/lib/fauna-ffi/src/lib.rs
+index 8f2312a..a18cacb 100644
+--- a/lib/fauna-ffi/src/lib.rs
++++ b/lib/fauna-ffi/src/lib.rs
+@@ -1,6 +1,7 @@
+ // FFI and serialization only. Compression/decompression algorithms are compiled
+ // directly from the pinned, unmodified Apache-2.0 upstream source modules.
+ #![allow(dead_code)]
++mod indexed;
+ include!(concat!(env!("OUT_DIR"), "/upstream.rs"));
+ 
+ use arrow::array::{Array, BinaryArray, Float32Array, UInt8Array};
+diff --git a/lib/pcodec-ffi/src/lib.rs b/lib/pcodec-ffi/src/lib.rs
+index 9744031..cd851e4 100644
+--- a/lib/pcodec-ffi/src/lib.rs
++++ b/lib/pcodec-ffi/src/lib.rs
+@@ -1,4 +1,5 @@
+ //! Thin C ABI over the official pco crate. All format/algorithm work stays upstream.
++mod indexed;
+ use pco::data_types::Number;
+ use pco::standalone::{self, DecompressorItem, FileDecompressor};
+ use pco::{ChunkConfig, PagingSpec};
+diff --git a/tests/recent/CMakeLists.txt b/tests/recent/CMakeLists.txt
+index 378a2ab..295565a 100644
+--- a/tests/recent/CMakeLists.txt
++++ b/tests/recent/CMakeLists.txt
+@@ -4,9 +4,17 @@ set(CMAKE_CXX_STANDARD 17)
+ set(CMAKE_CXX_STANDARD_REQUIRED ON)
+ enable_testing()
+ include(../../cmake/RecentCompressors.cmake)
++add_executable(benchmark_input_test benchmark_input.cpp)
++target_link_libraries(benchmark_input_test PRIVATE gef_benchmark_input)
++# Exercise the same unsafe caller flags that exposed the original regression.
++target_compile_options(benchmark_input_test PRIVATE -O3 -ffast-math)
++add_test(NAME benchmark_input COMMAND benchmark_input_test)
+ add_executable(recent_harness_test harness.cpp)
+ target_link_libraries(recent_harness_test PRIVATE gef_recent_compressors)
+ add_test(NAME recent_harness COMMAND recent_harness_test)
++add_executable(recent_warning_policy warning_policy.cpp)
++target_compile_options(recent_warning_policy PRIVATE -fno-fast-math -ffp-contract=off)
++add_test(NAME recent_warning_policy COMMAND recent_warning_policy)
+ add_executable(dexor_roundtrip ../dexor_roundtrip.cpp)
+ target_compile_options(dexor_roundtrip PRIVATE -fno-fast-math -ffp-contract=off)
+ add_test(NAME dexor_roundtrip COMMAND dexor_roundtrip)
+@@ -47,3 +55,10 @@ if(TARGET LosslessBenchmark AND GEF_WITH_PCODEC AND GEF_WITH_FAUNA AND GEF_WITH_
+             "${CMAKE_CURRENT_SOURCE_DIR}/cli_smoke.py" "$<TARGET_FILE:LosslessBenchmark>")
+     endif()
+ endif()
++
++if(GEF_WITH_FAUNA AND GEF_WITH_PCODEC)
++    add_executable(native_access_test native_access.cpp)
++    target_link_libraries(native_access_test PRIVATE gef_fauna gef_pcodec)
++    target_compile_options(native_access_test PRIVATE -fno-fast-math -ffp-contract=off)
++    add_test(NAME native_access COMMAND native_access_test)
++endif()
+diff --git a/tests/recent/cli_smoke.py b/tests/recent/cli_smoke.py
+index c95766c..ae61f59 100644
+--- a/tests/recent/cli_smoke.py
++++ b/tests/recent/cli_smoke.py
+@@ -37,16 +37,55 @@ with tempfile.TemporaryDirectory(prefix="gef-codec-smoke-") as directory:
+     exact = root / "quarters.bin"
+     dataset(exact, [(i * 13 % 97 - 48) * 25 for i in range(97)], 2)
+     names = ["fauna", "macaque", "dexor", "pcodec", "pcodec_i64", "elfstar", "selfstar", "flea"]
+-    run(exact, names)
++    p = run(exact, names)
++    for row in csv.DictReader(io.StringIO(p.stdout)):
++        if row['validation_status'] != 'passed' or int(row['roundtrip_mismatches']) != 0:
++            raise RuntimeError('exact inputs did not pass validation')
++        if int(row['input_changed_values']) != 0:
++            raise RuntimeError('exact float32 inputs were incorrectly reported as changed')
++        if row['compressor']=='fauna' and (row['access_layout']!='native_segments' or int(row['compression_unit_values'])!=65536):
++            raise RuntimeError('Fauna still uses external -b blocking')
++        if row['compressor'] in ['pcodec','pcodec_i64'] and (row['access_layout']!='native_pages' or int(row['compression_unit_values'])!=262144):
++            raise RuntimeError('Pcodec still uses external -b blocking')
++    # External -b must not change native compression layouts or stored size.
++    def native_run(block):
++        args=[binary,'-b',str(block),'-r','3,35','-c','fauna,pcodec,pcodec_i64',
++              '--fauna-batch-size','53','--pcodec-chunk-size','61','--pcodec-page-size','19',str(exact)]
++        process=subprocess.run(args,capture_output=True,text=True)
++        if process.returncode:raise RuntimeError(process.stderr)
++        return {r['compressor']:r for r in csv.DictReader(io.StringIO(process.stdout))}
++    small,large=native_run(7),native_run(1000)
++    for name in small:
++        if small[name]['compressed_bits']!=large[name]['compressed_bits']:
++            raise RuntimeError('external block size changed native layout')
++        if small[name]['validation_status']!='passed':raise RuntimeError('native query validation failed')
++        if name.startswith('pcodec') and small[name]['native_page_values']!='19':raise RuntimeError('native page option ignored')
+     # The integer route must retain all 64 bits without passing through double.
+     integers = root / "integers.bin"
+     dataset(integers, [-(1 << 63) + i for i in range(97)])
+     run(integers, ["pcodec_i64"])
+     inexact = root / "hundredths.bin"
+     dataset(inexact, [i + 1 for i in range(97)], 2)
+-    for name in ["fauna", "macaque"]:
+-        p = run(inexact, [name], success=False)
+-        if "not exactly representable" not in p.stderr:
+-            raise RuntimeError("missing eligibility explanation")
++    p = run(inexact, ["fauna", "macaque", "dexor"])
++    for row in csv.DictReader(io.StringIO(p.stdout)):
++        if row['compressor'] in ['fauna','macaque']:
++            if row['input_conversion'] != 'float32' or int(row['input_changed_values']) == 0:
++                raise RuntimeError('missing input conversion flag/count')
++            if row['validation_status'] != 'passed' or int(row['roundtrip_mismatches']) != 0:
++                raise RuntimeError('codec did not preserve its converted float32 input')
++        elif row['input_conversion'] != 'none' or int(row['input_changed_values']) != 0:
++            raise RuntimeError('float32 preprocessing affected another codec')
++    if p.stderr.count('Warning:') != 2 or 'Original float64 bits are not preserved' not in p.stderr:
++        raise RuntimeError('expected one explicit conversion warning per affected codec')
++    # Conversion can also change the original fixed-decimal values, not just
++    # their binary64 representation. Still emit flagged, validated metrics.
++    precision_loss = root / 'precision_loss.bin'
++    dataset(precision_loss, [197054018+i for i in range(97)], 4)
++    p = run(precision_loss, ['fauna','macaque','pcodec'])
++    for row in csv.DictReader(io.StringIO(p.stdout)):
++        if row['validation_status'] != 'passed':
++            raise RuntimeError('converted-input round trip failed')
++        if row['compressor'] in ['fauna','macaque'] and int(row['input_changed_values']) == 0:
++            raise RuntimeError('precision loss was not recorded')
+     run(exact, ["unknown_codec"], success=False)
+-print("CLI smoke: all eight entries, exact int64 route, eligibility errors and CSV passed")
++print("CLI smoke: all eight entries, exact int64 route, conversion warnings, continued metrics and CSV passed")

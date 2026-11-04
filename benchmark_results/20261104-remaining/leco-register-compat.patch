@@ -1,0 +1,11 @@
+--- lib/Learn-to-Compress/headers/popcount.h	2026-11-03 15:39:27.031165917 +0100
++++ /dev/shm/testPF-gef-extra-20261104/leco-headers/popcount.h	2026-11-04 00:21:52.397512123 +0100
+@@ -124,7 +124,7 @@
+ inline int select64_broadword(uint64_t x, int k) {
+     uint64_t word = x;
+     int residual = k;
+-    register uint64_t byte_sums;
++    uint64_t byte_sums;
+     
+     byte_sums = word - ( ( word & 0xa * ONES_STEP_4 ) >> 1 );
+     byte_sums = ( byte_sums & 3 * ONES_STEP_4 ) + ( ( byte_sums >> 2 ) & 3 * ONES_STEP_4 );

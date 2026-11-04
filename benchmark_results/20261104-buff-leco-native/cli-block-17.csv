@@ -1,0 +1,3 @@
+compressor,dataset,num_values,uncompressed_bits,compressed_bits,compression_ratio,compression_throughput_mbs,decompression_throughput_mbs,random_access_ns,random_access_mbs,range_10_mbs,range_100_mbs,input_conversion,input_changed_values,roundtrip_mismatches,validation_status,access_layout,compression_unit_values,native_page_values
+LeCo,BP,6782,434048,168928,0.3892,283.5410,1541.6087,10.4412,730.6978,70.6629,480.2191,none,0,0,passed,native_fixed_partitions_tuned,200,0
+BUFF,BP,6782,434048,190184,0.4382,244.6480,651.3823,275.3590,27.7071,125.4762,384.7755,none,0,6771,precision_bounded,native_columns,6782,0

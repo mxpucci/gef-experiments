@@ -1,0 +1,82 @@
+{
+  "LAT": {
+    "fastmath_equals_div": false,
+    "fastmath_equals_mul": true,
+    "sha256": "3a67938be7d7fc5bfa2cc3cb62446338b0979da84ca43779420d939367daf1a6"
+  },
+  "DP": {
+    "fastmath_equals_div": false,
+    "fastmath_equals_mul": true,
+    "sha256": "3cf4a645c4aa87c8c99b90c3679c3cb355e4a41e759cf69275dc06c52a65ec74"
+  },
+  "WD": {
+    "fastmath_equals_div": false,
+    "fastmath_equals_mul": true,
+    "sha256": "72f203db8fefdcbddd8fac15c8a62a1c9c581824a315b640941e6002d13fe534"
+  },
+  "UK": {
+    "fastmath_equals_div": false,
+    "fastmath_equals_mul": true,
+    "sha256": "974b2b270e219eebc6fa4792f1f0b4ad6963d935d0e62ae3df12c1182245fd6f"
+  },
+  "BP": {
+    "fastmath_equals_div": false,
+    "fastmath_equals_mul": true,
+    "sha256": "67ae32be2b58fe12290798f87a8cd6cbca8287263b1c444097df8824c75e6290"
+  },
+  "LON": {
+    "fastmath_equals_div": false,
+    "fastmath_equals_mul": true,
+    "sha256": "dc74825fd2c180b550f9a817f2fb0fb47bbf34f67435a251d84bf53e130e2f9a"
+  },
+  "BM": {
+    "fastmath_equals_div": false,
+    "fastmath_equals_mul": true,
+    "sha256": "893edf0d7403f3226a4e9bf4992bf90d120ae41fb742be368403aed9345993c5"
+  },
+  "IT": {
+    "fastmath_equals_div": false,
+    "fastmath_equals_mul": true,
+    "sha256": "9f2237b7a984f0b2142210bd4ca72e558ba2a5faa54ecabc330f75425a34dab4"
+  },
+  "GE": {
+    "fastmath_equals_div": false,
+    "fastmath_equals_mul": true,
+    "sha256": "a42d63ce054f05727e793f2daa30101072cf762d33ce39ccae263f129055c367"
+  },
+  "US": {
+    "fastmath_equals_div": false,
+    "fastmath_equals_mul": true,
+    "sha256": "27b83a9849392038620f9977e4414d0fad0c11c72dfbf6deccd4a00807c202ce"
+  },
+  "BT": {
+    "fastmath_equals_div": false,
+    "fastmath_equals_mul": true,
+    "sha256": "5167448aa7f667ede5f8071c58cc2a87e114dda421aa6aa069110f68cf47e1be"
+  },
+  "CT": {
+    "fastmath_equals_div": false,
+    "fastmath_equals_mul": true,
+    "sha256": "97c49f9218b0bfcb92f708bd4d643e32b84a5633f52c161ec1e44ccea8072657"
+  },
+  "ECG": {
+    "fastmath_equals_div": false,
+    "fastmath_equals_mul": true,
+    "sha256": "fa7afcaaaa09f703bd201157fb13ec338f6234fabb21fde2cc8897eae60b321b"
+  },
+  "BW": {
+    "fastmath_equals_div": false,
+    "fastmath_equals_mul": true,
+    "sha256": "0b7e1f04064a79ca36e9e9e8e9263ea808fb856a442368fc2f929c63fb122b4c"
+  },
+  "DU": {
+    "fastmath_equals_div": false,
+    "fastmath_equals_mul": true,
+    "sha256": "390628ca91419cfc20e6f1052c2b12efb99c7d1cc6425765f2268317d5170fb2"
+  },
+  "AP": {
+    "fastmath_equals_div": false,
+    "fastmath_equals_mul": true,
+    "sha256": "16053a4ac4e69a5b95b1737f4622b7ac3211125989f7c559e2f37958e6dbe4b5"
+  }
+}

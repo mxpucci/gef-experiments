@@ -1,0 +1,56 @@
+{
+  "started": "2026-11-03T23:24:05.737739+00:00",
+  "runner_pid": 93740,
+  "cpu": 2,
+  "block_size": 1000,
+  "gef_uniform_partition_size": 32000,
+  "codecs": [
+    "dac",
+    "rle_gef",
+    "u_gef_approximate",
+    "u_gef_optimal",
+    "b_gef_approximate",
+    "b_gef_optimal",
+    "b_star_gef_optimal",
+    "gorilla",
+    "chimp",
+    "chimp128",
+    "tsxor",
+    "elf",
+    "camel",
+    "falcon",
+    "alp",
+    "buff",
+    "leco",
+    "lz4",
+    "zstd",
+    "snappy",
+    "xz",
+    "brotli",
+    "neats"
+  ],
+  "ranges": [
+    10,
+    100,
+    1000,
+    10000,
+    100000
+  ],
+  "fauna_batch_size": 65536,
+  "pcodec_chunk_size": 262144,
+  "pcodec_page_size": 262144,
+  "binary_sha256": "27859212c0ceb8f486e85487cdfe79f148b7ed173e894bfe3778af0156f52670",
+  "binary": "/home/testPF/gef-benchmark-runs/20261104-remaining/LosslessBenchmark",
+  "source_commit": "0888e798ff2a691d1281c2d4b591a216c2a78eac",
+  "total_cases": 368,
+  "point_queries": {
+    "gef_neats_dac_leco": 1000000,
+    "streaming_squash": 100000,
+    "alp_buff_falcon": 10000
+  },
+  "queries_per_range": {
+    "gef_neats_dac": 10000,
+    "other": 1000
+  },
+  "qualification": "Existing baseline implementations and adapters; legacy validation_status remains not_checked. BUFF validates with its existing tolerance. See case logs."
+}

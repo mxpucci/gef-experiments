@@ -1,0 +1,82 @@
+[
+  {
+    "sample": "AP.div.f64.buff-original",
+    "identical_native_payload": true,
+    "sha256": "48121e2bd2c9497da1a1816e59ab2151600e504fa22069564b97679714dc1515"
+  },
+  {
+    "sample": "BM.div.f64.buff-original",
+    "identical_native_payload": true,
+    "sha256": "25d3a7a5a6b62f877c739931b2ef905e84eaac2bb6f38377a1fcc1d58c459f28"
+  },
+  {
+    "sample": "BP.div.f64.buff-original",
+    "identical_native_payload": true,
+    "sha256": "4c1e6d5356852ec13091f644b345b3ee8ba6d874fbb6a5733f4e1c769113a075"
+  },
+  {
+    "sample": "BT.div.f64.buff-original",
+    "identical_native_payload": true,
+    "sha256": "736225712ad92246ead069fe8a3af68a410ca8bda9d8813b95da62ee88b251a8"
+  },
+  {
+    "sample": "BW.div.f64.buff-original",
+    "identical_native_payload": true,
+    "sha256": "b7dbf6027aae2868215e798258db54086be83ac833d8f9ab5857d73e81cd9e63"
+  },
+  {
+    "sample": "CT.div.f64.buff-original",
+    "identical_native_payload": true,
+    "sha256": "0dcca95abe50c176e872f2201507fa92fc4eaf719cfaba6f67de62992310ed21"
+  },
+  {
+    "sample": "DP.div.f64.buff-original",
+    "identical_native_payload": true,
+    "sha256": "b36f95da591004c878fdf285229111ebc481debfd4354fadaab4d66f0ae1f80e"
+  },
+  {
+    "sample": "DU.div.f64.buff-original",
+    "identical_native_payload": true,
+    "sha256": "584dbfb3354ebc15f87d36902dcf3da592310d931b8ded1a63fda2230f3c18fe"
+  },
+  {
+    "sample": "ECG.div.f64.buff-original",
+    "identical_native_payload": true,
+    "sha256": "06381feb0e5c49f2819c3e06ada1dde92dbf9cb89c77cfe82f315260f2b87668"
+  },
+  {
+    "sample": "GE.div.f64.buff-original",
+    "identical_native_payload": true,
+    "sha256": "70b07589d0edbe0897ba26f0318e1de52a7115015392cb1e177f7cbfb4b4ac24"
+  },
+  {
+    "sample": "IT.div.f64.buff-original",
+    "identical_native_payload": true,
+    "sha256": "1a4686abf2debd3e3f784011a4af9b3f80721c0d5170e178dbf507019b1cc8b7"
+  },
+  {
+    "sample": "LAT.div.f64.buff-original",
+    "identical_native_payload": true,
+    "sha256": "be9be07bccca9c6fa680ee3587e924e7c8b8713558950552da2a86b67a3f1d24"
+  },
+  {
+    "sample": "LON.div.f64.buff-original",
+    "identical_native_payload": true,
+    "sha256": "b1baedeb2afb890f9c032ebd98fe1a5f35a3e4a0e81082d992db54b8d108b1a8"
+  },
+  {
+    "sample": "UK.div.f64.buff-original",
+    "identical_native_payload": true,
+    "sha256": "a9e1713f7958a7a4daa8c536a0b8a96c874dbb39d83b1e70ee4197f6313b0422"
+  },
+  {
+    "sample": "US.div.f64.buff-original",
+    "identical_native_payload": true,
+    "sha256": "da486c3376b512c1a9b1896809dca74d9560acd93c6fbca84f95589adb6418eb"
+  },
+  {
+    "sample": "WD.div.f64.buff-original",
+    "identical_native_payload": true,
+    "sha256": "7e30f10a8338974e1d8607e8f38c742ced0d077a2e256d5470515339bbd99a82"
+  }
+]

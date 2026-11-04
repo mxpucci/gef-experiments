@@ -1,0 +1,98 @@
+{"completed": 6, "failed": 0, "current": "BT__fauna", "state": "RUNNING", "elapsed": 120.24}
+{"completed": 7, "failed": 0, "current": "BT__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 8, "failed": 0, "current": "BT__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 8, "failed": 0, "current": "BT__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 9, "failed": 0, "current": "BW__fauna", "state": "RUNNING", "elapsed": 0}
+{"completed": 9, "failed": 0, "current": "BW__fauna", "state": "RUNNING", "elapsed": 60.08}
+{"completed": 9, "failed": 0, "current": "BW__fauna", "state": "RUNNING", "elapsed": 60.08}
+{"completed": 10, "failed": 0, "current": "BW__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 11, "failed": 0, "current": "BW__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 11, "failed": 0, "current": "BW__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 12, "failed": 0, "current": "DU__fauna", "state": "RUNNING", "elapsed": 0}
+{"completed": 13, "failed": 0, "current": "DU__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 14, "failed": 0, "current": "DU__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 15, "failed": 0, "current": "CT__fauna", "state": "RUNNING", "elapsed": 0}
+{"completed": 15, "failed": 0, "current": "CT__fauna", "state": "RUNNING", "elapsed": 60.09}
+{"completed": 15, "failed": 0, "current": "CT__fauna", "state": "RUNNING", "elapsed": 60.09}
+{"completed": 16, "failed": 0, "current": "CT__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 16, "failed": 0, "current": "CT__pcodec", "state": "RUNNING", "elapsed": 60.09}
+{"completed": 17, "failed": 0, "current": "CT__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 17, "failed": 0, "current": "CT__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 18, "failed": 0, "current": "DP__fauna", "state": "RUNNING", "elapsed": 0}
+{"completed": 18, "failed": 0, "current": "DP__fauna", "state": "RUNNING", "elapsed": 60.15}
+{"completed": 19, "failed": 0, "current": "DP__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 19, "failed": 0, "current": "DP__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 19, "failed": 0, "current": "DP__pcodec", "state": "RUNNING", "elapsed": 60.08}
+{"completed": 20, "failed": 0, "current": "DP__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 21, "failed": 0, "current": "LAT__fauna", "state": "RUNNING", "elapsed": 0}
+{"completed": 22, "failed": 0, "current": "LAT__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 22, "failed": 0, "current": "LAT__pcodec", "state": "RUNNING", "elapsed": 60.08}
+{"completed": 23, "failed": 0, "current": "LAT__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 23, "failed": 0, "current": "LAT__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 25, "failed": 0, "current": "LON__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 25, "failed": 0, "current": "LON__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 26, "failed": 0, "current": "LON__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 26, "failed": 0, "current": "LON__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 27, "failed": 0, "current": "GE__fauna", "state": "RUNNING", "elapsed": 0}
+{"completed": 27, "failed": 0, "current": "GE__fauna", "state": "RUNNING", "elapsed": 60.1}
+{"completed": 28, "failed": 0, "current": "GE__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 28, "failed": 0, "current": "GE__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 28, "failed": 0, "current": "GE__pcodec", "state": "RUNNING", "elapsed": 60.12}
+{"completed": 29, "failed": 0, "current": "GE__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 29, "failed": 0, "current": "GE__pcodec_i64", "state": "RUNNING", "elapsed": 60.09}
+{"completed": 30, "failed": 0, "current": "UK__fauna", "state": "RUNNING", "elapsed": 0}
+{"completed": 31, "failed": 0, "current": "UK__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 31, "failed": 0, "current": "UK__pcodec", "state": "RUNNING", "elapsed": 60.1}
+{"completed": 32, "failed": 0, "current": "UK__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 32, "failed": 0, "current": "UK__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 33, "failed": 0, "current": "AP__fauna", "state": "RUNNING", "elapsed": 0}
+{"completed": 34, "failed": 0, "current": "AP__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 34, "failed": 0, "current": "AP__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 34, "failed": 0, "current": "AP__pcodec", "state": "RUNNING", "elapsed": 60.13}
+{"completed": 35, "failed": 0, "current": "AP__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 35, "failed": 0, "current": "AP__pcodec_i64", "state": "RUNNING", "elapsed": 60.11}
+{"completed": 36, "failed": 0, "current": "WD__fauna", "state": "RUNNING", "elapsed": 0}
+{"completed": 36, "failed": 0, "current": "WD__fauna", "state": "RUNNING", "elapsed": 60.08}
+{"completed": 36, "failed": 0, "current": "WD__fauna", "state": "RUNNING", "elapsed": 60.08}
+{"completed": 36, "failed": 0, "current": "WD__fauna", "state": "RUNNING", "elapsed": 120.16}
+{"completed": 37, "failed": 0, "current": "WD__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 37, "failed": 0, "current": "WD__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 37, "failed": 0, "current": "WD__pcodec", "state": "RUNNING", "elapsed": 60.12}
+{"completed": 38, "failed": 0, "current": "WD__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 38, "failed": 0, "current": "WD__pcodec_i64", "state": "RUNNING", "elapsed": 60.09}
+{"completed": 39, "failed": 0, "current": "ECG__fauna", "state": "RUNNING", "elapsed": 0}
+{"completed": 39, "failed": 0, "current": "ECG__fauna", "state": "RUNNING", "elapsed": 60.1}
+{"completed": 40, "failed": 0, "current": "ECG__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 40, "failed": 0, "current": "ECG__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 40, "failed": 0, "current": "ECG__pcodec", "state": "RUNNING", "elapsed": 60.12}
+{"completed": 40, "failed": 0, "current": "ECG__pcodec", "state": "RUNNING", "elapsed": 120.23}
+{"completed": 41, "failed": 0, "current": "ECG__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 41, "failed": 0, "current": "ECG__pcodec_i64", "state": "RUNNING", "elapsed": 60.09}
+{"completed": 42, "failed": 0, "current": "US__fauna", "state": "RUNNING", "elapsed": 0}
+{"completed": 43, "failed": 0, "current": "US__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 43, "failed": 0, "current": "US__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 43, "failed": 0, "current": "US__pcodec", "state": "RUNNING", "elapsed": 60.11}
+{"completed": 44, "failed": 0, "current": "US__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 44, "failed": 0, "current": "US__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 44, "failed": 0, "current": "US__pcodec_i64", "state": "RUNNING", "elapsed": 60.12}
+{"completed": 45, "failed": 0, "current": "IT__fauna", "state": "RUNNING", "elapsed": 0}
+{"completed": 45, "failed": 0, "current": "IT__fauna", "state": "RUNNING", "elapsed": 60.17}
+{"completed": 45, "failed": 0, "current": "IT__fauna", "state": "RUNNING", "elapsed": 120.31}
+{"completed": 45, "failed": 0, "current": "IT__fauna", "state": "RUNNING", "elapsed": 120.31}
+{"completed": 46, "failed": 0, "current": "IT__pcodec", "state": "RUNNING", "elapsed": 0}
+{"completed": 46, "failed": 0, "current": "IT__pcodec", "state": "RUNNING", "elapsed": 60.09}
+{"completed": 46, "failed": 0, "current": "IT__pcodec", "state": "RUNNING", "elapsed": 120.19}
+{"completed": 47, "failed": 0, "current": "IT__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 47, "failed": 0, "current": "IT__pcodec_i64", "state": "RUNNING", "elapsed": 0}
+{"completed": 47, "failed": 0, "current": "IT__pcodec_i64", "state": "RUNNING", "elapsed": 60.09}
+PASS: 48/48 native-layout cases completed; 10/10 Linux tests passed.
+PASS: all full-input reconstructions passed against the declared input representation.
+PASS: 16 dataset counts and SHA-256 hashes match the earlier complete run.
+PASS: benchmark binary hash matches the run configuration.
+PASS: 144 unique combined rows: 48 replaced, 96 earlier measurements preserved.
+Fauna still narrows to float32; warnings do not imply original-f64 losslessness.
+GEF layout fields are unspecified/zero because its original CSV predates these fields.
+Size ratios aggregate encoded bytes over all 16 datasets; point-time ratios are geometric means.
+fauna: aggregate native/old bytes 1.098036; geometric-mean native/old point time 8.502271; equal-dataset mean compressed/raw 0.340216 -> 0.373522
+pcodec: aggregate native/old bytes 0.821045; geometric-mean native/old point time 50.218204; equal-dataset mean compressed/raw 0.234261 -> 0.175314
+pcodec_i64: aggregate native/old bytes 0.873619; geometric-mean native/old point time 49.528692; equal-dataset mean compressed/raw 0.154239 -> 0.121982

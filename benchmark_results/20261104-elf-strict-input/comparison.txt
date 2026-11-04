@@ -1,0 +1,53 @@
+Elf*/SElf*: strict decimal-input conversion comparison
+Completed measurements: 32/32. Old results retain reciprocal-conversion issue.
+All sizes include the existing headers, checkpoints and block directory.
+Bits/value; lower is better. Averages give equal weight to datasets.
+
+Dataset     Elf* old -> new       SElf* old -> new
+AP         21.578 ->   9.572       21.781 ->   9.778
+BM         37.122 ->  16.321       38.158 ->  18.619
+BP         38.661 ->  27.129       39.184 ->  27.881
+BT         46.324 ->  29.011       46.826 ->  29.556
+BW         45.026 ->  30.732       45.203 ->  30.985
+CT         34.491 ->  12.600       34.641 ->  12.725
+DP         22.949 ->  12.666       23.664 ->  13.370
+DU         10.882 ->   6.433       11.653 ->   7.162
+ECG        16.305 ->  11.358       16.701 ->  11.723
+GE         18.951 ->   9.136       19.314 ->   9.478
+IT         20.170 ->  10.393       21.074 ->  11.334
+LAT        24.730 ->  12.139       25.003 ->  12.497
+LON        26.018 ->  13.017       26.255 ->  13.339
+UK         19.919 ->   8.606       20.278 ->   8.938
+US         15.008 ->   6.951       15.314 ->   7.230
+WD         28.128 ->  18.582       28.669 ->  19.060
+
+{
+  "elfstar": {
+    "datasets": 16,
+    "mean_old_bits_per_value": 26.641489329902242,
+    "mean_new_bits_per_value": 14.66535841057085,
+    "mean_old_compressed_percent": 41.627327077972254,
+    "mean_new_compressed_percent": 22.914622516516953,
+    "mean_old_compression_mib_s": 76.65725,
+    "mean_new_compression_mib_s": 91.29475000000001,
+    "mean_old_decompression_mib_s": 190.39644375,
+    "mean_new_decompression_mib_s": 231.5347125,
+    "mean_old_point_mib_s": 0.33985,
+    "mean_new_point_mib_s": 0.39935625
+  },
+  "selfstar": {
+    "datasets": 16,
+    "mean_old_bits_per_value": 27.10731499488027,
+    "mean_new_bits_per_value": 15.229718604015202,
+    "mean_old_compressed_percent": 42.355179679500424,
+    "mean_new_compressed_percent": 23.796435318773753,
+    "mean_old_compression_mib_s": 79.7859,
+    "mean_new_compression_mib_s": 96.05881875,
+    "mean_old_decompression_mib_s": 174.678925,
+    "mean_new_decompression_mib_s": 216.1296875,
+    "mean_old_point_mib_s": 0.32651875,
+    "mean_new_point_mib_s": 0.40091875
+  }
+}
+Only Elf*/SElf* rerun. Other converted-double codec results remain provisional.
+Implementations remain the existing C++ ports; this change corrects shared input preparation.

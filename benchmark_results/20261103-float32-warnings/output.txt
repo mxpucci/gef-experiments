@@ -1,0 +1,310 @@
+2026-11-03T17:58:43.540843+00:00 Validating all datasets; full input, no sampling
+2026-11-03T17:58:46.092536+00:00 Verified AP: 137721453 values, decimals=5
+2026-11-03T17:58:46.093669+00:00 Verified BM: 17964 values, decimals=5
+2026-11-03T17:58:46.093889+00:00 Verified BP: 6782 values, decimals=4
+2026-11-03T17:58:46.096622+00:00 Verified BT: 129669 values, decimals=9
+2026-11-03T17:58:46.099077+00:00 Verified BW: 129669 values, decimals=7
+2026-11-03T17:58:46.153663+00:00 Verified CT: 2826654 values, decimals=1
+2026-11-03T17:58:46.255182+00:00 Verified DP: 5413914 values, decimals=3
+2026-11-03T17:58:46.262111+00:00 Verified DU: 334880 values, decimals=3
+2026-11-03T17:58:50.399460+00:00 Verified ECG: 225750000 values, decimals=3
+2026-11-03T17:58:51.202119+00:00 Verified GE: 43565657 values, decimals=3
+2026-11-03T17:59:00.121125+00:00 Verified IT: 477050760 values, decimals=2
+2026-11-03T17:59:00.578780+00:00 Verified LAT: 24876978 values, decimals=4
+2026-11-03T17:59:01.037356+00:00 Verified LON: 24876978 values, decimals=4
+2026-11-03T17:59:02.127442+00:00 Verified UK: 59305325 values, decimals=1
+2026-11-03T17:59:07.291037+00:00 Verified US: 282076178 values, decimals=2
+2026-11-03T17:59:10.936536+00:00 Verified WD: 198898762 values, decimals=2
+2026-11-03T17:59:11.160328+00:00 START 1/32 BP__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/BP__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 6771/6782 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T17:59:15.169584+00:00 END BP__fauna status=WARNING seconds=4.0 
+2026-11-03T17:59:15.169682+00:00 START 2/32 BP__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/BP__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque...
+Warning: macaque converted 6771/6782 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T17:59:19.179452+00:00 END BP__macaque status=WARNING seconds=4.0 
+2026-11-03T17:59:19.179539+00:00 START 3/32 BM__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/BM__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 17927/17964 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T17:59:23.189529+00:00 END BM__fauna status=WARNING seconds=4.0 
+2026-11-03T17:59:23.189607+00:00 START 4/32 BM__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/BM__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque...
+Warning: macaque converted 17927/17964 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T17:59:27.200874+00:00 END BM__macaque status=WARNING seconds=4.0 
+2026-11-03T17:59:27.200951+00:00 START 5/32 BT__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/BT__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 129669/129669 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T17:59:37.217501+00:00 END BT__fauna status=WARNING seconds=10.0 
+2026-11-03T17:59:37.217596+00:00 START 6/32 BT__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/BT__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque...
+Warning: macaque converted 129669/129669 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T17:59:46.236662+00:00 END BT__macaque status=WARNING seconds=9.0 
+2026-11-03T17:59:46.236737+00:00 START 7/32 BW__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/BW__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 128924/129669 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T17:59:56.252239+00:00 END BW__fauna status=WARNING seconds=10.0 
+2026-11-03T17:59:56.252317+00:00 START 8/32 BW__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/BW__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque...
+Warning: macaque converted 128924/129669 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:00:05.271588+00:00 END BW__macaque status=WARNING seconds=9.0 
+2026-11-03T18:00:05.271669+00:00 START 9/32 DU__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/DU__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 330995/334880 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:00:12.287365+00:00 END DU__fauna status=WARNING seconds=7.0 
+2026-11-03T18:00:12.287444+00:00 START 10/32 DU__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/DU__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque...
+Warning: macaque converted 330995/334880 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:00:18.298765+00:00 END DU__macaque status=WARNING seconds=6.0 
+2026-11-03T18:00:18.298839+00:00 START 11/32 CT__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/CT__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 2252772/2826654 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:00:28.314875+00:00 END CT__fauna status=WARNING seconds=10.0 
+2026-11-03T18:00:28.314961+00:00 START 12/32 CT__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/CT__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque...
+Warning: macaque converted 2252772/2826654 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:00:37.332706+00:00 END CT__macaque status=WARNING seconds=9.0 
+2026-11-03T18:00:37.332783+00:00 START 13/32 DP__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/DP__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 5361330/5413914 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:00:46.348746+00:00 END DP__fauna status=WARNING seconds=9.0 
+2026-11-03T18:00:46.348823+00:00 START 14/32 DP__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/DP__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque...
+Warning: macaque converted 5361330/5413914 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:00:54.363359+00:00 END DP__macaque status=WARNING seconds=8.0 
+2026-11-03T18:00:54.363450+00:00 START 15/32 LAT__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/LAT__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 24621957/24876978 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:01:05.379063+00:00 END LAT__fauna status=WARNING seconds=11.0 
+2026-11-03T18:01:05.379141+00:00 START 16/32 LAT__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/LAT__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque...
+Warning: macaque converted 24621957/24876978 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:01:13.393728+00:00 END LAT__macaque status=WARNING seconds=8.0 
+2026-11-03T18:01:13.393807+00:00 START 17/32 LON__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/LON__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 24825272/24876978 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:01:23.410925+00:00 END LON__fauna status=WARNING seconds=10.0 
+2026-11-03T18:01:23.411003+00:00 START 18/32 LON__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/LON__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque...
+Warning: macaque converted 24825272/24876978 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:01:30.423580+00:00 END LON__macaque status=WARNING seconds=7.0 
+2026-11-03T18:01:30.423659+00:00 START 19/32 GE__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/GE__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 41504664/43565657 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:01:45.448503+00:00 END GE__fauna status=WARNING seconds=15.0 
+2026-11-03T18:01:45.448581+00:00 START 20/32 GE__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/GE__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque...
+Warning: macaque converted 41504664/43565657 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:01:56.477178+00:00 END GE__macaque status=WARNING seconds=11.0 
+2026-11-03T18:01:56.477255+00:00 START 21/32 UK__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/UK__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 35849231/59305325 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:02:13.506181+00:00 END UK__fauna status=WARNING seconds=17.0 
+2026-11-03T18:02:13.506259+00:00 START 22/32 UK__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/UK__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque...
+Warning: macaque converted 35849231/59305325 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:02:25.529682+00:00 END UK__macaque status=WARNING seconds=12.0 
+2026-11-03T18:02:25.529758+00:00 START 23/32 AP__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/AP__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 136716747/137721453 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:02:55.577718+00:00 END AP__fauna status=WARNING seconds=30.1 
+2026-11-03T18:02:55.577794+00:00 START 24/32 AP__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/AP__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque...
+Warning: macaque converted 136716747/137721453 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:03:13.606447+00:00 END AP__macaque status=WARNING seconds=18.0 
+2026-11-03T18:03:13.606528+00:00 START 25/32 WD__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/WD__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 190933188/198898762 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:04:04.674926+00:00 END WD__fauna status=WARNING seconds=51.1 
+2026-11-03T18:04:04.675019+00:00 START 26/32 WD__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/WD__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque...
+Warning: macaque converted 190933188/198898762 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:04:39.720483+00:00 END WD__macaque status=WARNING seconds=35.0 
+2026-11-03T18:04:39.720562+00:00 START 27/32 ECG__fauna
+2026-11-03T18:05:39.836735+00:00 RUNNING ECG__fauna pid=95239 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/ECG__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 218678216/225750000 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:05:39.837908+00:00 END ECG__fauna status=WARNING seconds=60.1 
+2026-11-03T18:05:39.837994+00:00 START 28/32 ECG__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/ECG__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque...
+Warning: macaque converted 218678216/225750000 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:06:20.916270+00:00 END ECG__macaque status=WARNING seconds=41.1 
+2026-11-03T18:06:20.916356+00:00 START 29/32 US__fauna
+2026-11-03T18:07:21.024103+00:00 RUNNING US__fauna pid=96755 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/US__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 269855379/282076178 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:07:21.025323+00:00 END US__fauna status=WARNING seconds=60.1 
+2026-11-03T18:07:21.025407+00:00 START 30/32 US__macaque
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/US__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque...
+Warning: macaque converted 269855379/282076178 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:07:57.087486+00:00 END US__macaque status=WARNING seconds=36.1 
+2026-11-03T18:07:57.087569+00:00 START 31/32 IT__fauna
+2026-11-03T18:08:57.200726+00:00 RUNNING IT__fauna pid=98174 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c fauna -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/IT__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 457933312/477050760 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:09:45.282412+00:00 END IT__fauna status=WARNING seconds=108.2 
+2026-11-03T18:09:45.282500+00:00 START 32/32 IT__macaque
+2026-11-03T18:10:45.399324+00:00 RUNNING IT__macaque pid=99795 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-float32-warnings/LosslessBenchmark -c macaque -b 1000 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-float32-warnings/cases/IT__macaque.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running macaque...
+Warning: macaque converted 457933312/477050760 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:10:55.422186+00:00 END IT__macaque status=WARNING seconds=70.1 
+2026-11-03T18:10:55.422406+00:00 FINISHED {"finished": "2026-11-03T18:10:55.422216+00:00", "total": 32, "counts": {"OK": 0, "WARNING": 32, "UNSUPPORTED": 0, "FAILED": 0}}

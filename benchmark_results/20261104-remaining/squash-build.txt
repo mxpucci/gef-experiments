@@ -1,0 +1,61 @@
+[  1%] [RAGEL][ini] Compiling state machine with Ragel 6.10
+[  3%] Building C object squash/CMakeFiles/squash0.7.dir/codec.c.o
+[  7%] Building C object squash/CMakeFiles/squash0.7.dir/ini.c.o
+[  7%] Building C object squash/CMakeFiles/squash0.7.dir/buffer.c.o
+[  9%] Building C object squash/CMakeFiles/squash0.7.dir/file.c.o
+[ 11%] Building C object squash/CMakeFiles/squash0.7.dir/license.c.o
+[ 13%] Building C object squash/CMakeFiles/squash0.7.dir/options.c.o
+[ 15%] Building C object squash/CMakeFiles/squash0.7.dir/status.c.o
+[ 16%] Building C object squash/CMakeFiles/squash0.7.dir/buffer-stream.c.o
+[ 18%] Building C object squash/CMakeFiles/squash0.7.dir/context.c.o
+[ 20%] Building C object squash/CMakeFiles/squash0.7.dir/object.c.o
+[ 22%] Building C object squash/CMakeFiles/squash0.7.dir/plugin.c.o
+[ 24%] Building C object squash/CMakeFiles/squash0.7.dir/stream.c.o
+[ 26%] Building C object squash/CMakeFiles/squash0.7.dir/version.c.o
+[ 28%] Building C object squash/CMakeFiles/squash0.7.dir/tinycthread/source/tinycthread.c.o
+[ 30%] Linking C shared library libsquash0.7.so
+[ 30%] Built target squash0.7
+[ 33%] Building CXX object plugins/brotli/CMakeFiles/squash0.7-plugin-brotli.dir/squash-brotli.cpp.o
+[ 33%] Building C object plugins/snappy/CMakeFiles/squash0.7-plugin-snappy.dir/squash-snappy.c.o
+[ 35%] Building C object plugins/lz4/CMakeFiles/squash0.7-plugin-lz4.dir/squash-lz4.c.o
+[ 37%] Building C object plugins/lzma/CMakeFiles/squash0.7-plugin-lzma.dir/squash-lzma.c.o
+[ 39%] Building C object plugins/lz4/CMakeFiles/squash0.7-plugin-lz4.dir/squash-lz4f.c.o
+[ 41%] Linking C shared library libsquash0.7-plugin-lzma.so
+[ 41%] Built target squash0.7-plugin-lzma
+[ 43%] Building C object plugins/zstd/CMakeFiles/squash0.7-plugin-zstd.dir/squash-zstd.c.o
+[ 45%] Building C object plugins/snappy/CMakeFiles/squash0.7-plugin-snappy.dir/crc32.c.o
+[ 47%] Building C object plugins/zstd/CMakeFiles/squash0.7-plugin-zstd.dir/zstd/lib/zstd.c.o
+[ 49%] Building C object plugins/lz4/CMakeFiles/squash0.7-plugin-lz4.dir/lz4/lib/lz4.c.o
+[ 50%] Linking C shared library libsquash0.7-plugin-snappy.so
+[ 50%] Built target squash0.7-plugin-snappy
+[ 52%] Building C object plugins/lz4/CMakeFiles/squash0.7-plugin-lz4.dir/lz4/lib/lz4hc.c.o
+[ 54%] Building C object plugins/brotli/CMakeFiles/squash0.7-plugin-brotli.dir/brotli/dec/bit_reader.c.o
+[ 56%] Building C object plugins/brotli/CMakeFiles/squash0.7-plugin-brotli.dir/brotli/dec/decode.c.o
+[ 58%] Building C object plugins/brotli/CMakeFiles/squash0.7-plugin-brotli.dir/brotli/dec/huffman.c.o
+[ 60%] Building C object utils/CMakeFiles/squash.dir/squash.c.o
+[ 62%] Linking C executable squash
+[ 62%] Built target squash
+[ 64%] Building C object plugins/brotli/CMakeFiles/squash0.7-plugin-brotli.dir/brotli/dec/state.c.o
+[ 66%] Building C object examples/CMakeFiles/simple.dir/simple.c.o
+[ 67%] Linking C executable simple
+[ 67%] Built target simple
+[ 69%] Building C object plugins/lz4/CMakeFiles/squash0.7-plugin-lz4.dir/lz4/lib/lz4frame.c.o
+[ 71%] Building C object plugins/brotli/CMakeFiles/squash0.7-plugin-brotli.dir/brotli/dec/streams.c.o
+[ 73%] Building CXX object plugins/brotli/CMakeFiles/squash0.7-plugin-brotli.dir/brotli/enc/backward_references.cc.o
+[ 75%] Building CXX object plugins/brotli/CMakeFiles/squash0.7-plugin-brotli.dir/brotli/enc/block_splitter.cc.o
+[ 77%] Linking C shared library libsquash0.7-plugin-zstd.so
+[ 77%] Built target squash0.7-plugin-zstd
+[ 79%] Building CXX object plugins/brotli/CMakeFiles/squash0.7-plugin-brotli.dir/brotli/enc/brotli_bit_stream.cc.o
+[ 81%] Building C object plugins/lz4/CMakeFiles/squash0.7-plugin-lz4.dir/lz4/lib/xxhash.c.o
+[ 83%] Linking C shared library libsquash0.7-plugin-lz4.so
+[ 83%] Built target squash0.7-plugin-lz4
+[ 84%] Building CXX object plugins/brotli/CMakeFiles/squash0.7-plugin-brotli.dir/brotli/enc/encode.cc.o
+[ 86%] Building CXX object plugins/brotli/CMakeFiles/squash0.7-plugin-brotli.dir/brotli/enc/encode_parallel.cc.o
+[ 88%] Building CXX object plugins/brotli/CMakeFiles/squash0.7-plugin-brotli.dir/brotli/enc/entropy_encode.cc.o
+[ 90%] Building CXX object plugins/brotli/CMakeFiles/squash0.7-plugin-brotli.dir/brotli/enc/histogram.cc.o
+[ 92%] Building CXX object plugins/brotli/CMakeFiles/squash0.7-plugin-brotli.dir/brotli/enc/literal_cost.cc.o
+[ 94%] Building CXX object plugins/brotli/CMakeFiles/squash0.7-plugin-brotli.dir/brotli/enc/metablock.cc.o
+[ 96%] Building CXX object plugins/brotli/CMakeFiles/squash0.7-plugin-brotli.dir/brotli/enc/static_dict.cc.o
+[ 98%] Building CXX object plugins/brotli/CMakeFiles/squash0.7-plugin-brotli.dir/brotli/enc/streams.cc.o
+[100%] Linking CXX shared library libsquash0.7-plugin-brotli.so
+[100%] Built target squash0.7-plugin-brotli

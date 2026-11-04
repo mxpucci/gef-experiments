@@ -1,0 +1,11 @@
+PASS: 48/48 native-layout cases completed; 10/10 Linux tests passed.
+PASS: all full-input reconstructions passed against the declared input representation.
+PASS: 16 dataset counts and SHA-256 hashes match the earlier complete run.
+PASS: benchmark binary hash matches the run configuration.
+PASS: 144 unique combined rows: 48 replaced, 96 earlier measurements preserved.
+Fauna still narrows to float32; warnings do not imply original-f64 losslessness.
+GEF layout fields are unspecified/zero because its original CSV predates these fields.
+Size ratios aggregate encoded bytes over all 16 datasets; point-time ratios are geometric means.
+fauna: aggregate native/old bytes 1.098036; geometric-mean native/old point time 8.502271; equal-dataset mean compressed/raw 0.340216 -> 0.373522
+pcodec: aggregate native/old bytes 0.821045; geometric-mean native/old point time 50.218204; equal-dataset mean compressed/raw 0.234261 -> 0.175314
+pcodec_i64: aggregate native/old bytes 0.873619; geometric-mean native/old point time 49.528692; equal-dataset mean compressed/raw 0.154239 -> 0.121982
