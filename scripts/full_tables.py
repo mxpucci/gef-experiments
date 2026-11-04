@@ -28,6 +28,9 @@ GEF_ORDER = [
 
 # 3. LaTeX Names (Full Notation for Ratio/Comp)
 NAME_MAPPING_FULL = {
+    "fauna": "Fauna", "macaque": "MacaqueV", "dexor": "DeXOR",
+    "pcodec": "Pcodec", "pcodec_i64": "Pcodec (int64)",
+    "elfstar": "Elf*", "selfstar": "SElf*", "flea": "FLEA",
     # GEF Variants
     "rle_gef": r"\RLEGEF",
     "u_gef_approximate": r"$\hat{\UGEF}$",

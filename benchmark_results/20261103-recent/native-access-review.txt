@@ -1,0 +1,73 @@
+Independent paper review: native access in the new competitors
+2026-11-03. Five separate reviewers: DeXOR, Elf*, SElf*, FLEA, Fauna/Macaque.
+
+Here native individual-value access means retrieving an arbitrary value without
+decoding the preceding values in its sequential coding unit. Independently
+decodable pages/segments are reported separately; they are useful native format
+features even when they do not provide direct individual-value lookup.
+
+DeXOR: no native individual-value access established.
+Paper https://www.vldb.org/pvldb/vol19/p849-li.pdf
+Sections 2.2 (p.851), 4.2.2 (p.854), 4.4 (p.855), 5.1-5.2 (pp.855-856)
+require preceding-value, prefix, coordinate, exponent and adaptive-width state.
+Section 6.7 (p.860) reports single-value queries through IoTDB/TsFile; these
+do not establish a native DeXOR point-lookup mechanism. Independent 1000-value
+blocks and prefix decoding are appropriate. 1000 is our experimental choice.
+
+Elf*: no native individual-value access established.
+Adaptive Encoding Strategies for Lossless Floating-Point Compression,
+DOI 10.1109/JIOT.2025.3554999.
+Definition 4 / equation 3 (PDF p.3, printed p.26073), Figure 3 (PDF p.4),
+and section VI (PDF p.8, p.26078) show preceding erased-value and shared
+leading/trailing-zero dependencies. Section VIII-A (PDF p.9, p.26079) uses
+1000-record experimental blocks. Independent blocks plus prefix decoding fit
+the paper. The separate original 2023 Elf paper was not independently reviewed;
+the reviewed paper describes original Elf as sequential as well.
+
+SElf*: no native individual-value access; native windows are not independent.
+Same adaptive-encoding paper, section VII (PDF pp.8-9, pp.26078-26079):
+Huffman state is derived from the preceding window and zero rules can persist.
+Section VIII-A uses 1000-value windows. Retain adaptation across windows and
+charge external decoder-state checkpoints and indexing for independent access.
+Resetting the compressor every window would discard the streaming algorithm.
+
+FLEA: native independent page/block encoding, without native point lookup.
+FLEA: Frequency-based Lossless Encoding Algorithm for Periodic Time Series,
+DOI 10.1145/3802063.
+Sections 4.1.2 (p.186:7), 5.2.3 (p.186:19) reconstruct through an inverse DFT
+and residual decoding. Section 6.1 (p.186:23) describes page-oriented TsFile
+integration. Section 4.3.1 (p.186:12) gives addressable residual low bits, but
+that component alone does not retrieve a complete value. Original decoder
+reconstructs the full block. 1000-value blocks bound our access work; that
+size is not prescribed by FLEA. A new single-position Fourier evaluator would
+be a decoder optimization, not a capability demonstrated by this artifact.
+
+MacaqueV: sequential XOR; external blocking is appropriate.
+Compressing High-Frequency Time Series Through Multiple Models and Stealing
+From Residuals, DOI 10.1109/ICDE65706.2026.00025.
+Sections VI-A (PDF p.5, p.242) and VII (PDF p.7, p.244) use preceding-value
+XOR and preceding meaningful-bit-window state.
+
+Full Fauna: QUALIFIED classification, not an undifferentiated sequential stream.
+Same ICDE paper, sections III-IV (PDF p.3, p.240) give independently decodable
+model/residual segments. PMC and Swing models (section II-B, PDF p.2, p.239)
+can be evaluated directly once the segment and timestamp are known. Residuals
+or Gorilla-only fallback segments still require sequential decoding. Section IV
+(PDF p.4, p.241) uses default 65536-value batches and may represent an entire
+fallback batch as one Gorilla segment. Irregular timestamps add sequential
+delta-of-delta decoding (section VII-C, PDF pp.8-9). No general indexed point
+lookup is established by the paper or the imported compression API.
+
+The current Fauna wrapper decodes an entire external 1000-value block. This
+overlooks opportunities to select a native segment and directly evaluate a
+model or decode only a residual prefix. A better adapter would add and charge
+a segment directory. A 1000-value fitting cap is a chosen worst-case bound,
+not an inherent requirement of Fauna, and limits its larger native batches.
+Do not describe current Fauna access measurements as exploiting its best native
+segment/model behavior. The current datasets attempted so far were rejected by
+the exact-float32 input check, so no successful Fauna metrics have been emitted.
+
+These conclusions are based on algorithm/state dependencies, corroborated by
+the official sources. Absence of a point API alone is not treated as proof.
+Pcodec's separate native-page/shared-chunk distinction remains documented in
+README.txt and repository docs/pcodec.md; it was outside these five reviews.

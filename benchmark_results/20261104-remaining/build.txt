@@ -1,0 +1,37 @@
+[  0%] Generating leco_benchmark_clang.o
+[  0%] Built target gef_pcodec_build
+[  0%] Built target gef_fauna_build
+[  0%] Built target neats_alp
+[  0%] Built target buff_ffi_build
+[  5%] Built target tlx
+[ 98%] Built target fftw3
+[ 98%] Built target gef_flea
+[100%] Built target gef_recent_compressors
+In file included from /dev/shm/testPF-gef-extra-20261104/leco-headers/lr.h:8,
+                 from /dev/shm/testPF-gef-extra-20261104/leco-headers/piecewise_fix_integer_template.h:8,
+                 from /home/testPF/gef-experiments/benchmark/leco_benchmark.cpp:5:
+/dev/shm/testPF-gef-extra-20261104/leco-headers/string/leco_uint256.h: In function 'uint32_t bits(__int128 unsigned)':
+/dev/shm/testPF-gef-extra-20261104/leco-headers/string/leco_uint256.h:35:7: warning: right shift count >= width of type [-Wshift-count-overflow]
+   35 |     v >>= 128;
+      |     ~~^~~~~~~
+[100%] Built target neats_leco_bench_obj
+[100%] Building CXX object CMakeFiles/LosslessBenchmarkFull.dir/benchmark/lossless_benchmark.cpp.o
+[100%] Building CXX object CMakeFiles/LosslessBenchmarkFull.dir/benchmark/alp_benchmark.cpp.o
+In file included from /home/testPF/gef-experiments/build/alp-compat/alp.hpp:6,
+                 from /home/testPF/gef-experiments/benchmark/alp_benchmark.cpp:4:
+/home/testPF/gef-experiments/build/alp-compat/alp/decoder.hpp:10:32: warning: unknown option after '#pragma GCC diagnostic' kind [-Wpragmas]
+   10 | #pragma GCC diagnostic ignored "-Wimplicit-int-float-conversion"
+      |                                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/testPF/gef-experiments/build/alp-compat/alp/decoder.hpp:10:32: note: did you mean '-Wdeprecated-enum-float-conversion'?
+In file included from /home/testPF/gef-experiments/build/alp-compat/alp.hpp:7:
+/home/testPF/gef-experiments/build/alp-compat/alp/encoder.hpp:28:32: warning: unknown option after '#pragma GCC diagnostic' kind [-Wpragmas]
+   28 | #pragma GCC diagnostic ignored "-Wimplicit-int-conversion"
+      |                                ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/testPF/gef-experiments/build/alp-compat/alp/encoder.hpp:28:32: note: did you mean '-Wno-int-conversion'?
+In file included from /home/testPF/gef-experiments/build/alp-compat/alp.hpp:9:
+/home/testPF/gef-experiments/build/alp-compat/alp/rd.hpp:13:32: warning: unknown option after '#pragma GCC diagnostic' kind [-Wpragmas]
+   13 | #pragma GCC diagnostic ignored "-Wimplicit-int-conversion"
+      |                                ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/testPF/gef-experiments/build/alp-compat/alp/rd.hpp:13:32: note: did you mean '-Wno-int-conversion'?
+[100%] Linking CXX executable LosslessBenchmarkFull
+[100%] Built target LosslessBenchmarkFull

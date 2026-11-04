@@ -1,0 +1,16 @@
+AP n=10000 bytes=25020 point_mismatches=9324 lengths=10000/10000
+BM n=10000 bytes=30020 point_mismatches=0 lengths=10000/10000
+BP n=6782 bytes=23757 point_mismatches=6369 lengths=6782/6782
+BT n=10000 bytes=46270 point_mismatches=9843 lengths=10000/10000
+BW n=10000 bytes=50020 point_mismatches=0 lengths=10000/10000
+CT n=10000 bytes=13770 point_mismatches=8029 lengths=10000/10000
+DP n=10000 bytes=18770 point_mismatches=9910 lengths=10000/10000
+DU n=10000 bytes=13770 point_mismatches=7437 lengths=10000/10000
+ECG n=10000 bytes=15020 point_mismatches=9825 lengths=10000/10000
+GE n=10000 bytes=17520 point_mismatches=7977 lengths=10000/10000
+IT n=10000 bytes=15020 point_mismatches=9576 lengths=10000/10000
+LAT n=10000 bytes=36270 point_mismatches=9636 lengths=10000/10000
+LON n=10000 bytes=30020 point_mismatches=0 lengths=10000/10000
+UK n=10000 bytes=13770 point_mismatches=8060 lengths=10000/10000
+US n=10000 bytes=11270 point_mismatches=5150 lengths=10000/10000
+WD n=10000 bytes=21270 point_mismatches=4777 lengths=10000/10000

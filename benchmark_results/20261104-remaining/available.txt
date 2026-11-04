@@ -1,0 +1,16 @@
+Usage: ./build/LosslessBenchmarkFull [options] <input_file_or_directory>
+
+Options:
+  -o <file>      Output CSV file (default: stdout)
+  -c <list>      Comma-separated list of compressors (default: all)
+                 Available: neats,dac,rle_gef,u_gef_approximate,u_gef_optimal,b_gef_approximate,b_gef_optimal,b_star_gef_approximate,b_star_gef_optimal,gorilla,chimp,chimp128,tsxor,elf,camel,falcon,alp,leco,buff,lz4,zstd,brotli,xz,snappy
+                 Additional: selfstar fauna macaque elfstar dexor pcodec flea pcodec_i64 
+  -r <list>      Comma-separated list of range sizes (default: 10,100,1000,10000,100000)
+  -b <size>      Block size for block-based compressors (default: 1000)
+                 Does not control Fauna or Pcodec native layouts.
+  --fauna-batch-size <N>   Native fitting batch (default: 65536)
+  --pcodec-chunk-size <N>  Native compression chunk maximum (default: 262144)
+  --pcodec-page-size <N>   Native page maximum (default: 262144)
+                 (Note: *_gef compressors use fixed UniformedPartitioner block size = 32000)
+  -m <bpc>       Max bits per correction for NeaTS (default: 32)
+  -h             Show this help

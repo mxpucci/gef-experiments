@@ -1,0 +1,4 @@
+LC_ALL=C
+LD_LIBRARY_PATH=/dev/shm/testPF-gef-extra-20261104/deps/lib:/home/testPF/.local/share/gef-toolchain/envs/build/lib
+SQUASH_PLUGINS=/dev/shm/testPF-gef-extra-20261104/squash-install/lib64/squash/0.7/plugins:/dev/shm/testPF-gef-extra-20261104/squash-install/lib/squash/0.7/plugins
+PATH=/home/testPF/.local/share/gef-toolchain/envs/build/bin:/dev/shm/testPF-gef-extra-20261104/deps/bin:/usr/local/go/bin:/opt/anaconda3/condabin:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/root/bin:/usr/local/go/bin

@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.22)
+project(GefSElfStarTest LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+enable_testing()
+add_executable(selfstar_roundtrip ../selfstar_roundtrip.cpp)
+target_compile_options(selfstar_roundtrip PRIVATE -fno-fast-math -ffp-contract=off)
+add_test(NAME selfstar_roundtrip COMMAND selfstar_roundtrip)

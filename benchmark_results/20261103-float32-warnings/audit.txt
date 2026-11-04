@@ -1,0 +1,8 @@
+Audit passed: 32 affected cases rerun on all 16 complete datasets.
+32 metric rows emitted with float32 conversion warnings; no hard failures.
+0 cases have codec reconstruction mismatches (see validation_status).
+All input hashes, executable hash, source patch, case logs and CSV metadata verified.
+All nine tests passed, including warning continuation and malformed-length rejection.
+results-all.txt contains 144 rows: 112 original valid rows plus 32 rerun rows.
+Original rows retain their measured values; diagnostic fields are populated from their completed audit.
+Float32 rows measure converted input and do not claim preservation of original float64 values.

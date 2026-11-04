@@ -1,0 +1,145 @@
+dataset,compressor,status,exit_code,elapsed_seconds,reason
+BP,b_star_gef_approximate,OK,0,5.01,
+BP,dexor,OK,0,5.01,
+BP,elfstar,OK,0,5.01,
+BP,selfstar,OK,0,5.01,
+BP,pcodec,OK,0,5.01,
+BP,pcodec_i64,OK,0,5.01,
+BP,flea,OK,0,5.01,
+BP,fauna,UNSUPPORTED,1,5.01,Exact float32 representation required
+BP,macaque,UNSUPPORTED,1,5.01,Exact float32 representation required
+BM,b_star_gef_approximate,OK,0,5.01,
+BM,dexor,OK,0,5.01,
+BM,elfstar,OK,0,5.01,
+BM,selfstar,OK,0,5.01,
+BM,pcodec,OK,0,5.01,
+BM,pcodec_i64,OK,0,5.01,
+BM,flea,OK,0,5.01,
+BM,fauna,UNSUPPORTED,1,5.01,Exact float32 representation required
+BM,macaque,UNSUPPORTED,1,5.01,Exact float32 representation required
+BT,b_star_gef_approximate,OK,0,10.02,
+BT,dexor,OK,0,10.01,
+BT,elfstar,OK,0,10.01,
+BT,selfstar,OK,0,10.02,
+BT,pcodec,OK,0,5.01,
+BT,pcodec_i64,OK,0,5.01,
+BT,flea,OK,0,10.01,
+BT,fauna,UNSUPPORTED,1,5.01,Exact float32 representation required
+BT,macaque,UNSUPPORTED,1,5.01,Exact float32 representation required
+BW,b_star_gef_approximate,OK,0,10.01,
+BW,dexor,OK,0,10.02,
+BW,elfstar,OK,0,10.02,
+BW,selfstar,OK,0,10.01,
+BW,pcodec,OK,0,5.01,
+BW,pcodec_i64,OK,0,5.01,
+BW,flea,OK,0,10.01,
+BW,fauna,UNSUPPORTED,1,5.01,Exact float32 representation required
+BW,macaque,UNSUPPORTED,1,5.01,Exact float32 representation required
+DU,b_star_gef_approximate,OK,0,10.01,
+DU,dexor,OK,0,5.01,
+DU,elfstar,OK,0,10.01,
+DU,selfstar,OK,0,10.01,
+DU,pcodec,OK,0,5.01,
+DU,pcodec_i64,OK,0,5.01,
+DU,flea,OK,0,5.01,
+DU,fauna,UNSUPPORTED,1,5.01,Exact float32 representation required
+DU,macaque,UNSUPPORTED,1,5.01,Exact float32 representation required
+CT,b_star_gef_approximate,OK,0,10.02,
+CT,dexor,OK,0,10.02,
+CT,elfstar,OK,0,10.02,
+CT,selfstar,OK,0,10.02,
+CT,pcodec,OK,0,5.01,
+CT,pcodec_i64,OK,0,5.01,
+CT,flea,OK,0,5.01,
+CT,fauna,UNSUPPORTED,1,5.01,Exact float32 representation required
+CT,macaque,UNSUPPORTED,1,5.01,Exact float32 representation required
+DP,b_star_gef_approximate,OK,0,10.02,
+DP,dexor,OK,0,10.02,
+DP,elfstar,OK,0,10.02,
+DP,selfstar,OK,0,10.02,
+DP,pcodec,OK,0,5.01,
+DP,pcodec_i64,OK,0,5.01,
+DP,flea,OK,0,5.01,
+DP,fauna,UNSUPPORTED,1,5.01,Exact float32 representation required
+DP,macaque,UNSUPPORTED,1,5.01,Exact float32 representation required
+LAT,b_star_gef_approximate,OK,0,10.02,
+LAT,dexor,OK,0,15.03,
+LAT,elfstar,OK,0,15.02,
+LAT,selfstar,OK,0,15.02,
+LAT,pcodec,OK,0,10.01,
+LAT,pcodec_i64,OK,0,10.01,
+LAT,flea,OK,0,10.01,
+LAT,fauna,UNSUPPORTED,1,5.01,Exact float32 representation required
+LAT,macaque,UNSUPPORTED,1,5.01,Exact float32 representation required
+LON,b_star_gef_approximate,OK,0,10.01,
+LON,dexor,OK,0,15.02,
+LON,elfstar,OK,0,15.02,
+LON,selfstar,OK,0,15.02,
+LON,pcodec,OK,0,10.01,
+LON,pcodec_i64,OK,0,10.01,
+LON,flea,OK,0,10.01,
+LON,fauna,UNSUPPORTED,1,5.01,Exact float32 representation required
+LON,macaque,UNSUPPORTED,1,5.01,Exact float32 representation required
+GE,b_star_gef_approximate,OK,0,15.02,
+GE,dexor,OK,0,15.02,
+GE,elfstar,OK,0,15.02,
+GE,selfstar,OK,0,20.03,
+GE,pcodec,OK,0,10.01,
+GE,pcodec_i64,OK,0,10.01,
+GE,flea,OK,0,10.01,
+GE,fauna,UNSUPPORTED,1,5.01,Exact float32 representation required
+GE,macaque,UNSUPPORTED,1,5.01,Exact float32 representation required
+UK,b_star_gef_approximate,OK,0,15.02,
+UK,dexor,OK,0,15.02,
+UK,elfstar,OK,0,20.02,
+UK,selfstar,OK,0,20.03,
+UK,pcodec,OK,0,15.02,
+UK,pcodec_i64,OK,0,10.02,
+UK,flea,OK,0,10.01,
+UK,fauna,UNSUPPORTED,1,5.01,Exact float32 representation required
+UK,macaque,UNSUPPORTED,1,5.01,Exact float32 representation required
+AP,b_star_gef_approximate,OK,0,20.02,
+AP,dexor,OK,0,30.04,
+AP,elfstar,OK,0,35.05,
+AP,selfstar,OK,0,35.05,
+AP,pcodec,OK,0,30.04,
+AP,pcodec_i64,OK,0,25.04,
+AP,flea,OK,0,20.03,
+AP,fauna,UNSUPPORTED,1,5.01,Exact float32 representation required
+AP,macaque,UNSUPPORTED,1,5.01,Exact float32 representation required
+WD,b_star_gef_approximate,OK,0,25.03,
+WD,dexor,OK,0,60.09,
+WD,elfstar,OK,0,55.09,
+WD,selfstar,OK,0,55.09,
+WD,pcodec,OK,0,55.09,
+WD,pcodec_i64,OK,0,45.06,
+WD,flea,OK,0,25.03,
+WD,fauna,UNSUPPORTED,1,10.02,Exact float32 representation required
+WD,macaque,UNSUPPORTED,1,10.02,Exact float32 representation required
+ECG,b_star_gef_approximate,OK,0,25.03,
+ECG,dexor,OK,0,50.06,
+ECG,elfstar,OK,0,65.07,
+ECG,selfstar,OK,0,65.11,
+ECG,pcodec,OK,0,50.06,
+ECG,pcodec_i64,OK,0,40.05,
+ECG,flea,OK,0,30.04,
+ECG,fauna,UNSUPPORTED,1,10.02,Exact float32 representation required
+ECG,macaque,UNSUPPORTED,1,10.02,Exact float32 representation required
+US,b_star_gef_approximate,OK,0,50.06,
+US,dexor,OK,0,55.07,
+US,elfstar,OK,0,60.1,
+US,selfstar,OK,0,60.11,
+US,pcodec,OK,0,50.09,
+US,pcodec_i64,OK,0,40.06,
+US,flea,OK,0,30.04,
+US,fauna,UNSUPPORTED,1,10.02,Exact float32 representation required
+US,macaque,UNSUPPORTED,1,10.02,Exact float32 representation required
+IT,b_star_gef_approximate,OK,0,45.06,
+IT,dexor,OK,0,105.12,
+IT,elfstar,OK,0,110.12,
+IT,selfstar,OK,0,110.13,
+IT,pcodec,OK,0,105.12,
+IT,pcodec_i64,OK,0,85.1,
+IT,flea,OK,0,55.07,
+IT,fauna,UNSUPPORTED,1,20.03,Exact float32 representation required
+IT,macaque,UNSUPPORTED,1,20.03,Exact float32 representation required

@@ -1,0 +1,39 @@
+Source review and native-access implementation (2026-11-03)
+
+Pcodec: original pco 1.0.2, upstream commit 2d8555888b21bbaa19326580b740fa24b7da6bd3.
+Inspected pco_cli/src/bench/codecs/pcopage.rs at that commit: level uses
+DEFAULT_COMPRESSION_LEVEL (8); chunk_n/page_n DEFAULT_MAX_PAGE_N (262144).
+EqualPagesUpTo balances both chunk and page lengths; implemented identically.
+FileCompressor/chunk_compressor/write_meta/write_page encode untouched native data.
+FileDecompressor/chunk_decompressor/page_decompressor/read decode it.
+PageDecompressor permits stopping on 256-value boundaries; prior pages are
+independent with chunk metadata, prior values within selected page are not.
+The integration adds a serialized byte-offset/position directory and FFI only.
+Per-query native decoder setup is timed. Chunk metadata is reused across pages
+of one query; no persistent expanded tables or original-value cache is kept.
+Bulk full-page/range spans go straight to the original output API.
+
+Fauna: original PlatypusMacaque commit 26ea89142f0395927d0922a9b29b2524c08849e0,
+ModelarDB-versions/ModelarDB-Macaque. Default uncompressed buffer in
+crates/modelardb_server/src/storage/mod.rs:60-61 is 64*1024. Compression uses
+crates/modelardb_compression/src/compression.rs original zero-error fitting.
+models/mod.rs:grid splits model timestamps from residual timestamps, evaluates
+PMC/Swing or Gorilla, then seeds residual decoding with the model's last value.
+The indexed integration uses original PMC/Swing grid on selected regular index
+timestamps; Gorilla grid decodes the needed prefix of the selected segment or
+residual tail. Swing's end timestamp excludes the residual tail. A fallback
+Gorilla segment can cover an entire native fitting batch. Residual tails are
+bounded by the upstream u8 count; this does not bound Gorilla fallback segments.
+Native model/residual payloads are unchanged. Stored original timestamp data
+and the added segment directory count toward size. Inputs have no timestamp
+column, so the existing synthetic regular index timestamps remain explicit.
+No complete ModelarDB storage/query server or Parquet/Arrow disk container is
+benchmarked; this is codec access through the original model/bitstream functions.
+Float32 narrowing warnings and converted-input validation remain unchanged.
+
+External -b 1000 no longer determines either native layout. Standalone Macaque
+and the other sequential adapters keep their existing external block wrappers.
+Tests: source-grid agreement including hand-constructed native PMC/Swing residual
+tails, cross-unit queries, wrong type/bounds, f64 bit patterns/i64 extremes,
+serialized reopening, and a Pco later-page query after earlier-page corruption.
+CLI tests verify -b changes cannot change Fauna/Pco compressed size.

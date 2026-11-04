@@ -1,0 +1,26 @@
+Internal ctest changing into directory: /home/testPF/gef-experiments/build
+Test project /home/testPF/gef-experiments/build
+      Start  1: recent_harness
+ 1/10 Test  #1: recent_harness ...................   Passed    0.01 sec
+      Start  2: recent_warning_policy
+ 2/10 Test  #2: recent_warning_policy ............   Passed    0.00 sec
+      Start  3: dexor_roundtrip
+ 3/10 Test  #3: dexor_roundtrip ..................   Passed    0.05 sec
+      Start  4: fauna_roundtrip
+ 4/10 Test  #4: fauna_roundtrip ..................   Passed    0.01 sec
+      Start  5: elfstar_roundtrip
+ 5/10 Test  #5: elfstar_roundtrip ................   Passed    0.05 sec
+      Start  6: selfstar_roundtrip
+ 6/10 Test  #6: selfstar_roundtrip ...............   Passed    0.02 sec
+      Start  7: pcodec_roundtrip
+ 7/10 Test  #7: pcodec_roundtrip .................   Passed    0.04 sec
+      Start  8: flea_roundtrip
+ 8/10 Test  #8: flea_roundtrip ...................   Passed    0.02 sec
+      Start  9: recent_cli_smoke
+ 9/10 Test  #9: recent_cli_smoke .................   Passed    4.12 sec
+      Start 10: native_access
+10/10 Test #10: native_access ....................   Passed    0.55 sec
+
+100% tests passed, 0 tests failed out of 10
+
+Total Test time (real) =   4.88 sec

@@ -6,6 +6,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Push and PR events for the same branch share one expensive native build.
+concurrency:
+  group: build-linux-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   build-centos7-skylake:
     runs-on: ubuntu-latest
@@ -120,6 +125,21 @@ jobs:
           # Patch 2: Remove deprecated 'register' keyword
           sed -i 's/register uint64_t/uint64_t/g' lib/Learn-to-Compress/headers/popcount.h
 
+          # Execute tests for this runner's CPU. GEF's existing rank/select
+          # code requires SSE4.1, while runners need not support the server's
+          # Skylake AVX-512 instructions. Native flags satisfy both constraints.
+          echo "Building and testing GCC binaries for the CI runner..."
+          cmake -S . -B build-test-runner -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DARCH_FLAGS="-march=native -mtune=native" \
+            -DCMAKE_C_COMPILER="$ENV_PATH/bin/x86_64-conda-linux-gnu-gcc" \
+            -DCMAKE_CXX_COMPILER="$ENV_PATH/bin/x86_64-conda-linux-gnu-g++" \
+            -DNEATS_WITH_SQUASH=OFF -DNEATS_WITH_LECO=OFF \
+            -DNEATS_ALP_HYBRID_CLANG=OFF -DNEATS_WITH_BUFF=ON \
+            -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE -DBUILD_TESTING=ON
+          cmake --build build-test-runner -j2
+          ctest --test-dir build-test-runner --output-on-failure
+
           # --- BUILD PROJECT (GCC) ---
           echo "Building with GCC..."
           cmake -S . -B build-gcc -G Ninja \
@@ -133,7 +153,7 @@ jobs:
             -DNEATS_ALP_HYBRID_CLANG=ON \
             -DNEATS_ALP_CLANGXX="$ENV_PATH/bin/clang++" \
             -DNEATS_WITH_BUFF=ON \
-            -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE
+            -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE -DBUILD_TESTING=OFF
           cmake --build build-gcc -j
 
           # --- BUILD PROJECT (Clang) ---
@@ -149,7 +169,7 @@ jobs:
             -DNEATS_LECO_EXTRA_INCLUDES="$ENV_PATH/include;$ENV_PATH/include/eigen3" \
             -DNEATS_ALP_HYBRID_CLANG=OFF \
             -DNEATS_WITH_BUFF=ON \
-            -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE
+            -DCMAKE_DISABLE_FIND_PACKAGE_OpenMP=TRUE -DBUILD_TESTING=OFF
           cmake --build build-clang -j
 
           # --- BUNDLE ---

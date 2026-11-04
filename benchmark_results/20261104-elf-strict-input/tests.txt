@@ -1,0 +1,14 @@
+Internal ctest changing into directory: /home/testPF/gef-experiments/build-elf-strict-tests
+Test project /home/testPF/gef-experiments/build-elf-strict-tests
+    Start 1: benchmark_input
+1/4 Test #1: benchmark_input ..................   Passed    0.00 sec
+    Start 2: recent_harness
+2/4 Test #2: recent_harness ...................   Passed    0.00 sec
+    Start 5: elfstar_roundtrip
+3/4 Test #5: elfstar_roundtrip ................   Passed    0.05 sec
+    Start 6: selfstar_roundtrip
+4/4 Test #6: selfstar_roundtrip ...............   Passed    0.02 sec
+
+100% tests passed, 0 tests failed out of 4
+
+Total Test time (real) =   0.08 sec

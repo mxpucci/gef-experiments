@@ -1,0 +1,51 @@
+Start testing: Nov 04 11:27 CET
+----------------------------------------------------------
+1/6 Testing: benchmark_input
+1/6 Test: benchmark_input
+Command: "/tmp/gef-strict-input-tests/benchmark_input_test"
+Directory: /tmp/gef-strict-input-tests
+"benchmark_input" start time: Nov 04 11:27 CET
+Output:
+----------------------------------------------------------
+Strict decimal input: 32992 bitwise checks passed
+<end of output>
+Test time =   0.42 sec
+----------------------------------------------------------
+Test Passed.
+"benchmark_input" end time: Nov 04 11:27 CET
+"benchmark_input" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/6 Testing: elfstar_roundtrip
+5/6 Test: elfstar_roundtrip
+Command: "/tmp/gef-strict-input-tests/elfstar_roundtrip"
+Directory: /tmp/gef-strict-input-tests
+"elfstar_roundtrip" start time: Nov 04 11:27 CET
+Output:
+----------------------------------------------------------
+ElfStar round trips and malformed inputs passed
+<end of output>
+Test time =   0.34 sec
+----------------------------------------------------------
+Test Passed.
+"elfstar_roundtrip" end time: Nov 04 11:27 CET
+"elfstar_roundtrip" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/6 Testing: selfstar_roundtrip
+6/6 Test: selfstar_roundtrip
+Command: "/tmp/gef-strict-input-tests/selfstar_roundtrip"
+Directory: /tmp/gef-strict-input-tests
+"selfstar_roundtrip" start time: Nov 04 11:27 CET
+Output:
+----------------------------------------------------------
+SElfStar stateful/checkpoint round trips passed
+<end of output>
+Test time =   0.31 sec
+----------------------------------------------------------
+Test Passed.
+"selfstar_roundtrip" end time: Nov 04 11:27 CET
+"selfstar_roundtrip" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Nov 04 11:27 CET

@@ -1,0 +1,264 @@
+CMake Deprecation Warning at CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.5 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value or use a ...<max> suffix to tell
+  CMake that the project does not need compatibility with older versions.
+
+
+-- The C compiler identification is GNU 13.4.0
+-- The CXX compiler identification is GNU 13.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /home/testPF/.local/share/gef-toolchain/envs/build/bin/x86_64-conda-linux-gnu-gcc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /home/testPF/.local/share/gef-toolchain/envs/build/bin/x86_64-conda-linux-gnu-g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Performing Test CFLAG__Wall
+-- Performing Test CFLAG__Wall - Success
+-- Performing Test CFLAG__Wstrict_prototypes
+-- Performing Test CFLAG__Wstrict_prototypes - Success
+-- Performing Test CFLAG__Wnested_externs
+-- Performing Test CFLAG__Wnested_externs - Success
+-- Performing Test CFLAG__Werror_missing_prototypes
+-- Performing Test CFLAG__Werror_missing_prototypes - Success
+-- Performing Test CFLAG__Werror_implicit_function_declaration
+-- Performing Test CFLAG__Werror_implicit_function_declaration - Success
+-- Performing Test CFLAG__Werror_pointer_arith
+-- Performing Test CFLAG__Werror_pointer_arith - Success
+-- Performing Test CFLAG__Werror_init_self
+-- Performing Test CFLAG__Werror_init_self - Success
+-- Performing Test CFLAG__Werror_format_security
+-- Performing Test CFLAG__Werror_format_security - Failed
+-- Performing Test CFLAG__Werror_format_2
+-- Performing Test CFLAG__Werror_format_2 - Success
+-- Performing Test CFLAG__Werror_missing_include_dirs
+-- Performing Test CFLAG__Werror_missing_include_dirs - Success
+-- Performing Test CFLAG__Wextra
+-- Performing Test CFLAG__Wextra - Success
+-- Performing Test CFLAG__Waggregate_return
+-- Performing Test CFLAG__Waggregate_return - Success
+-- Performing Test CFLAG__Wcast_align
+-- Performing Test CFLAG__Wcast_align - Success
+-- Performing Test CFLAG__Wno_uninitialized
+-- Performing Test CFLAG__Wno_uninitialized - Success
+-- Performing Test CFLAG__Wclobbered
+-- Performing Test CFLAG__Wclobbered - Success
+-- Performing Test CFLAG__Wempty_body
+-- Performing Test CFLAG__Wempty_body - Success
+-- Performing Test CFLAG__Wformat_nonliteral
+-- Performing Test CFLAG__Wformat_nonliteral - Success
+-- Performing Test CFLAG__Wformat_security
+-- Performing Test CFLAG__Wformat_security - Success
+-- Performing Test CFLAG__Wignored_qualifiers
+-- Performing Test CFLAG__Wignored_qualifiers - Success
+-- Performing Test CFLAG__Winit_self
+-- Performing Test CFLAG__Winit_self - Success
+-- Performing Test CFLAG__Winline
+-- Performing Test CFLAG__Winline - Success
+-- Performing Test CFLAG__Winvalid_pch
+-- Performing Test CFLAG__Winvalid_pch - Success
+-- Performing Test CFLAG__Wlogical_op
+-- Performing Test CFLAG__Wlogical_op - Success
+-- Performing Test CFLAG__Wmissing_declarations
+-- Performing Test CFLAG__Wmissing_declarations - Success
+-- Performing Test CFLAG__Wmissing_format_attribute
+-- Performing Test CFLAG__Wmissing_format_attribute - Success
+-- Performing Test CFLAG__Wmissing_include_dirs
+-- Performing Test CFLAG__Wmissing_include_dirs - Success
+-- Performing Test CFLAG__Wmissing_noreturn
+-- Performing Test CFLAG__Wmissing_noreturn - Success
+-- Performing Test CFLAG__Wmissing_parameter_type
+-- Performing Test CFLAG__Wmissing_parameter_type - Success
+-- Performing Test CFLAG__Wmissing_prototypes
+-- Performing Test CFLAG__Wmissing_prototypes - Success
+-- Performing Test CFLAG__Wno_missing_field_initializers
+-- Performing Test CFLAG__Wno_missing_field_initializers - Success
+-- Performing Test CFLAG__Wno_strict_aliasing
+-- Performing Test CFLAG__Wno_strict_aliasing - Success
+-- Performing Test CFLAG__Wno_unused_parameter
+-- Performing Test CFLAG__Wno_unused_parameter - Success
+-- Performing Test CFLAG__Wold_style_definition
+-- Performing Test CFLAG__Wold_style_definition - Success
+-- Performing Test CFLAG__Woverride_init
+-- Performing Test CFLAG__Woverride_init - Success
+-- Performing Test CFLAG__Wpacked
+-- Performing Test CFLAG__Wpacked - Success
+-- Performing Test CFLAG__Wpointer_arith
+-- Performing Test CFLAG__Wpointer_arith - Success
+-- Performing Test CFLAG__Wredundant_decls
+-- Performing Test CFLAG__Wredundant_decls - Success
+-- Performing Test CFLAG__Wreturn_type
+-- Performing Test CFLAG__Wreturn_type - Success
+-- Performing Test CFLAG__Wshadow
+-- Performing Test CFLAG__Wshadow - Success
+-- Performing Test CFLAG__Wsign_compare
+-- Performing Test CFLAG__Wsign_compare - Success
+-- Performing Test CFLAG__Wswitch_enum
+-- Performing Test CFLAG__Wswitch_enum - Success
+-- Performing Test CFLAG__Wsync_nand
+-- Performing Test CFLAG__Wsync_nand - Success
+-- Performing Test CFLAG__Wtype_limits
+-- Performing Test CFLAG__Wtype_limits - Success
+-- Performing Test CFLAG__Wundef
+-- Performing Test CFLAG__Wundef - Success
+-- Performing Test CFLAG__Wuninitialized
+-- Performing Test CFLAG__Wuninitialized - Success
+-- Performing Test CFLAG__WUnsafe_loop_optimizations
+-- Performing Test CFLAG__WUnsafe_loop_optimizations - Failed
+-- Performing Test CFLAG__Wwrite_strings
+-- Performing Test CFLAG__Wwrite_strings - Success
+-- Performing Test CXXFLAG__Wall
+-- Performing Test CXXFLAG__Wall - Success
+-- Performing Test CXXFLAG__Werror_missing_prototypes
+-- Performing Test CXXFLAG__Werror_missing_prototypes - Failed
+-- Performing Test CXXFLAG__Werror_implicit_function_declaration
+-- Performing Test CXXFLAG__Werror_implicit_function_declaration - Failed
+-- Performing Test CXXFLAG__Werror_pointer_arith
+-- Performing Test CXXFLAG__Werror_pointer_arith - Success
+-- Performing Test CXXFLAG__Werror_init_self
+-- Performing Test CXXFLAG__Werror_init_self - Success
+-- Performing Test CXXFLAG__Werror_format_2
+-- Performing Test CXXFLAG__Werror_format_2 - Success
+-- Performing Test CXXFLAG__Werror_missing_include_dirs
+-- Performing Test CXXFLAG__Werror_missing_include_dirs - Success
+-- Performing Test CXXFLAG__Wextra
+-- Performing Test CXXFLAG__Wextra - Success
+-- Performing Test CXXFLAG__Wcast_align
+-- Performing Test CXXFLAG__Wcast_align - Success
+-- Performing Test CXXFLAG__Wno_uninitialized
+-- Performing Test CXXFLAG__Wno_uninitialized - Success
+-- Performing Test CXXFLAG__Wclobbered
+-- Performing Test CXXFLAG__Wclobbered - Success
+-- Performing Test CXXFLAG__Wempty_body
+-- Performing Test CXXFLAG__Wempty_body - Success
+-- Performing Test CXXFLAG__Wformat_nonliteral
+-- Performing Test CXXFLAG__Wformat_nonliteral - Success
+-- Performing Test CXXFLAG__Wformat_security
+-- Performing Test CXXFLAG__Wformat_security - Success
+-- Performing Test CXXFLAG__Wignored_qualifiers
+-- Performing Test CXXFLAG__Wignored_qualifiers - Success
+-- Performing Test CXXFLAG__Winit_self
+-- Performing Test CXXFLAG__Winit_self - Success
+-- Performing Test CXXFLAG__Winline
+-- Performing Test CXXFLAG__Winline - Success
+-- Performing Test CXXFLAG__Winvalid_pch
+-- Performing Test CXXFLAG__Winvalid_pch - Success
+-- Performing Test CXXFLAG__Wlogical_op
+-- Performing Test CXXFLAG__Wlogical_op - Success
+-- Performing Test CXXFLAG__Wmissing_declarations
+-- Performing Test CXXFLAG__Wmissing_declarations - Success
+-- Performing Test CXXFLAG__Wmissing_format_attribute
+-- Performing Test CXXFLAG__Wmissing_format_attribute - Success
+-- Performing Test CXXFLAG__Wmissing_include_dirs
+-- Performing Test CXXFLAG__Wmissing_include_dirs - Success
+-- Performing Test CXXFLAG__Wmissing_noreturn
+-- Performing Test CXXFLAG__Wmissing_noreturn - Success
+-- Performing Test CXXFLAG__Wmissing_parameter_type
+-- Performing Test CXXFLAG__Wmissing_parameter_type - Failed
+-- Performing Test CXXFLAG__Wno_missing_field_initializers
+-- Performing Test CXXFLAG__Wno_missing_field_initializers - Success
+-- Performing Test CXXFLAG__Wno_strict_aliasing
+-- Performing Test CXXFLAG__Wno_strict_aliasing - Success
+-- Performing Test CXXFLAG__Wno_unused_parameter
+-- Performing Test CXXFLAG__Wno_unused_parameter - Success
+-- Performing Test CXXFLAG__Wpacked
+-- Performing Test CXXFLAG__Wpacked - Success
+-- Performing Test CXXFLAG__Wpointer_arith
+-- Performing Test CXXFLAG__Wpointer_arith - Success
+-- Performing Test CXXFLAG__Wredundant_decls
+-- Performing Test CXXFLAG__Wredundant_decls - Success
+-- Performing Test CXXFLAG__Wreturn_type
+-- Performing Test CXXFLAG__Wreturn_type - Success
+-- Performing Test CXXFLAG__Wshadow
+-- Performing Test CXXFLAG__Wshadow - Success
+-- Performing Test CXXFLAG__Wsign_compare
+-- Performing Test CXXFLAG__Wsign_compare - Success
+-- Performing Test CXXFLAG__Wswitch_enum
+-- Performing Test CXXFLAG__Wswitch_enum - Success
+-- Performing Test CXXFLAG__Wsync_nand
+-- Performing Test CXXFLAG__Wsync_nand - Success
+-- Performing Test CXXFLAG__Wtype_limits
+-- Performing Test CXXFLAG__Wtype_limits - Success
+-- Performing Test CXXFLAG__Wundef
+-- Performing Test CXXFLAG__Wundef - Success
+-- Performing Test CXXFLAG__Wuninitialized
+-- Performing Test CXXFLAG__Wuninitialized - Success
+-- Performing Test CXXFLAG__Wwrite_strings
+-- Performing Test CXXFLAG__Wwrite_strings - Success
+-- Looking for fdopen
+-- Looking for fdopen - found
+-- Looking for mmap
+-- Looking for mmap - found
+-- Looking for mremap
+-- Looking for mremap - found
+-- Performing Test CFLAG__fvisibility_hidden
+-- Performing Test CFLAG__fvisibility_hidden - Success
+-- Performing Test CXXFLAG__fvisibility_hidden
+-- Performing Test CXXFLAG__fvisibility_hidden - Success
+-- Performing Test CFLAG__fvisibility_inlines_hidden
+-- Performing Test CFLAG__fvisibility_inlines_hidden - Failed
+-- Performing Test CXXFLAG__fvisibility_inlines_hidden
+-- Performing Test CXXFLAG__fvisibility_inlines_hidden - Success
+-- Performing Test CFLAG__O3
+-- Performing Test CFLAG__O3 - Success
+-- Performing Test CFLAG__flto
+-- Performing Test CFLAG__flto - Success
+-- Performing Test CFLAG__DNDEBUG
+-- Performing Test CFLAG__DNDEBUG - Success
+CMake Deprecation Warning at cmake/FindRAGEL.cmake:45 (cmake_minimum_required):
+  Compatibility with CMake < 3.5 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value or use a ...<max> suffix to tell
+  CMake that the project does not need compatibility with older versions.
+Call Stack (most recent call first):
+  squash/CMakeLists.txt:5 (find_package)
+
+
+-- Found RAGEL: /dev/shm/testPF-gef-extra-20261104/deps/bin/ragel (found suitable version "6.10", minimum required is "6.6") 
+-- Performing Test CFLAG__std_c99
+-- Performing Test CFLAG__std_c99 - Success
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Failed
+-- Looking for pthread_create in pthreads
+-- Looking for pthread_create in pthreads - not found
+-- Looking for pthread_create in pthread
+-- Looking for pthread_create in pthread - found
+-- Found Threads: TRUE  
+-- Looking for clock_gettime
+-- Looking for clock_gettime - found
+-- Performing Test CXXFLAG__Wno_shadow
+-- Performing Test CXXFLAG__Wno_shadow - Success
+-- Performing Test CXXFLAG__Wno_sign_compare
+-- Performing Test CXXFLAG__Wno_sign_compare - Success
+-- Performing Test CXXFLAG__Wno_cast_align
+-- Performing Test CXXFLAG__Wno_cast_align - Success
+-- Performing Test CFLAG__Wno_shadow
+-- Performing Test CFLAG__Wno_shadow - Success
+-- Performing Test CFLAG__Wno_sign_compare
+-- Performing Test CFLAG__Wno_sign_compare - Success
+-- Performing Test CFLAG__Wno_cast_align
+-- Performing Test CFLAG__Wno_cast_align - Success
+-- Performing Test CFLAG__Wno_tautological_constant_out_of_range_compare
+-- Performing Test CFLAG__Wno_tautological_constant_out_of_range_compare - Success
+-- Found PkgConfig: /dev/shm/testPF-gef-extra-20261104/deps/bin/pkg-config (found version "0.29.2") 
+-- Checking for module 'liblzma'
+--   Found liblzma, version 5.8.3
+-- Found LZMA: /dev/shm/testPF-gef-extra-20261104/deps/lib/liblzma.so  
+-- Found Snappy: /dev/shm/testPF-gef-extra-20261104/deps/lib/libsnappy.so  
+-- Found Doxygen: /bin/doxygen (found version "1.8.5") found components: doxygen missing components: dot
+-- Could NOT find Vala (missing: VALA_EXECUTABLE) 
+-- Checking for modules 'glib-2.0;gobject-2.0'
+--   No package 'glib-2.0' found
+--   No package 'gobject-2.0' found
+-- Checking for modules 'glib-2.0;gobject-2.0'
+--   No package 'glib-2.0' found
+--   No package 'gobject-2.0' found
+-- Configuring done (11.6s)
+-- Generating done (0.0s)
+-- Build files have been written to: /dev/shm/testPF-gef-extra-20261104/squash-build
