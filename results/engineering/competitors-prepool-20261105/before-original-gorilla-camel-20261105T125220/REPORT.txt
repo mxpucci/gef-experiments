@@ -1,0 +1,97 @@
+Updated competitor comparison against native GEF 942d3c4 (2026-11-05)
+
+ALP was rerun with the corrected adapter on ALL 16 full datasets. Every case
+passed bitwise full reconstruction and the adapter's point/range checks.
+The exact benchmark executable was built in gef-experiments, snapshotted, and
+run sequentially on CPU 8 with the original range/query configuration.
+All ALP metric fields were replaced, including timings, so the plot does not
+combine corrected sizes with stale ALP speeds.
+
+The plot retains the original 14 common datasets (AP, BM, BP, BT, BW, CT, DP,
+DU, ECG, GE, LAT, LON, UK, WD), with equal-dataset arithmetic means. ALP's full
+16-case results, including US/IT, are in alp-corrected-full16.csv. Coverage of
+other codecs and GEF was not expanded. GEF remains revision 942d3c4, K=32000,
+no pooling/GCD, median-of-three. Other competitors retain their captured run.
+
+ALP compressed/original ratio across the 14 plotted datasets changed from
+32.344541% to 26.979270% (16.59% less compressed storage in this averaging).
+The input converter was already strict. An additional compiler issue was
+inside ALP itself: -ffast-math changed encoding choices and increased payload
+size in 12/16 identical-input sample comparisons. The corrected build uses
+strict FP arithmetic and -fwrapv for overflowing upstream candidate products.
+The adapter also now uses original ALP-RD, preserves the tail, counts actual
+metadata, and validates binary64 bits. These changes have opposing size effects;
+old aggregate ratios cannot be corrected by one universal factor.
+
+Additional audit, 32 head/tail samples from 16 datasets (5,507,968 values,
+including complete BP/BM/BT/BW twice):
+- DAC: identical size under strict/fast builds; exact full decoding and reopen
+  checks pass. Reported size matches actual serialized bytes. Its larger size
+  reflects directly addressed shifted integers, not temporal prediction.
+- BUFF: identical encoded bytes under strict/fast C++ builds (Rust encoder).
+  The current variant is authors' plain scalar 'buff', not 'buff-major'.
+  Original majority/outlier encoding reduces size on 7/32 samples, up to 44.96%,
+  while reconstructing the same bounded-precision values. BW is a full-data
+  example with 19.38% reduction. The existing point is explicitly labeled plain;
+  majority timings/access have NOT been substituted without a benchmark.
+- Gorilla: 280,216 bitwise mismatches on 11/32 samples. Its encoder changes XOR
+  bits when leading/trailing zero counts are equal. An isolated diagnostic
+  correction removes the mutation and encodes 64-bit widths as six-bit zero;
+  all sample mismatches disappear. Production Gorilla is not changed here.
+- Camel: 39,275 bitwise mismatches on 19/32 samples. Decimal reconstruction
+  changes binary64 bits. Observed max absolute error was 1.42109e-14.
+- Falcon: strict reconstruction passes, but the original fast-math build has
+  5,498,049 bitwise mismatches across the 5,507,968 sampled values. Compressed
+  sizes are unchanged, so this failure would be missed by a size-only audit.
+  Its current measurements are also marked as failing bitwise validation.
+- Chimp, Chimp128, TSXor, Elf: unchanged sample sizes under strict/fast
+  builds and successful strict sample bitwise reconstruction. This is evidence
+  about these samples, not a claim of universal correctness.
+
+All observed Gorilla/Camel differences were below the existing 1e-9 tolerance,
+which explains why legacy validation did not reject them. Gorilla, Camel and Falcon now have
+hollow markers (double dagger), and are excluded from the lossless frontier.
+Their old measurements remain visible for diagnosis. BUFF (bounded precision)
+and Fauna/MacaqueV (float32) retain their separate qualifications.
+
+Fairness limits remain: different GEF/competitor timing harnesses, allocation
+scopes and query counts; competitor timings are single-run measurements without
+confidence intervals. Stored compressed size is not resident memory. FLEA's
+integer route, float32 conversions and Pcodec/Fauna native layouts are unchanged.
+Recent C++ codecs already compile in strict FP units; Rust codec internals do
+not inherit the legacy main translation unit's fast-math flags.
+
+Reproduce plots/tables with compare.py; manifest.json hashes its inputs.
+The prior PDF, CSVs, report and script are preserved in the backup directory
+named by alp-update-provenance.json. See COMPETITOR_AUDIT.txt for details and
+paths to the primary evidence in canonical gef-experiments.
+
+Arithmetic means on the same 14 datasets:
+Codec | compressed % | compression MiB/s | decompression MiB/s | access Mvalues/s
+ALP | 26.98 | 1159.65 | 5105.47 | 1.6465
+B*-GEF (Approximate) | 21.62 | 526.26 | 1915.26 | 11.1960
+BUFF | 38.29 | 259.19 | 438.53 | 2.1194
+Brotli | 21.64 | 0.48 | 281.56 | 0.0422
+Camel | 34.55 | 124.77 | 193.92 | 0.0490
+Chimp | 66.38 | 344.96 | 536.23 | 0.1290
+Chimp128 | 41.53 | 78.55 | 491.15 | 0.1334
+DAC | 34.68 | 187.65 | 946.07 | 37.7929
+DeXOR | 37.57 | 68.50 | 245.76 | 0.0629
+Elf | 28.46 | 207.79 | 286.15 | 0.0780
+Elf* | 24.25 | 88.12 | 230.96 | 0.0532
+FLEA | 23.60 | 101.43 | 442.37 | 0.0577
+Falcon | 21.10 | 109.73 | 352.12 | 0.0513
+Fauna | 37.80 | 79.81 | 194.95 | 0.0124
+Gorilla | 72.73 | 627.90 | 569.28 | 0.1473
+LeCo | 25.09 | 411.20 | 1965.79 | 46.8656
+Lz4 | 44.60 | 351.85 | 873.55 | 0.1576
+MacaqueV | 32.30 | 379.70 | 263.42 | 0.0344
+NeaTS | 23.84 | 0.89 | 3511.51 | 11.2304
+Pcodec | 18.59 | 95.21 | 651.68 | 0.0050
+Pcodec (int64) | 12.99 | 145.65 | 788.32 | 0.0057
+RLE-GEF | 22.25 | 811.11 | 1790.22 | 26.5184
+SElf* | 25.12 | 92.72 | 206.65 | 0.0506
+Snappy | 42.30 | 369.84 | 551.56 | 0.0873
+TSXor | 45.78 | 33.97 | 595.65 | 0.1633
+Xz | 20.37 | 2.57 | 120.59 | 0.0165
+Zstd | 31.40 | 170.16 | 412.61 | 0.0628

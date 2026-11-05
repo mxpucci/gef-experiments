@@ -1,0 +1,99 @@
+{
+  "datasets": [
+    "AP",
+    "BM",
+    "BP",
+    "BT",
+    "BW",
+    "CT",
+    "DP",
+    "DU",
+    "ECG",
+    "GE",
+    "LAT",
+    "LON",
+    "UK",
+    "WD"
+  ],
+  "n_datasets": 14,
+  "competitor_rows": 336,
+  "gef_rows": 28,
+  "gef_revision": "07d4e4aec2d6dc12aea27d2b753b5785b10a92f1",
+  "gef_source_fingerprint": "8e4d13390d90db7186dbf5b8104a160699aa92ddf94fefbcdb05af0eb204db2a",
+  "gef_runs": [
+    "gef-07d4e4a-r9.csv",
+    "gef-07d4e4a-r10.csv"
+  ],
+  "gef_available_datasets": [
+    "AP",
+    "BM",
+    "BP",
+    "BT",
+    "BW",
+    "CT",
+    "DP",
+    "DU",
+    "ECG",
+    "GE",
+    "IT",
+    "LAT",
+    "LON",
+    "UK",
+    "US",
+    "WD"
+  ],
+  "gef_excluded_datasets": [
+    "IT",
+    "US"
+  ],
+  "gef_aggregation": "Arithmetic mean of the two per-run median metrics for each dataset; access rates averaged independently of latency.",
+  "frontier": {
+    "arithmetic_compression_mib_s": [
+      "ALP",
+      "B*-GEF (Approximate)",
+      "Pcodec (int64)",
+      "RLE-GEF"
+    ],
+    "arithmetic_decompression_mib_s": [
+      "ALP",
+      "B*-GEF (Approximate)",
+      "NeaTS",
+      "Pcodec (int64)"
+    ],
+    "arithmetic_random_access_mvalues_s": [
+      "B*-GEF (Approximate)",
+      "LeCo",
+      "Pcodec (int64)",
+      "RLE-GEF",
+      "Xz"
+    ],
+    "geometric_compression_mib_s": [
+      "ALP",
+      "B*-GEF (Approximate)",
+      "Pcodec (int64)",
+      "RLE-GEF"
+    ],
+    "geometric_decompression_mib_s": [
+      "ALP",
+      "B*-GEF (Approximate)",
+      "NeaTS",
+      "Pcodec (int64)"
+    ],
+    "geometric_random_access_mvalues_s": [
+      "B*-GEF (Approximate)",
+      "LeCo",
+      "Pcodec (int64)",
+      "RLE-GEF",
+      "Xz"
+    ]
+  },
+  "sha256": {
+    "competitors-snapshot.csv": "a8526e6998997bd46f7e5155dc416dd1c99b7110111ad34a96367415dc52d878",
+    "gef-942.csv": "ef263074e3a7873f69e9dd65ddc4dd59286e5a3fd7b94bfee9055dec4b9a0caf",
+    "alp-corrected-full16.csv": "db145bd65b096efd4dbd407e3e5bebdcde6bd8f7314cb90e3baf6150cdc3b918",
+    "gorilla-camel-original-full16.csv": "4930c3fd7ecb965f4bc7ee4e0abcbcb45500401fe98100979b1f3928608bfdd4",
+    "gef-07d4e4a-r9.csv": "114a19c19bd20a55065ee28b057d891218c32f7373a7d18fcc8e2c2c31b5a287",
+    "gef-07d4e4a-r10.csv": "f767925d0b0c3dbfbb0e17b714c719fed46f1faeb0c49236d885e2acc69967fb",
+    "compare.py": "b6dfeada8f6f78db9bfc1d755de850606a281e0362235e3a40b98a855ccef429"
+  }
+}

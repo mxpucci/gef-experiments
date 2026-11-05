@@ -1,0 +1,91 @@
+Preliminary competitor comparison against native GEF 942d3c4
+
+Scope: all 25 non-GEF codecs on the same 14 full datasets: AP, BM, BP, BT,
+BW, CT, DP, DU, ECG, GE, LAT, LON, UK, WD. US and IT are excluded from ALL
+aggregates because they were not complete in the captured results snapshot.
+350 competitor rows + 28 GEF rows. No partial-input measurements.
+
+GEF source: 942d3c4e063380425a290cb5dcc89466d95a3a78, uniform K=32000,
+RLE_GEF and B_STAR_GEF_APPROXIMATE only. No pooling or GCD normalization.
+GEF medians are the saved median-of-three rows from full16-final-r1.
+Competitors: non-gef-20261105T021920Z, one standard suite measurement per case,
+CPU 8 on the same host. Competitor block size 1000 where applicable; native
+Fauna/Pcodec layouts retained. These are different layouts, not a matched-K
+ablation. Input value counts are checked against GEF for each dataset.
+
+pareto-arithmetic.pdf/png/svg follows the repository's equal-dataset arithmetic
+averaging convention. pareto-geometric uses equal-dataset geometric means.
+All 27 points use identical dataset coverage. The size axis is compressed /
+original bytes, so lower is better; throughput axes are higher-is-better.
+MiB/s is the actual 2^20 denominator used by the suite's fields named mbs.
+Point-access speed is 1000 / ns per query in million values/s, computed BEFORE
+averaging. Therefore the arithmetic average speed is not the inverse of the
+arithmetic average latency. Both columns are preserved in the summary tables.
+The corpus_ratio_pct column separately reports input-size-weighted storage.
+Per-dataset plots are in the 14-page pareto-per-dataset.pdf.
+
+Fairness limits:
+* Timing harnesses differ. GefTuning uses an untimed whole-code warmup, a
+  dedicated access warmup, three timed repeats and an ordinary checksum
+  accumulator. LosslessBenchmarkFull uses each codec's existing timing and
+  query-count policies; many legacy access loops use volatile accumulators.
+  RNG implementations also differ (mt19937_64 vs mt19937). These differences
+  can affect access rankings, especially the fastest implementations. These
+  are preliminary comparisons, not controlled cross-codec speedup claims.
+* GEF decodes into a preallocated buffer; competitor timing/allocation scopes
+  are their existing suite implementations. Input conversion is outside the
+  GEF integer representation comparison; floating codecs use suite conversion
+  policies. No throughput is adjusted to compensate for these differences.
+* Compression uses reported compressed bits/bytes, matching the repo plots.
+  Total owned memory is unavailable for many competitors, so this is not a
+  resident-memory comparison. Available owned_bytes are retained in the data.
+* BUFF is precision_bounded. Fauna and MacaqueV use float32 conversion.
+  These are hollow markers and excluded from the dashed frontier. Original
+  validation_status/input_conversion fields are preserved. 'not_checked'
+  on legacy rows is not promoted to a roundtrip validation guarantee.
+* No uncertainty intervals are available for single-run competitors. Small
+  gaps should not be interpreted as significant. Arithmetic and geometric
+  averages can reverse close rankings; inspect per-dataset pages.
+
+Observed aggregate trade-offs (both averaging conventions):
+Both GEF variants lie on the compression/access Pareto frontiers. B*-GEF is
+also on the decompression frontier; RLE-GEF is dominated there by B*-GEF.
+LeCo/DAC have faster access than GEF but larger reported sizes. ALP leads
+compression/decompression throughput at larger sizes. Pcodec int64 has the
+smallest aggregate reported size and much slower point access. B*-GEF versus
+NeaTS access is close and changes ordering with the averaging convention;
+there is no defensible decisive winner from these harnesses.
+
+Reproduction: run compare.py using Python with pandas/numpy/matplotlib.
+The script imports only style definitions from ../../../scripts/pareto_plots.py.
+Frozen source CSV hashes and exact frontier memberships are in manifest.json.
+
+Arithmetic means across 14 datasets:
+Codec | compressed % | compression MiB/s | decompression MiB/s | access Mvalues/s
+ALP | 32.34 | 1301.09 | 4833.19 | 1.5572
+B*-GEF (Approximate) | 21.62 | 526.26 | 1915.26 | 11.1960
+BUFF | 38.29 | 259.19 | 438.53 | 2.1194
+Brotli | 21.64 | 0.48 | 281.56 | 0.0422
+Camel | 34.55 | 124.77 | 193.92 | 0.0490
+Chimp | 66.38 | 344.96 | 536.23 | 0.1290
+Chimp128 | 41.53 | 78.55 | 491.15 | 0.1334
+DAC | 34.68 | 187.65 | 946.07 | 37.7929
+DeXOR | 37.57 | 68.50 | 245.76 | 0.0629
+Elf | 28.46 | 207.79 | 286.15 | 0.0780
+Elf* | 24.25 | 88.12 | 230.96 | 0.0532
+FLEA | 23.60 | 101.43 | 442.37 | 0.0577
+Falcon | 21.10 | 109.73 | 352.12 | 0.0513
+Fauna | 37.80 | 79.81 | 194.95 | 0.0124
+Gorilla | 72.73 | 627.90 | 569.28 | 0.1473
+LeCo | 25.09 | 411.20 | 1965.79 | 46.8656
+Lz4 | 44.60 | 351.85 | 873.55 | 0.1576
+MacaqueV | 32.30 | 379.70 | 263.42 | 0.0344
+NeaTS | 23.84 | 0.89 | 3511.51 | 11.2304
+Pcodec | 18.59 | 95.21 | 651.68 | 0.0050
+Pcodec (int64) | 12.99 | 145.65 | 788.32 | 0.0057
+RLE-GEF | 22.25 | 811.11 | 1790.22 | 26.5184
+SElf* | 25.12 | 92.72 | 206.65 | 0.0506
+Snappy | 42.30 | 369.84 | 551.56 | 0.0873
+TSXor | 45.78 | 33.97 | 595.65 | 0.1633
+Xz | 20.37 | 2.57 | 120.59 | 0.0165
+Zstd | 31.40 | 170.16 | 412.61 | 0.0628

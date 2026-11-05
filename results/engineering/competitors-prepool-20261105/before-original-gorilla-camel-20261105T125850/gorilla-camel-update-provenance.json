@@ -1,0 +1,207 @@
+{
+  "backup": "/Users/michelangelopucci/gef-performance/experiments/results/engineering/competitors-prepool-20261105/before-original-gorilla-camel-20261105T125220",
+  "source": "/Users/michelangelopucci/Downloads/gef-experiments/benchmark_results/20261105-gorilla-camel-original",
+  "source_sha256": "f1f4e12f5a04e33cfab3c643e488a1b5ea17a44c663a1d30a5898486a11aa5f2",
+  "changes": [
+    {
+      "dataset": "BP",
+      "compressor": "Gorilla",
+      "old_bits": 358832,
+      "new_bits": 343576,
+      "validation": "bitwise_passed"
+    },
+    {
+      "dataset": "BP",
+      "compressor": "Camel",
+      "old_bits": 275225,
+      "new_bits": 244408,
+      "validation": "passed"
+    },
+    {
+      "dataset": "BM",
+      "compressor": "Gorilla",
+      "old_bits": 850029,
+      "new_bits": 770736,
+      "validation": "bitwise_passed"
+    },
+    {
+      "dataset": "BM",
+      "compressor": "Camel",
+      "old_bits": 470978,
+      "new_bits": 360872,
+      "validation": "bitwise_failed"
+    },
+    {
+      "dataset": "BT",
+      "compressor": "Gorilla",
+      "old_bits": 7702390,
+      "new_bits": 7251688,
+      "validation": "bitwise_passed"
+    },
+    {
+      "dataset": "BT",
+      "compressor": "Camel",
+      "old_bits": 4359731,
+      "new_bits": 2756448,
+      "validation": "bitwise_failed"
+    },
+    {
+      "dataset": "BW",
+      "compressor": "Camel",
+      "old_bits": 4454002,
+      "new_bits": 2948120,
+      "validation": "bitwise_failed"
+    },
+    {
+      "dataset": "BW",
+      "compressor": "Gorilla",
+      "old_bits": 8271492,
+      "new_bits": 7421560,
+      "validation": "bitwise_passed"
+    },
+    {
+      "dataset": "DU",
+      "compressor": "Camel",
+      "old_bits": 3888586,
+      "new_bits": 3886984,
+      "validation": "passed"
+    },
+    {
+      "dataset": "DU",
+      "compressor": "Gorilla",
+      "old_bits": 9524896,
+      "new_bits": 8402976,
+      "validation": "bitwise_passed"
+    },
+    {
+      "dataset": "CT",
+      "compressor": "Camel",
+      "old_bits": 42164937,
+      "new_bits": 40358232,
+      "validation": "passed"
+    },
+    {
+      "dataset": "CT",
+      "compressor": "Gorilla",
+      "old_bits": 157486138,
+      "new_bits": 137811952,
+      "validation": "bitwise_passed"
+    },
+    {
+      "dataset": "DP",
+      "compressor": "Camel",
+      "old_bits": 88552432,
+      "new_bits": 88575872,
+      "validation": "passed"
+    },
+    {
+      "dataset": "DP",
+      "compressor": "Gorilla",
+      "old_bits": 289251599,
+      "new_bits": 275990320,
+      "validation": "bitwise_passed"
+    },
+    {
+      "dataset": "LAT",
+      "compressor": "Camel",
+      "old_bits": 411450225,
+      "new_bits": 411336472,
+      "validation": "bitwise_failed"
+    },
+    {
+      "dataset": "LAT",
+      "compressor": "Gorilla",
+      "old_bits": 1021149809,
+      "new_bits": 950885184,
+      "validation": "bitwise_passed"
+    },
+    {
+      "dataset": "LON",
+      "compressor": "Gorilla",
+      "old_bits": 998895889,
+      "new_bits": 934659688,
+      "validation": "bitwise_passed"
+    },
+    {
+      "dataset": "LON",
+      "compressor": "Camel",
+      "old_bits": 589701901,
+      "new_bits": 502917712,
+      "validation": "passed"
+    },
+    {
+      "dataset": "GE",
+      "compressor": "Gorilla",
+      "old_bits": 1991982318,
+      "new_bits": 1945962160,
+      "validation": "bitwise_passed"
+    },
+    {
+      "dataset": "GE",
+      "compressor": "Camel",
+      "old_bits": 635915659,
+      "new_bits": 636111416,
+      "validation": "passed"
+    },
+    {
+      "dataset": "UK",
+      "compressor": "Gorilla",
+      "old_bits": 2044654791,
+      "new_bits": 1781285600,
+      "validation": "bitwise_passed"
+    },
+    {
+      "dataset": "UK",
+      "compressor": "Camel",
+      "old_bits": 584866959,
+      "new_bits": 582263616,
+      "validation": "passed"
+    },
+    {
+      "dataset": "AP",
+      "compressor": "Gorilla",
+      "old_bits": 3316208066,
+      "new_bits": 3175221128,
+      "validation": "bitwise_passed"
+    },
+    {
+      "dataset": "AP",
+      "compressor": "Camel",
+      "old_bits": 3843653301,
+      "new_bits": 2837189392,
+      "validation": "bitwise_failed"
+    },
+    {
+      "dataset": "WD",
+      "compressor": "Gorilla",
+      "old_bits": 11579745252,
+      "new_bits": 10885952984,
+      "validation": "bitwise_passed"
+    },
+    {
+      "dataset": "WD",
+      "compressor": "Camel",
+      "old_bits": 5048579370,
+      "new_bits": 4874019928,
+      "validation": "passed"
+    },
+    {
+      "dataset": "ECG",
+      "compressor": "Gorilla",
+      "old_bits": 10610435370,
+      "new_bits": 10161680576,
+      "validation": "bitwise_passed"
+    },
+    {
+      "dataset": "ECG",
+      "compressor": "Camel",
+      "old_bits": 3131918786,
+      "new_bits": 3132918064,
+      "validation": "passed"
+    }
+  ],
+  "excluded": [
+    "Falcon"
+  ],
+  "note": "Camel remains outside aggregate lossless frontiers if any dataset fails; no imputation or averaging over a smaller subset."
+}

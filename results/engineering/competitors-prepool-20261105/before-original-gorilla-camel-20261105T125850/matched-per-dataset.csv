@@ -1,0 +1,365 @@
+dataset,label,num_values,ratio_pct,compression_mib_s,decompression_mib_s,random_access_ns,qualification,validation_status,input_conversion,input_changed_values,owned_bytes,harness,random_access_mvalues_s
+BP,NeaTS,6782,40.28125921557063,1.0833,3342.7582,51.9097,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,19.264222293713892
+BP,DAC,6782,45.82718961958124,145.7635,1179.0756,11.2013,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,89.27535196807514
+BP,Gorilla,6782,79.15622235328811,267.268,170.611,44480.1558,none,bitwise_passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.02248193564106176
+BP,Chimp,6782,76.65465570628133,321.2925,460.343,7420.2597,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.1347661726718271
+BP,Chimp128,6782,72.02936080802124,63.0153,364.2816,7523.1166,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.13292363433527005
+BP,TSXor,6782,87.79489826010027,13.7805,419.5898,6669.094,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.1499454048780839
+BP,Elf,6782,48.61996829843704,177.8681,247.2113,12977.7519,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.07705494816864238
+BP,Camel,6782,56.30897965202005,29.9499,1.811,62959.4182,none,passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.015883247154910973
+BP,ALP,6782,47.04917428487172,477.625,3895.6899,275.6562,none,passed,none,0,,LosslessBenchmark family; single measurement; 20261105-alp-corrected,3.62770726724086
+BP,LeCo,6782,38.919197876732525,278.5152,1513.3827,10.5397,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,94.87936089262503
+BP,BUFF,6782,43.81635210852256,226.6537,691.1355,269.4147,bounded precision,precision_bounded,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,3.711749952767982
+BP,Lz4,6782,68.99513417870835,267.4338,928.0843,5015.036,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.19940036322770166
+BP,Zstd,6782,65.94662341492186,76.497,294.3363,19415.5398,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05150513507741876
+BP,Brotli,6782,39.796520200530814,0.3982,164.7527,34560.3084,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.028934926981149276
+BP,Xz,6782,36.950751990563255,1.4902,62.0026,110200.9801,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.009074329457801256
+BP,Snappy,6782,71.16079327631967,273.6876,409.6344,14700.4264,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06802523768970402
+BP,SElf*,6782,43.56384547331171,62.589,190.7616,18904.2896,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.052898047012567985
+BP,Fauna,6782,37.74144795045709,60.2717,197.7526,99641.0853,float32 conversion,passed,float32,6771,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.010036020753780368
+BP,MacaqueV,6782,35.73061043939841,337.9392,249.9157,29641.5975,float32 conversion,passed,float32,6771,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.03373637335167243
+BP,Elf*,6782,42.389781775287524,55.5787,207.1293,17480.8555,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05720543825787015
+BP,DeXOR,6782,42.02668829253907,35.7285,240.3612,14061.6282,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.07111551989406177
+BP,Pcodec,6782,72.36803302860513,35.0007,1257.2299,21540.9504,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.046423207028042736
+BP,FLEA,6782,36.76828369212622,6.8709,271.8014,25434.4401,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0393167687618962
+BP,Pcodec (int64),6782,33.53546151577705,35.3042,1296.1237,20397.615,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.04902533948209141
+BM,DAC,17964,37.41928301046538,84.53,716.9132,16.4208,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,60.898372795478906
+BM,Gorilla,17964,67.03824315297261,291.3312,191.8098,39489.6597,none,bitwise_passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.02532308476692191
+BM,Chimp,17964,65.34301241371632,347.4192,509.6306,7625.9678,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.1311308972482155
+BM,Chimp128,17964,40.88367707637497,64.4449,468.1493,6818.9265,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.14665064948273018
+BM,TSXor,17964,48.09619238476954,27.5635,539.2108,6282.0807,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.15918292803847617
+BM,Elf,17964,30.26921899354264,155.4002,232.7928,14923.0521,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06701042074362254
+BM,Camel,17964,31.388471387218882,7.2347,44.4271,62712.9456,bitwise audit failed,bitwise_failed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.015945671032234213
+BM,ALP,17964,33.90252727677577,725.9932,3013.9078,316.1029,none,passed,none,0,,LosslessBenchmark family; single measurement; 20261105-alp-corrected,3.163526813578743
+BM,LeCo,17964,25.915720329547987,368.0697,1914.703,9.9801,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,100.19939679963126
+BM,BUFF,17964,37.5250501002004,304.5966,729.3039,292.8722,bounded precision,precision_bounded,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,3.414458593202086
+BM,Lz4,17964,43.51271988421287,292.4901,862.0752,6670.4271,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.14991543794849357
+BM,Zstd,17964,29.442217768871075,110.0073,409.7709,15520.0373,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06443283483603483
+BM,Brotli,17964,20.61623246492986,0.432,227.7889,28253.4366,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0353939244332493
+BM,Xz,17964,19.658761968381206,1.9437,103.674,68878.6383,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.014518289337319839
+BM,Snappy,17964,39.29386550879536,316.9028,524.5039,12137.6934,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.08238797661506263
+BM,SElf*,17964,29.09290803829882,65.7287,163.0248,23592.1695,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.04238694538033054
+BM,Fauna,17964,36.305945223780896,67.6404,235.8762,40623.7544,float32 conversion,passed,float32,17920,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.02461613936894026
+BM,MacaqueV,17964,32.15737029614785,371.6368,242.0464,30092.5996,float32 conversion,passed,float32,17920,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.033230761492602984
+BM,Elf*,17964,25.50169784012469,61.5249,186.9499,21726.4825,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.04602677860992915
+BM,DeXOR,17964,44.91691716766867,52.9391,212.0066,17607.8122,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.056792972837363634
+BM,Pcodec,17964,18.34502338009352,55.9798,778.1923,88668.7385,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.011277931962458222
+BM,FLEA,17964,28.26764640391895,16.363,354.5535,21168.6089,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.04723975981246458
+BM,Pcodec (int64),17964,12.784596971721221,66.591,965.1042,76059.4796,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.013147605075120708
+BM,NeaTS,17964,23.941633266533067,0.6054,2603.3706,56.7301,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,17.62732658676787
+BT,Gorilla,129669,87.38220006323793,246.1685,151.6814,24885.1448,none,bitwise_passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.04018461648653939
+BT,Chimp,129669,84.39741283575874,355.1343,497.3841,8393.0013,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.11914688968295525
+BT,Chimp128,129669,46.85121347430766,78.6921,470.1682,7967.0347,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.1255172140771522
+BT,TSXor,129669,53.83563149249242,14.8659,507.6707,7106.5716,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.14071482794882414
+BT,Elf,129669,51.293437521689846,169.4336,231.5199,15048.4864,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06645186588333561
+BT,Camel,129669,33.21495500080975,18.1776,28.6944,32678.3547,bitwise audit failed,bitwise_failed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.030601295847982213
+BT,ALP,129669,47.004295552522194,1107.8479,9569.7879,363.2773,none,passed,none,0,,LosslessBenchmark family; single measurement; 20261105-alp-corrected,2.752718102672531
+BT,LeCo,129669,54.95723727336526,415.9535,1497.5106,10.7853,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,92.71879317218807
+BT,BUFF,129669,57.816054723950984,244.8712,491.5659,315.2955,bounded precision,precision_bounded,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,3.1716278855866955
+BT,Lz4,129669,67.15116951622979,278.0924,823.3669,6895.6198,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.14501959635303557
+BT,Zstd,129669,58.06322251270542,129.8722,389.6919,17554.1364,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.056966630383480446
+BT,Brotli,129669,45.650945869868664,0.3997,165.0176,41919.1375,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.02385545265572318
+BT,Xz,129669,45.61383214183806,3.0681,57.8041,129682.1779,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.007711159823141743
+BT,Snappy,129669,68.54423570784073,303.8924,462.0318,14843.2298,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06737078206523489
+BT,SElf*,129669,46.18152758176588,83.2704,176.2173,23411.7794,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.04271354103054636
+BT,Fauna,129669,51.0916256005676,76.7544,162.7497,1442065.1932,float32 conversion,passed,float32,129669,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0006934499249517008
+BT,MacaqueV,129669,45.39770492561831,393.0814,196.1777,40414.1969,float32 conversion,passed,float32,129669,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.024743780074966675
+BT,Elf*,129669,45.32926142717226,76.8631,191.2939,22729.2848,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0439961049720315
+BT,DeXOR,129669,53.968084121879556,44.5705,194.7758,19775.1475,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0505685229402208
+BT,Pcodec,129669,23.335858994825287,52.1296,694.6357,691458.2308,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0014462189550379996
+BT,FLEA,129669,52.2120745899174,58.1446,257.9967,29883.453,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.033463335043644384
+BT,Pcodec (int64),129669,17.286803322305254,71.8791,731.868,663987.0654,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0015060534340342589
+BT,NeaTS,129669,65.09147810964842,1.4222,2179.5893,59.4718,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,16.81469200528654
+BT,DAC,129669,57.06915299724684,144.9462,954.8396,14.5133,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,68.90231718492693
+BW,Chimp,129669,87.56632271398715,352.808,493.2686,8431.6113,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.11860129273274254
+BW,Chimp128,129669,71.21660487471948,72.1372,403.7875,8675.6491,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.1152651505925937
+BW,TSXor,129669,82.27188071165814,16.6393,485.5986,7614.8245,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.13132279017067303
+BW,Elf,129669,54.59969229345487,157.0807,236.9765,16252.1591,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.061530286151333574
+BW,Camel,129669,35.52458567583617,23.7439,19.8643,32805.609,bitwise audit failed,bitwise_failed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.030482592168918434
+BW,ALP,129669,50.66129915399979,987.0268,8151.0077,407.7355,none,passed,none,0,,LosslessBenchmark family; single measurement; 20261105-alp-corrected,2.4525703550463476
+BW,LeCo,129669,50.05552599310552,430.6027,1485.6368,10.9113,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,91.64810792481188
+BW,BUFF,129669,64.06600652430419,226.0,483.438,323.0961,bounded precision,precision_bounded,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,3.095054381653013
+BW,Lz4,129669,58.693481094170544,277.8242,805.8722,7428.8824,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.13460974964417258
+BW,Zstd,129669,50.19270218787837,146.2201,355.7165,19779.8838,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.050556414289956546
+BW,Brotli,129669,41.43193438678481,0.425,152.1959,45279.249,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.02208517195150476
+BW,Xz,129669,36.12158650101412,2.9626,68.5965,108987.7369,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.009175344203334861
+BW,Snappy,129669,58.66995966653556,314.9138,462.635,14717.4147,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06794671621232498
+BW,SElf*,129669,48.414424419097855,70.4885,150.5591,26732.8447,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0374071675207839
+BW,Fauna,129669,49.31595061271391,77.6526,199.8874,1213739.8,float32 conversion,passed,float32,128924,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0008238998177368823
+BW,MacaqueV,129669,49.11418689123846,378.342,191.0213,38932.6453,float32 conversion,passed,float32,128924,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.025685385421267536
+BW,Elf*,129669,48.01880171822101,68.2021,163.17,25737.4199,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0388539334511926
+BW,DeXOR,129669,56.672759102021296,31.8652,178.5082,21411.9647,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.04670286048061718
+BW,Pcodec,129669,22.0076695277977,54.1129,698.6637,690990.908,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.001447197044740276
+BW,FLEA,129669,46.74141467891324,58.9888,267.3714,28372.5371,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.03524534998317087
+BW,Pcodec (int64),129669,22.822725555067134,41.8867,589.6767,823973.4652,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.001213631314883755
+BW,NeaTS,129669,45.23083774842098,1.0848,4772.5214,58.8544,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,16.991083079599825
+BW,DAC,129669,45.91382674347763,146.4852,1024.6685,12.4373,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,80.4033029676859
+BW,Gorilla,129669,89.42914266324257,242.6046,140.0211,25063.7839,none,bitwise_passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.03989820547407449
+DU,Chimp128,334880,21.6278032429527,88.2334,638.7414,5838.2051,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.17128552061317612
+DU,TSXor,334880,18.255755793119924,89.3602,942.7674,4202.0539,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.2379788607661601
+DU,Elf,334880,11.151489899366936,261.0676,340.1533,10687.1098,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.09357066772159485
+DU,Camel,334880,18.13608606067845,21.3429,34.5072,21990.1967,none,passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.0454748092362448
+DU,ALP,334880,13.614690336837077,1417.5054,8133.8496,318.267,none,passed,none,0,,LosslessBenchmark family; single measurement; 20261105-alp-corrected,3.1420159802932757
+DU,LeCo,334880,12.407018932154802,461.3756,2388.789,11.6201,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,86.05777919295014
+DU,BUFF,334880,29.688843764930724,322.5029,496.2244,273.4887,bounded precision,precision_bounded,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,3.656458201015252
+DU,Lz4,334880,22.947772336359293,514.7091,1130.6713,4979.8895,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.20080766852356863
+DU,Zstd,334880,11.321070234113712,267.2181,615.0417,10901.284,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.09173231336785649
+DU,Brotli,334880,7.729559842331582,0.4152,454.7029,14243.9555,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.07020521792559659
+DU,Xz,334880,8.161430960344005,2.2759,222.4744,32901.9604,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.030393325742377342
+DU,Snappy,334880,18.553698339703775,506.3157,916.0252,6797.8926,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.14710441291761508
+DU,SElf*,334880,11.190239787386526,90.236,215.3026,19299.7995,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05181400977766634
+DU,Fauna,334880,33.34657190635452,93.2859,201.7938,12427.7913,float32 conversion,passed,float32,330995,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0804648208085052
+DU,MacaqueV,334880,22.720489429049213,454.9654,299.6437,25695.5368,float32 conversion,passed,float32,330995,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.03891726441768673
+DU,Elf*,334880,10.052145544672719,88.7838,238.2785,17849.2921,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05602463080314541
+DU,DeXOR,334880,18.18528278786431,136.1343,360.0211,10981.8545,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0910593015050418
+DU,Pcodec,334880,5.909206282847587,114.4743,742.4427,744043.197,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.001344007987751281
+DU,FLEA,334880,9.837329789775442,104.068,672.9829,11331.5803,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.08824894441245763
+DU,Pcodec (int64),334880,5.310372372193024,234.589,1392.4813,426514.1567,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0023445880618292734
+DU,NeaTS,334880,9.494744386048733,0.558,3672.958,63.7861,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,15.677396799616218
+DU,DAC,334880,11.52621834687052,201.67,670.8361,21.9993,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,45.45599178155668
+DU,Gorilla,334880,39.20702938365982,372.7169,274.6538,13806.7952,none,bitwise_passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.0724281040976113
+DU,Chimp,334880,39.78468966495461,425.3388,645.7947,6268.5219,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.15952724038501007
+CT,TSXor,2826654,30.913657101293612,19.0177,573.1335,6338.2797,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.15777151645737564
+CT,Elf,2826654,22.708037157183018,237.2897,311.7648,11806.3611,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.084700102896226
+CT,Camel,2826654,22.308969368023114,39.4965,64.339,25933.6218,none,passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.03855998239320356
+CT,ALP,2826654,15.523636780447836,1443.6562,7553.0531,496.0782,none,passed,none,0,,LosslessBenchmark family; single measurement; 20261105-alp-corrected,2.0158112168605675
+CT,LeCo,2826654,15.695757245138598,536.1702,2376.335,16.2522,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,61.53013130530021
+CT,BUFF,2826654,20.312660304374006,303.1884,317.5591,379.2275,bounded precision,precision_bounded,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,2.6369395679374517
+CT,Lz4,2826654,42.86615464786281,336.3108,819.4992,7774.8823,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.12861931041708502
+CT,Zstd,2826654,25.28395764037622,173.5475,384.9626,17978.1967,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05562293130322687
+CT,Brotli,2826654,16.322713179610947,0.5576,306.5783,21958.4795,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.045540493821532586
+CT,Xz,2826654,15.670365032296136,2.3861,113.0596,65071.3334,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.015367750248068529
+CT,Snappy,2826654,37.59411746184711,385.113,524.7098,13280.7749,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.07529681118230533
+CT,SElf*,2826654,19.883504489760686,112.8399,222.3424,18508.4341,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.054029422186504694
+CT,Fauna,2826654,46.52739157321695,90.0178,169.8186,1261464.6243,float32 conversion,passed,float32,2252772,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0007927293248947908
+CT,MacaqueV,2826654,41.6064850880228,391.8762,217.6695,35195.9951,float32 conversion,passed,float32,2252772,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.028412323537344734
+CT,Elf*,2826654,19.687477667942378,107.399,253.2077,17540.7153,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05701021782161871
+CT,DeXOR,2826654,29.26579446936201,66.6472,231.3821,17050.9029,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05864792063298888
+CT,Pcodec,2826654,13.244882465275198,146.4252,564.4054,1157192.012,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.000864160821739236
+CT,FLEA,2826654,13.990375192719023,129.1736,504.8701,15251.3028,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06556816903536923
+CT,Pcodec (int64),2826654,11.771156816504602,251.507,752.5792,648714.9047,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0015415092096002525
+CT,NeaTS,2826654,14.206409105960615,0.7515,2110.9617,70.4465,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,14.195169383858673
+CT,DAC,2826654,19.140899452143774,265.1437,1088.819,18.4326,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,54.25170621616049
+CT,Gorilla,2826654,76.17882308906573,222.2799,149.004,24658.5903,none,bitwise_passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.04055381868281416
+CT,Chimp,2826654,73.21225853517976,336.7401,442.8063,9131.9872,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.1095051907212485
+CT,Chimp128,2826654,36.043627576102345,83.6773,526.9048,7219.6793,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.1385103075146288
+DP,Elf,5413914,23.79992725687922,225.3008,301.7725,12291.0778,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.08135982997357645
+DP,Camel,5413914,25.56372339863544,19.3096,57.7997,52676.7925,none,passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.01898369191708094
+DP,ALP,5413914,22.28518960589326,1310.7913,5048.8669,844.5323,none,passed,none,0,,LosslessBenchmark family; single measurement; 20261105-alp-corrected,1.1840873344927128
+DP,LeCo,5413914,18.424900173885288,396.5905,2111.991,27.7252,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,36.06827002149669
+DP,BUFF,5413914,28.125084273595775,259.137,334.1263,427.4625,bounded precision,precision_bounded,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,2.3393864958914525
+DP,Lz4,5413914,48.5599997524896,341.8205,900.6427,6801.0988,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.14703506439283018
+DP,Zstd,5413914,29.29704830922693,171.8747,360.9469,19515.4303,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0512415040113156
+DP,Brotli,5413914,16.971672435136576,0.5302,308.2802,21907.3315,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.04564681919383928
+DP,Xz,5413914,16.320863242378806,2.8485,109.2601,66863.6749,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.01495580375286851
+DP,Snappy,5413914,47.55130022383067,363.5851,456.8526,15080.458,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06631098339320994
+DP,SElf*,5413914,20.891064209738094,103.87,221.4486,18643.8244,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.053637063863356274
+DP,Fauna,5413914,42.85859546346691,79.9579,186.7119,1105808.8078,float32 conversion,passed,float32,5361330,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0009043154593690513
+DP,MacaqueV,5413914,37.24494423073585,365.9136,238.7221,32437.5787,float32 conversion,passed,float32,5361330,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.030828441581553682
+DP,Elf*,5413914,19.790067777212567,98.5415,253.0269,17564.6498,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.056932532751094195
+DP,DeXOR,5413914,36.28865826091807,65.4375,238.0876,16418.8313,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06090567481499124
+DP,Pcodec,5413914,13.262689894963236,101.5548,534.6679,1138044.7713,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0008787000522463541
+DP,FLEA,5413914,16.318134163195054,120.722,442.1385,17290.8895,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05783392462255918
+DP,Pcodec (int64),5413914,12.318647839622129,187.8357,699.7718,683067.8459,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0014639834183417242
+DP,NeaTS,5413914,16.125179664379598,0.7306,2401.6668,80.1643,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,12.474380740554087
+DP,DAC,5413914,26.953328035872016,248.241,1173.1455,23.4362,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,42.66903337571791
+DP,Gorilla,5413914,79.6530707728272,249.9217,172.2178,22387.8361,none,bitwise_passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.04466711278094447
+DP,Chimp,5413914,77.1364207923325,299.9757,495.6016,8447.6381,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.11837628318855184
+DP,Chimp128,5413914,49.483079328097936,73.5341,411.557,9087.7021,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.11003881828388719
+DP,TSXor,5413914,60.85854891673566,15.2888,433.4559,7819.0182,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.12789329483847472
+LAT,Camel,24876978,25.835663700791955,31.3364,66.6622,49683.6295,bitwise audit failed,bitwise_failed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.02012735402110669
+LAT,ALP,24876978,26.948740518241404,1282.6469,4166.184,1415.8209,none,passed,none,0,,LosslessBenchmark family; single measurement; 20261105-alp-corrected,0.7063040247534134
+LAT,LeCo,24876978,25.993806904520316,404.4462,1844.5963,65.1055,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,15.359685433642317
+LAT,BUFF,24876978,53.12501834025017,227.5751,335.0042,488.3123,bounded precision,precision_bounded,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,2.0478697751418506
+LAT,Lz4,24876978,52.07230054229256,323.667,970.4458,6426.6241,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.1556026903767407
+LAT,Zstd,24876978,40.72103331843602,152.2436,345.8081,19893.6754,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.050267232167666716
+LAT,Brotli,24876978,23.621497554887895,0.523,228.5463,31876.8836,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.031370695220658266
+LAT,Xz,24876978,21.456155164827496,3.2843,91.2626,79736.9972,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.01254122973168596
+LAT,Snappy,24876978,51.388041385091064,342.1225,472.0762,15304.4483,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06534048012694453
+LAT,SElf*,24876978,19.526286512774984,102.0539,226.3174,18047.8509,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05540825916286797
+LAT,Fauna,24876978,25.449204481348175,83.5849,233.404,101856.1794,float32 conversion,passed,float32,24621957,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.009817764674570153
+LAT,MacaqueV,24876978,20.17391089464323,391.2944,330.264,23617.2061,float32 conversion,passed,float32,24621957,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.04234201097986777
+LAT,Elf*,24876978,18.967565614279998,94.8678,249.6333,17758.8499,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05630995281963614
+LAT,DeXOR,24876978,34.85542586804555,65.0786,245.1166,16048.3611,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.062311658727569386
+LAT,Pcodec,24876978,15.989208978679,112.7255,567.3969,1033222.4322,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0009678458082551878
+LAT,FLEA,24876978,26.435331594536926,117.216,374.7367,20512.1549,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.04875158192179994
+LAT,Pcodec (int64),24876978,10.230380977142802,132.4,634.8498,800368.1348,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0012494250539470627
+LAT,NeaTS,24876978,22.25762208737733,0.8521,4047.3024,129.4418,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,7.7254797136628195
+LAT,DAC,24876978,47.27048840096253,195.8941,1101.0643,70.9496,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,14.094512160745092
+LAT,Gorilla,24876978,59.72421971832752,124.8128,99.1896,38465.032,none,bitwise_passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.025997638582492277
+LAT,Chimp,24876978,61.17040691950204,419.5944,781.0289,6227.736,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.16057199598698468
+LAT,Chimp128,24876978,44.13639867149459,76.3799,418.2648,8816.7931,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.11341992362279658
+LAT,TSXor,24876978,50.66459589665594,16.2181,473.8078,7694.903,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.1299561540931705
+LAT,Elf,24876978,25.476150014583766,270.558,332.6365,11199.5947,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.08928894542942702
+LON,ALP,24876978,27.117282895052607,1293.9979,4171.9638,1388.5049,none,passed,none,0,,LosslessBenchmark family; single measurement; 20261105-alp-corrected,0.7201991148896918
+LON,LeCo,24876978,21.302644256066795,421.1716,2112.7106,56.5424,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,17.685842836526216
+LON,BUFF,24876978,48.43751821463202,224.1456,331.7824,469.8629,bounded precision,precision_bounded,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,2.128280398388551
+LON,Lz4,24876978,49.664285489177985,319.4612,936.1873,6750.4733,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.14813776094781383
+LON,Zstd,24876978,32.67473394477416,155.4169,360.1448,19303.4146,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05180430616664059
+LON,Brotli,24876978,18.58354991912603,0.5458,298.5039,23053.6022,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.04337716905690339
+LON,Xz,24876978,16.97861171079542,3.3014,105.0376,69629.0905,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.014361813328582827
+LON,Snappy,24876978,49.2681079470344,346.0759,457.2065,15313.7766,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06530067834475266
+LON,SElf*,24876978,20.842897396942668,93.2736,226.3097,18124.1369,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05517504119051318
+LON,Fauna,24876978,21.937635471639684,82.0171,240.7272,30755.9314,float32 conversion,passed,float32,24825272,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.032514053533101585
+LON,MacaqueV,24876978,17.690861607064974,406.8795,353.6836,21566.5149,float32 conversion,passed,float32,24825272,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.04636817792011449
+LON,Elf*,24876978,20.338323951566785,87.7765,247.34,17906.1504,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05584673297505644
+LON,DeXOR,24876978,42.54715795865559,59.0318,234.9413,16957.7748,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.058970001181994705
+LON,Pcodec,24876978,25.042923220014906,144.225,655.0591,761425.3964,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.001313326301864864
+LON,FLEA,24876978,21.446232335776475,123.1496,394.3814,18940.9455,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05279567485160653
+LON,Pcodec (int64),24876978,10.54423541717969,172.0338,588.2265,721930.7266,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0013851744539390824
+LON,NeaTS,24876978,17.568793424185206,0.8008,4017.2697,121.7569,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,8.213086896923295
+LON,DAC,24876978,47.26565260458887,187.4094,944.9207,67.2864,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,14.861844295429686
+LON,Gorilla,24876978,58.70511130813397,133.7375,95.2827,38700.5082,none,bitwise_passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.025839453963552864
+LON,Chimp,24876978,61.58227743488377,423.3447,792.6101,6151.3987,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.16256465379166532
+LON,Chimp128,24876978,54.93222055297472,77.9975,468.3698,7722.904,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.12948497093839312
+LON,TSXor,24876978,66.0301017068874,16.3,479.0287,7440.9994,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.13439054974255207
+LON,Elf,24876978,28.303371620339096,227.0667,305.9521,11274.1235,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.08869869129959415
+LON,Camel,24876978,31.587796757307096,30.1274,65.3204,49390.2025,none,passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.020246930552673882
+GE,ALP,43565657,14.121128713839894,1339.8454,3963.4007,1478.3724,none,passed,none,0,,LosslessBenchmark family; single measurement; 20261105-alp-corrected,0.6764195543693863
+GE,LeCo,43565657,13.898796189392943,473.107,2308.7666,69.5492,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,14.378310606017036
+GE,BUFF,43565657,31.250010472698715,261.0482,386.6168,1909.2761,bounded precision,precision_bounded,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.5237587167199128
+GE,Lz4,43565657,30.197160231050802,430.5556,991.7956,6971.4203,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.14344279314216646
+GE,Zstd,43565657,15.218273593349,218.9892,452.7115,13696.5868,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.07301089056727622
+GE,Brotli,43565657,10.993043786760751,0.509,361.3311,18443.4392,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0542198225155317
+GE,Xz,43565657,11.02271337259989,2.0378,170.5135,42651.3123,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.023445937441882652
+GE,Snappy,43565657,23.8874048771949,444.5931,784.0761,8845.2107,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.11305553184843861
+GE,SElf*,43565657,14.809007700721693,107.8368,219.3992,19330.0016,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05173305314159933
+GE,Fauna,43565657,32.6154567116938,82.2668,182.2306,776394.9692,float32 conversion,passed,float32,41504664,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0012880042242293293
+GE,MacaqueV,43565657,28.229148478123488,397.5788,280.1942,27262.692,float32 conversion,passed,float32,41504664,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.036680163499627993
+GE,Elf*,43565657,14.275684801448078,105.6456,247.5149,18258.908,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05476778786551748
+GE,DeXOR,43565657,38.33815733571974,85.9629,240.5422,16881.4643,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05923656752927529
+GE,Pcodec,43565657,6.743550315332097,103.1205,522.5583,1180168.1164,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0008473369057371359
+GE,FLEA,43565657,11.91169112863373,142.9922,546.7711,14181.4549,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.07051462681730913
+GE,Pcodec (int64),43565657,5.684412724454035,147.8352,633.2436,809735.1924,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0012349716418228879
+GE,NeaTS,43565657,12.128770662175484,0.8015,4430.5179,123.7536,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,8.080573009593255
+GE,DAC,43565657,29.016328159586806,228.3389,926.4242,60.5121,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,16.525620495735563
+GE,Gorilla,43565657,69.79272400276209,135.6633,88.8331,40477.989,none,bitwise_passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.02470478461763503
+GE,Chimp,43565657,66.85448464314449,309.5493,469.5121,9514.4606,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.10510317316359478
+GE,Chimp128,43565657,21.030175392798505,86.9804,616.963,6141.0765,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.16283789983726793
+GE,TSXor,43565657,21.389107594544026,61.8109,779.6419,4879.7805,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.20492725031382047
+GE,Elf,43565657,18.592578158812113,203.0386,269.9895,14444.1159,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06923234394706013
+GE,Camel,43565657,22.81439454706261,35.2164,69.7326,44283.7648,none,passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.02258163921961757
+UK,LeCo,59305325,10.817838448739636,437.0178,2330.1816,72.0752,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,13.874397851133262
+UK,BUFF,59305325,29.687507614198218,258.5673,363.7575,2551.6681,bounded precision,precision_bounded,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.39190049834459273
+UK,Lz4,59305325,26.894875375862114,463.0268,886.6435,6107.314,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.16373810156150478
+UK,Zstd,59305325,12.93984667481377,237.2597,492.7856,12993.6411,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.07696072196422295
+UK,Brotli,59305325,9.007970194919258,0.4769,404.5313,16165.4798,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06186021153544728
+UK,Xz,59305325,9.370536288267537,2.0937,193.4228,38111.6923,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.02623866691954794
+UK,Snappy,59305325,21.358543688952043,463.731,741.6894,7689.2948,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.13005093783112595
+UK,SElf*,59305325,13.965158272043867,116.6259,259.962,16380.9475,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06104652981764333
+UK,Fauna,59305325,28.43361599485375,83.8165,229.1276,362913.9141,float32 conversion,passed,float32,35849231,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0027554744008091475
+UK,MacaqueV,59305325,22.664638462060534,377.5377,317.0634,24340.5226,float32 conversion,passed,float32,35849231,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.041083752244497826
+UK,Elf*,59305325,13.446630635613243,113.7682,287.9273,15740.8394,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06352901357979676
+UK,DeXOR,59305325,19.663377403293886,110.587,324.8686,13065.6018,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.07653684960764685
+UK,Pcodec,59305325,6.014505442808045,112.1419,535.3231,1155292.9248,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0008655813417823158
+UK,FLEA,59305325,9.625074139632487,159.8127,647.1796,12364.6465,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.08087574521439007
+UK,Pcodec (int64),59305325,4.894914579761598,162.5743,658.6467,733385.2026,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0013635399193422451
+UK,NeaTS,59305325,9.10853894654485,0.7671,4281.2852,125.3339,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,7.9786873304030275
+UK,DAC,59305325,25.78996236847197,206.2421,795.0992,91.0474,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,10.983290022559679
+UK,Gorilla,59305325,46.9310091463119,131.6495,117.4288,33222.2836,none,bitwise_passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.030100278838147053
+UK,Chimp,59305325,46.90064498845592,308.197,478.2713,8628.5767,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.11589396893232694
+UK,Chimp128,59305325,23.084734091120822,86.098,538.3535,7185.5972,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.13916727756462607
+UK,TSXor,59305325,15.800193743141952,75.2783,824.8098,4736.5324,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.21112491492721552
+UK,Elf,59305325,13.7457146818182,207.1462,341.3664,11479.9399,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.08710846996681577
+UK,Camel,59305325,15.340728678242638,49.5831,163.8554,19403.718,none,passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.051536514806079944
+UK,ALP,59305325,11.884240369646403,1431.158,3738.8126,1416.4773,none,passed,none,0,,LosslessBenchmark family; single measurement; 20261105-alp-corrected,0.7059767212647884
+AP,BUFF,137721453,39.0625033015009,242.4986,360.3481,3879.7226,bounded precision,precision_bounded,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.25775038658691735
+AP,Lz4,137721453,26.448675719388465,388.7231,682.2233,6321.6688,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.1581860789669968
+AP,Zstd,137721453,17.81979320607371,188.9213,490.8053,12841.7833,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.07787080475030286
+AP,Brotli,137721453,12.643348400484856,0.4529,328.2916,20178.4192,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.04955789599216969
+AP,Xz,137721453,12.298469215250002,3.2346,160.606,46277.1197,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.021608950740294234
+AP,Snappy,137721453,24.759536918333268,386.5535,537.4391,9685.8176,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.10324373649158951
+AP,SElf*,137721453,15.277952193838676,120.5943,253.3708,16618.7153,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06017312300909325
+AP,Fauna,137721453,31.999490123009377,86.6738,179.1155,147704.7812,float32 conversion,passed,float32,136694904,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.006770261543842293
+AP,MacaqueV,137721453,15.269333801611868,405.0859,380.4055,20341.2524,float32 conversion,passed,float32,136694904,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.049161181442298994
+AP,Elf*,137721453,14.955621692431606,114.733,300.2285,15583.8999,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06416878999588543
+AP,DeXOR,137721453,50.34610384919479,72.2792,288.6031,14044.7276,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.07120109613233082
+AP,Pcodec,137721453,7.600507507715591,112.4314,524.9925,1209558.485,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0008267479517536515
+AP,FLEA,137721453,20.16896815632638,118.0534,433.5689,17728.6279,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05640594442167744
+AP,Pcodec (int64),137721453,6.184028115793986,180.4697,677.5336,713712.3164,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0014011247627672297
+AP,NeaTS,137721453,19.862580069497234,0.8368,4223.8002,178.1043,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,5.614687573517315
+AP,DAC,137721453,41.131907750058375,146.6709,716.3141,139.3707,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,7.175109258976241
+AP,Gorilla,137721453,36.024039134266175,327.6189,298.9901,13580.0017,none,bitwise_passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.07363769328541395
+AP,Chimp,137721453,35.71286547083917,373.0229,583.7781,6140.9086,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.1628423520258875
+AP,Chimp128,137721453,29.945403367912476,83.8164,568.7796,6849.6071,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.1459937753217991
+AP,TSXor,137721453,34.72639925240986,42.5537,669.5429,5726.5616,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.17462485691239224
+AP,Elf,137721453,16.14422500320266,249.1921,355.4066,10685.5549,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.09358428358268976
+AP,Camel,137721453,32.188946082350725,66.1995,165.8139,20974.9438,bitwise audit failed,bitwise_failed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.047675932271151064
+AP,ALP,137721453,25.98728718030589,1219.89,3282.5377,1590.5292,none,passed,none,0,,LosslessBenchmark family; single measurement; 20261105-alp-corrected,0.6287215600945899
+AP,LeCo,137721453,21.788087637297874,360.8946,1858.5732,95.0958,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,10.51571152458889
+WD,Lz4,198898762,52.645434829302765,315.872,810.9595,5754.9428,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.1737636732027988
+WD,Zstd,198898762,33.72901932642497,159.3336,366.7791,17916.2907,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05581512472333349
+WD,Brotli,198898762,27.545853578515484,0.5045,219.6409,31717.8763,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.03152796204076248
+WD,Xz,198898762,23.554886932880958,3.0274,84.6902,88706.0586,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.011273187150713964
+WD,Snappy,198898762,54.12726374837868,345.1406,402.8604,15094.2225,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06625051406258256
+WD,SElf*,198898762,29.78111365771095,88.133,193.8847,21271.3211,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.04701165457936696
+WD,Fauna,198898762,49.378662359396685,76.8559,145.6518,1334531.9924,float32 conversion,passed,float32,190933188,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0007493263598736337
+WD,MacaqueV,198898762,43.22520783211311,337.3712,196.9328,38916.8356,float32 conversion,passed,float32,190933188,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.025695819934547812
+WD,Elf*,198898762,29.034017567188275,83.5107,215.1541,20387.1742,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.049050446628351264
+WD,DeXOR,198898762,34.69708568372084,49.6739,221.7393,17312.2194,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0577626690659893
+WD,Pcodec,198898762,22.000296625777892,90.8307,538.0888,1161449.0757,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0008609934098034429
+WD,FLEA,198898762,24.29372096845932,126.299,519.8794,15076.808,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06632703686350586
+WD,Pcodec (int64),198898762,21.121715931042345,161.3179,710.5761,658707.6186,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.001518124235643993
+WD,NeaTS,198898762,24.86664208095976,1.219,3459.2594,689.9189,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,1.449445724707643
+WD,DAC,198898762,25.74769520184344,197.462,868.4263,87.0233,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,11.491175351888517
+WD,Gorilla,198898762,85.51738264464412,217.2481,145.4137,26094.0168,none,bitwise_passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.03832296145375364
+WD,Chimp,198898762,84.04413521123374,274.3234,418.033,10177.3045,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.09825784420619428
+WD,Chimp128,198898762,43.33432032937943,81.9007,477.2244,8713.0574,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.11477027570138583
+WD,TSXor,198898762,46.37471084410269,13.6036,496.5632,7157.1569,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.13972028474043932
+WD,Elf,198898762,33.65666299685163,171.5495,243.7579,15331.8394,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06522374608228677
+WD,Camel,198898762,38.289107789921786,65.3866,130.4385,27752.4191,none,passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.03603289487654069
+WD,ALP,198898762,25.13982867324232,1026.9681,3107.838,1710.0568,none,passed,none,0,,LosslessBenchmark family; single measurement; 20261105-alp-corrected,0.5847758975023519
+WD,LeCo,198898762,25.040453243243416,398.1866,1671.4869,88.0577,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,11.35619031612227
+WD,BUFF,198898762,26.562502309592052,253.5613,422.2607,553.3407,bounded precision,precision_bounded,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,1.8072048558871596
+ECG,Zstd,225750000,16.985356921373203,194.7951,457.0626,14136.5604,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.07073856523118593
+ECG,Brotli,225750000,12.088194186046513,0.4964,321.6975,21073.3002,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.04745341216180273
+ECG,Xz,225750000,12.065269324473975,2.0609,145.8761,50375.8622,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.019850776866703435
+ECG,Snappy,225750000,26.090623477297896,385.1093,570.0721,9563.5412,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.1045637781118149
+ECG,SElf*,225750000,18.316712624584717,80.5051,174.1495,23631.8132,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.04231583888789371
+ECG,Fauna,225750000,42.225554097452935,76.4827,164.4885,516269.4621,float32 conversion,passed,float32,218678216,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0019369729829309616
+ECG,MacaqueV,225750000,40.97180891472868,306.2336,194.184,40491.536,float32 conversion,passed,float32,218678216,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.024696519292328155
+ECG,Elf*,225750000,17.746803931339976,76.4596,192.6019,22214.243,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.04501616372882929
+ECG,DeXOR,225750000,24.27073881506091,83.0244,229.6306,16912.9217,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.05912638973548846
+ECG,Pcodec,225750000,8.407063012181617,97.8108,509.8154,1264118.6957,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.0007910649556893504
+ECG,FLEA,225750000,12.352388704318937,138.1239,504.9794,15409.0535,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06489691271433382
+ECG,Pcodec (int64),225750000,7.365750885935769,192.902,705.7992,667073.3698,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.00149908547585975
+ECG,NeaTS,225750000,13.538860340531562,0.9557,3617.9474,195.3609,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,5.1187315373751865
+ECG,DAC,225750000,25.390630343300113,228.3591,1084.4808,82.5514,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,12.113664940873202
+ECG,Gorilla,225750000,70.33278361018827,215.2745,157.5046,23693.5108,none,bitwise_passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.04220564898301184
+ECG,Chimp,225750000,68.96258657253598,282.7285,439.2042,9150.7511,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.10928064691869939
+ECG,Chimp128,225750000,26.802075574473978,82.7649,504.5245,8249.2895,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.12122256104601492
+ECG,TSXor,225750000,23.881170321151714,53.2962,714.3228,5368.8331,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.1862602136020954
+ECG,Elf,225750000,20.108137548449612,197.1322,254.8399,14930.6508,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.06697631693321768
+ECG,Camel,225750000,21.684095127353267,90.006,163.5714,21287.3079,none,passed,none,0,,LosslessBenchmark family; single measurement; gef-experiments/20261105-gorilla-camel-original,0.04697634875662225
+ECG,ALP,225750000,16.470456866002216,1170.1864,3679.7343,1449.4884,none,passed,none,0,,LosslessBenchmark family; single measurement; 20261105-alp-corrected,0.6898985876672072
+ECG,LeCo,225750000,16.08618056478405,374.765,2106.3338,101.5641,none,passed,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,9.845998733804564
+ECG,BUFF,225750000,26.562501993355482,274.2671,396.2812,2045.368,bounded precision,precision_bounded,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.48890957519624834
+ECG,Lz4,225750000,33.69557967884828,375.9332,681.1827,6322.3579,none,not_checked,none,0,,LosslessBenchmark family; single measurement; non-gef-20261105T021920Z,0.15816883761041114
+BP,RLE-GEF,6782,36.46785608964907,925.908661148,1892.90483669,22.752663,none,passed,none,0,19960.0,GefTuning; median of three; warmed access,43.95089928594293
+BP,B*-GEF (Approximate),6782,34.46254792096727,393.895857301,2000.64005378,49.54258,none,passed,none,0,18944.0,GefTuning; median of three; warmed access,20.184657319017298
+BM,RLE-GEF,17964,23.960420841683366,933.225589907,3108.16290644,21.911257,none,passed,none,0,34608.0,GefTuning; median of three; warmed access,45.63864136137877
+BM,B*-GEF (Approximate),17964,24.33338900022267,651.483048487,1940.04449514,52.881293,none,passed,none,0,35216.0,GefTuning; median of three; warmed access,18.910278914700516
+BT,RLE-GEF,129669,52.71518250314262,767.837139527,1314.22318568,24.496357,none,passed,none,0,547616.0,GefTuning; median of three; warmed access,40.82239657104932
+BT,B*-GEF (Approximate),129669,50.9260116141869,480.060617774,1955.30810997,60.183993,none,passed,none,0,529416.0,GefTuning; median of three; warmed access,16.615713749667623
+BW,RLE-GEF,129669,45.70039870747827,815.370164956,2424.29935544,25.642122,none,passed,none,0,474848.0,GefTuning; median of three; warmed access,38.998332509298564
+BW,B*-GEF (Approximate),129669,46.958216690188095,665.558827805,1939.65908185,53.399503,none,passed,none,0,488256.0,GefTuning; median of three; warmed access,18.726766052485544
+DU,RLE-GEF,334880,8.960747133301481,872.895391408,2162.34494228,20.839936,none,passed,none,0,241736.0,GefTuning; median of three; warmed access,47.98479227575363
+DU,B*-GEF (Approximate),334880,9.65890766841854,703.852072128,2614.94729602,55.702062,none,passed,none,0,261232.0,GefTuning; median of three; warmed access,17.952656761611447
+CT,RLE-GEF,2826654,13.877229048903757,765.305964855,1228.62700492,27.495842,none,passed,none,0,3151464.0,GefTuning; median of three; warmed access,36.369135376905355
+CT,B*-GEF (Approximate),2826654,12.742955098147846,414.009034496,1957.37602985,73.228383,none,passed,none,0,2901376.0,GefTuning; median of three; warmed access,13.655907163756437
+DP,RLE-GEF,5413914,16.033197054847932,877.14227519,1634.6523456,31.087037,none,passed,none,0,6969712.0,GefTuning; median of three; warmed access,32.16774889160392
+DP,B*-GEF (Approximate),5413914,13.477522915953227,426.228619016,1907.02896966,85.575056,none,passed,none,0,5875056.0,GefTuning; median of three; warmed access,11.685648210385045
+LAT,RLE-GEF,24876978,23.510212936635632,854.662199637,2211.05945278,64.379099,none,passed,none,0,46905768.0,GefTuning; median of three; warmed access,15.5329915381388
+LAT,B*-GEF (Approximate),24876978,23.460731444148884,688.671127054,1943.23295643,144.182783,none,passed,none,0,46863308.0,GefTuning; median of three; warmed access,6.935640852486528
+LON,RLE-GEF,24876978,18.800943185301687,893.155080621,2307.88260725,59.112103,none,passed,none,0,37533576.0,GefTuning; median of three; warmed access,16.917009364393618
+LON,B*-GEF (Approximate),24876978,19.051723243876324,698.900835403,1372.52825294,139.598774,none,passed,none,0,38088684.0,GefTuning; median of three; warmed access,7.163386692779982
+GE,RLE-GEF,43565657,12.452217810005711,773.784256472,1275.36848572,68.073856,none,passed,none,0,43603448.0,GefTuning; median of three; warmed access,14.68992736359756
+GE,B*-GEF (Approximate),43565657,10.01516171327337,414.678184913,1889.38899595,156.136224,none,passed,none,0,35207756.0,GefTuning; median of three; warmed access,6.4046636608811545
+UK,RLE-GEF,59305325,9.184272238622754,807.615751797,1475.43996926,73.665703,none,passed,none,0,43852224.0,GefTuning; median of three; warmed access,13.574838212023852
+UK,B*-GEF (Approximate),59305325,7.086515418303501,462.058275452,1891.42925955,164.908677,none,passed,none,0,34033060.0,GefTuning; median of three; warmed access,6.063962298357411
+AP,RLE-GEF,137721453,14.351127271362726,739.987292045,1344.54940732,104.58486,none,passed,none,0,158761808.0,GefTuning; median of three; warmed access,9.561613411348448
+AP,B*-GEF (Approximate),137721453,16.66432462050774,526.708895595,1817.09607425,238.090719,none,passed,none,0,184554600.0,GefTuning; median of three; warmed access,4.20007971835307
+WD,RLE-GEF,198898762,22.706976426529994,654.290087099,1244.12144337,133.394506,none,passed,none,0,362243584.0,GefTuning; median of three; warmed access,7.496560615472424
+WD,B*-GEF (Approximate),198898762,22.86476549311051,411.252445037,1610.86581117,243.061741,none,passed,none,0,365198660.0,GefTuning; median of three; warmed access,4.114181013786123
+ECG,RLE-GEF,225750000,12.738265227021042,674.384467792,1439.50794133,132.410444,none,passed,none,0,231111344.0,GefTuning; median of three; warmed access,7.552274350805741
+ECG,B*-GEF (Approximate),225750000,10.975677408637875,430.335078924,1974.0311832,242.114472,none,passed,none,0,199786968.0,GefTuning; median of three; warmed access,4.1302776812118855

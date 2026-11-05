@@ -1,0 +1,51 @@
+{
+  "updated_utc": "2026-11-05T21:59:40.962918+00:00",
+  "gef_revision": "07d4e4aec2d6dc12aea27d2b753b5785b10a92f1",
+  "gef_source_fingerprint": "8e4d13390d90db7186dbf5b8104a160699aa92ddf94fefbcdb05af0eb204db2a",
+  "inputs": [
+    {
+      "file": "gef-07d4e4a-r9.csv",
+      "original": "/Users/michelangelopucci/gef-performance/experiments/results/engineering/mainline-continued-20261105/runs/full16-r9/l1-flatten-candidate.csv",
+      "sha256": "114a19c19bd20a55065ee28b057d891218c32f7373a7d18fcc8e2c2c31b5a287"
+    },
+    {
+      "file": "gef-07d4e4a-r10.csv",
+      "original": "/Users/michelangelopucci/gef-performance/experiments/results/engineering/mainline-continued-20261105/runs/full16-r10/l1-flatten-candidate.csv",
+      "sha256": "f767925d0b0c3dbfbb0e17b714c719fed46f1faeb0c49236d885e2acc69967fb"
+    }
+  ],
+  "backup": "before-gef-07d4e4a-20261105T215653Z",
+  "datasets": [
+    "AP",
+    "BM",
+    "BP",
+    "BT",
+    "BW",
+    "CT",
+    "DP",
+    "DU",
+    "ECG",
+    "GE",
+    "LAT",
+    "LON",
+    "UK",
+    "WD"
+  ],
+  "aggregation": "Arithmetic mean of the two per-run median metrics for each dataset; access rates averaged independently of latency.",
+  "validation": "Independent stdlib CSV calculations match all GEF plotted metrics and aggregate metrics; competitor measurements match backup; PDF rendered and visually inspected.",
+  "output_sha256": {
+    "REPORT.txt": "3d440d394452eef4224c53feed991e6367b95ded466bee9095464556c3340a28",
+    "manifest.json": "2e93c010a5d36a33d27440552d31f0a58465e5c0a5c1aa31277dd6e8ecabd8ea",
+    "compare.py": "b6dfeada8f6f78db9bfc1d755de850606a281e0362235e3a40b98a855ccef429",
+    "matched-per-dataset.csv": "26d2b7c35876d50d0393f0c706bc9f9cf16b3654ea193a03cd825ebf6ed82e54",
+    "summary-arithmetic.csv": "9e555d1e73f21dbd70a18448f6847ed567bbdb2464d4303a006be6e3349a0c8c",
+    "summary-geometric.csv": "08760c29e4c17b5101360b3a272165564f7de26289c0172624cd8ae65d62286f",
+    "pareto-arithmetic.pdf": "8b72d3110bdd56fd802f6df38720c6d15bb0fd754b916a408ed403835e9bc9e3",
+    "pareto-arithmetic.png": "61c72b61194af0c5d12d97ca5b58275121ca3728a6faf80b9184f0436926e6e9",
+    "pareto-arithmetic.svg": "d39b0e0024605531df4676c76141012166c92c7d3e3d8d63914066139bda977e",
+    "pareto-geometric.pdf": "9325e7c0f982bb70f5c116edae82e674b13a90696021b6a63c8a711eee894684",
+    "pareto-geometric.png": "fe3ae9e0ac4069a194b95b0ed575884c00b493dadcb5a27a91005b06cadd21f6",
+    "pareto-geometric.svg": "b4ef274fcd413037b4a1ae7818ccbbb8b020dbcf319781f5fbfe5b225cede0c6",
+    "pareto-per-dataset.pdf": "bc578f945ad298aec58838911c8a78f3803f9a05fd836213b3834beb0908e8f9"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "backup": "before-alp-audit-20261105T115917",
+  "alp_full_run": "/Users/michelangelopucci/Downloads/gef-experiments/benchmark_results/20261105-alp-corrected/results.csv",
+  "plot_datasets": "original 14 common datasets retained",
+  "alp_metrics": "all fields replaced from corrected run on CPU 8, same host",
+  "audit_note": "Gorilla/Camel/Falcon sample bitwise failures exclude their points from frontier; other measurements unchanged"
+}

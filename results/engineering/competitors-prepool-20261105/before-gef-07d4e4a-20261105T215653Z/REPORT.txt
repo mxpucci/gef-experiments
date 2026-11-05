@@ -1,0 +1,33 @@
+Updated competitor comparison — 2026-11-05
+
+The 14 common full datasets are unchanged. All 16 fresh ALP, Gorilla and Camel
+measurements are retained separately. Codec work and reruns were performed in
+gef-experiments. Backups of earlier plots, tables and reports are in before-*.
+
+ALP: official kernels, native vector/row-group organization, strict IEEE build;
+all 16 full datasets pass exact bitwise round-trip validation.
+Gorilla: extracted original Facebook Beringei value codec and bit I/O;
+all 16 full datasets / 1,482,981,623 values pass bitwise validation.
+Camel: authors' original Java codec, configured for four decimal places; normal
+16-bit integer differences, documented 19-bit setting on LAT. Count actual bit
+writer bytes, not the authors' incomplete getSize counter. Full verification
+passes 12 datasets and fails AP/BM/BT/BW. Failing rows are retained visibly
+qualified and excluded from lossless frontiers. Aggregate Camel is also excluded.
+Falcon: excluded at the user's request; historical raw rows retained only.
+BUFF remains the original plain native-access implementation, with a bounded-
+precision qualification. The majority/outlier variant is not silently substituted.
+Its original selective decoder is unfinished when sparse columns are present.
+Fauna/Macaque float32 qualifications remain visible. DAC's sampled exactness and
+serialized-size checks found no inflation defect.
+
+Fresh files: alp-corrected-full16.csv, gorilla-camel-original-full16.csv.
+Provenance: alp-update-provenance.json, gorilla-camel-update-provenance.json,
+manifest.json. Full source/configuration audit: COMPETITOR_AUDIT.txt and
+/Users/michelangelopucci/Downloads/gef-experiments/docs/codec-fidelity-20261105.txt.
+
+Plots and aggregate tables use ratios recomputed from integer byte/bit counts.
+Gorilla/Camel timing fields are fresh measurements, not reused from the old ports.
+Camel timers exclude JVM launch and input transport, following codec-only timing;
+its JVM is warmed before measurement. GEF uses its existing tuning harness,
+while competitors use LosslessBenchmark. This remains a preliminary cross-harness
+comparison, not certification of every historical competitor measurement.
