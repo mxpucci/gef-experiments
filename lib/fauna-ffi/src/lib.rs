@@ -49,13 +49,8 @@ impl<'a> Reader<'a> {
 fn encode(values: &[Value], macaque: bool) -> Result<Vec<u8>, String> {
     // Model fitting identifies -0 and +0 and treats NaNs as equal. Do not
     // promise bitwise preservation for those values with the Fauna model path.
-    // Upstream fits f32 values in f64 arithmetic; with f64 values, magnitudes
-    // near f64::MAX overflow the Swing/PMC arithmetic (inf - inf = NaN), so
-    // they are rejected rather than silently corrupted.
-    const MAX_FAUNA_MAGNITUDE: Value = 1.0715086071862673e301; // 2^1000
-    if !macaque && values.iter().any(|v| !v.is_finite() || v.to_bits() == (-0.0 as Value).to_bits()
-                                         || v.abs() > MAX_FAUNA_MAGNITUDE) {
-        return Err("Fauna model fitting requires finite values, |value| <= 2^1000, without negative zero".into());
+    if !macaque && values.iter().any(|v| !v.is_finite() || v.to_bits() == (-0.0 as Value).to_bits()) {
+        return Err("Fauna model fitting requires finite values without negative zero".into());
     }
     let mut out = Vec::new();
     out.extend_from_slice(if macaque { b"GFMAC002" } else { b"GFFAU002" });

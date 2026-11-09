@@ -57,17 +57,20 @@ compares decoded values with the original float64 input. Compression ratios use
 64 bits per value like every other codec.
 
 Upstream fits float32 values in f64 arithmetic, which leaves headroom that the
-float64 version does not have. Two consequences are handled explicitly:
+float64 version does not have. Two consequences are documented, not patched,
+because they do not prevent meaningful aggregate metrics; any affected values
+are reported by validation as mismatches:
 
 - A Swing line is decoded as `slope * t + intercept` in f64. At error bound zero
   the fitted line can reproduce a value only to within f64 rounding, so a decoded
   Swing value may differ from the input in its last bits (e.g. 0.1 decoded as
   0.10000000000000002 for the series `0, 0.1, ..., 0.6`). PMC values and MacaqueV
   residuals are exact. Validation records such values; tests require 1e-9.
-- Magnitudes near `f64::MAX` overflow the fitting arithmetic (`inf - inf`).
-  The Fauna adapter therefore rejects `|value| > 2^1000`, in addition to
-  nonfinite values and negative zero, which its model fitting identifies
-  numerically. Standalone MacaqueV preserves all 64-bit patterns.
+- Magnitudes near `f64::MAX` (above about 2^1000) can overflow the fitting
+  arithmetic (`inf - inf`) and decode as NaN; no benchmark dataset is near that
+  range. As before, the Fauna adapter rejects nonfinite values and negative
+  zero, which its model fitting identifies numerically. Standalone MacaqueV
+  preserves all 64-bit patterns.
 
 The value-series adapter supplies synthetic regular timestamps `0..n-1` because
 the GEF files contain values, not original timestamps. Fauna still encodes its
@@ -121,8 +124,8 @@ No server, Java, Python, or GPU runtime is required.
 `tests/fauna_roundtrip.cpp` exercises both pipelines at empty/singleton and
 segment/block boundary lengths, repeated/linear/periodic/random and decimal
 inputs, bitwise MacaqueV random float64 patterns including nonfinite values,
-float64 values that float32 cannot represent, magnitude/negative-zero
-eligibility and wrong-count rejection. It uses explicit checks, so Release builds retain
+float64 values that float32 cannot represent, negative-zero rejection and
+wrong-count rejection. It uses explicit checks, so Release builds retain
 validation. Round trips should also be checked on every benchmark dataset.
 
 The FFI catches upstream Rust panics and returns an error; it does not silently
