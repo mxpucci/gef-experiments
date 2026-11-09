@@ -57,6 +57,12 @@ Two changes are in our caller, not in the authors' code:
 Below 20,000 values, the sample is shorter than every candidate, so the helper
 itself returns 200.
 
+We checked the choice on the 16 datasets (2026-11-09) by encoding each full
+dataset at every candidate size. On 11 datasets the helper picked the best
+size. Over all 16, the size it picked was at most 6.0% larger than the best
+candidate (BW: it chose 1600, but 200 was best). The other gaps were CT 1.8%,
+US 0.5%, BT 0.25% and UK 0.05%. We report this and keep the authors' choice.
+
 ## Storage and queries
 
 Counted size includes:
