@@ -9,7 +9,6 @@ std::vector<std::string> recent_compressor_names();
 bool recent_compressor_uses_integers(const std::string& name);
 bool is_recent_compressor(const std::string& name);
 struct NativeAccessOptions {
-    size_t fauna_batch_size=65536;
     size_t pcodec_chunk_size=262144;
     size_t pcodec_page_size=262144;
 };

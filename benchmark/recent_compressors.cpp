@@ -5,7 +5,6 @@
 #include <memory>
 #ifdef GEF_WITH_FAUNA
 #include "Fauna/Fauna.hpp"
-#include "Fauna/Indexed.hpp"
 #endif
 #ifdef GEF_WITH_PCODEC
 #include "Pcodec/Pcodec.hpp"
@@ -274,11 +273,6 @@ BenchmarkResult benchmark_indexed(const std::string& name,const Values<T>& value
 BenchmarkResult benchmark_recent_compressor(const std::string& name,
     const BenchmarkData& data, const std::vector<size_t>& ranges, size_t block_size,
     const NativeAccessOptions& native) {
-#ifdef GEF_WITH_FAUNA
-    if(name=="fauna") return benchmark_indexed(name,data.double_data,data,ranges,
-        [&]{return gef_compressors::fauna::Indexed(data.double_data,native.fauna_batch_size);},
-        false,"native_segments",native.fauna_batch_size,0);
-#endif
 #ifdef GEF_WITH_PCODEC
     if(name=="pcodec") return benchmark_indexed(name,data.double_data,data,ranges,
         [&]{return gef_compressors::pcodec::Indexed<double>(data.double_data,native.pcodec_chunk_size,native.pcodec_page_size);},

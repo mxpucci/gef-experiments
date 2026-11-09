@@ -56,9 +56,9 @@ if(TARGET LosslessBenchmark AND GEF_WITH_PCODEC AND GEF_WITH_FAUNA AND GEF_WITH_
     endif()
 endif()
 
-if(GEF_WITH_FAUNA AND GEF_WITH_PCODEC)
+if(GEF_WITH_PCODEC)
     add_executable(native_access_test native_access.cpp)
-    target_link_libraries(native_access_test PRIVATE gef_fauna gef_pcodec)
+    target_link_libraries(native_access_test PRIVATE gef_pcodec)
     target_compile_options(native_access_test PRIVATE -fno-fast-math -ffp-contract=off)
     add_test(NAME native_access COMMAND native_access_test)
 endif()

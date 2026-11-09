@@ -43,14 +43,14 @@ with tempfile.TemporaryDirectory(prefix="gef-codec-smoke-") as directory:
             raise RuntimeError('exact inputs did not pass validation')
         if int(row['input_changed_values']) != 0:
             raise RuntimeError('exact inputs were incorrectly reported as changed')
-        if row['compressor']=='fauna' and (row['access_layout']!='native_segments' or int(row['compression_unit_values'])!=65536):
-            raise RuntimeError('Fauna still uses external -b blocking')
+        if row['compressor'] in ['fauna','macaque'] and (row['access_layout']!='external_blocks' or int(row['compression_unit_values'])!=16):
+            raise RuntimeError('Fauna/MacaqueV must use external -b blocks')
         if row['compressor'] in ['pcodec','pcodec_i64'] and (row['access_layout']!='native_pages' or int(row['compression_unit_values'])!=262144):
             raise RuntimeError('Pcodec still uses external -b blocking')
     # External -b must not change native compression layouts or stored size.
     def native_run(block):
-        args=[binary,'-b',str(block),'-r','3,35','-c','fauna,pcodec,pcodec_i64',
-              '--fauna-batch-size','53','--pcodec-chunk-size','61','--pcodec-page-size','19',str(exact)]
+        args=[binary,'-b',str(block),'-r','3,35','-c','pcodec,pcodec_i64',
+              '--pcodec-chunk-size','61','--pcodec-page-size','19',str(exact)]
         process=subprocess.run(args,capture_output=True,text=True)
         if process.returncode:raise RuntimeError(process.stderr)
         return {r['compressor']:r for r in csv.DictReader(io.StringIO(process.stdout))}

@@ -49,7 +49,7 @@ hard-codes the 32-bit representation:
   comparison) are cast to `Value`.
 
 The algorithms and defaults are unchanged: error bound zero, Swing/PMC/Gorilla
-model selection, MacaqueV residuals and the 65,536-value fitting batch. The
+model selection and MacaqueV residuals (the batch is the external block, below). The
 model selection still compares bytes per value against `size_of::<Value>()`,
 which is now 8 bytes. Values cross the FFI as `double`; no float32 conversion
 is performed, `input_conversion=none` and `input_changed_values=0`. Validation
@@ -75,25 +75,22 @@ are reported by validation as mismatches:
 The value-series adapter supplies synthetic regular timestamps `0..n-1` because
 the GEF files contain values, not original timestamps. Fauna still encodes its
 timestamp information using the author's implementation. No claim about
-compression of a dataset's real timestamps is made. Full Fauna now uses its native segments for point/range access. Its default
-fitting batch is 65,536 values, matching the original ModelarDB ingestion
-batch. `--fauna-batch-size` changes that batch; external `-b` does not.
-A counted positional directory selects only overlapping segments. Constant
-(PMC) and linear (Swing) models evaluate only the requested synthetic timestamps
-through the authors' original model functions. Macaque/Gorilla segments decode
-the necessary prefix of that segment. Residual tails decode their necessary
-prefix using the model's last value as the original predictor seed. A whole
-batch may be a Gorilla fallback, so this is native segment access, not uniform
-constant-time access to every value. No decoded values are retained between
-queries. Decoder allocation, prefix work and output expansion are timed.
+compression of a dataset's real timestamps is made.
 
-Standalone MacaqueV remains sequential and uses external `-b` blocks.
+Both entries use the benchmark's shared external-block layout, like the other
+streaming codecs: the input is split into independent `-b` blocks (default
+1,000 values), and each block is compressed by one call of the upstream API.
+For Fauna the block is therefore its fitting batch (upstream ModelarDB ingests
+65,536-value batches; the smaller batch is a benchmark-wide layout choice).
+Point and range queries decode each containing block in full with the
+upstream decoder. CSV records `access_layout=external_blocks` and the block size
+in `compression_unit_values`.
 
 ## Byte accounting
 
 The standalone serialization APIs retain their original frames. MacaqueV uses a 16-byte magic/version/count header followed by the exact upstream
 compressed bytes. Fauna uses a 24-byte magic/version/count/segment-count header.
-The float64 frames use version 002 (`GFMAC002`, `GFFAU002`, `GFFIDX02`).
+The float64 frames use version 002 (`GFMAC002`, `GFFAU002`).
 Every segment stores its model id (1 byte), start/end timestamps (16 bytes),
 minimum/maximum (16 bytes), and three byte vectors (timestamps, model values,
 residuals), each with an 8-byte length. Thus segment overhead is 57 bytes plus
@@ -103,14 +100,8 @@ zero, and these fields are not needed to decode values. This is a self-contained
 codec frame, not an Arrow or Parquet file; no Arrow allocation overhead is
 misreported as encoded storage.
 
-
-The benchmark's indexed Fauna container instead has a 32-byte header and a
-32-byte directory entry per native segment (first global position, batch base,
-payload offset and payload length), followed by the unchanged 57-byte-plus-payload
-segment representations. All bytes count; there is no additional external
-1,000-value block wrapper. CSV records `access_layout=native_segments`, the
-configured batch limit in `compression_unit_values`, and `native_page_values=0`.
-Older full-block Fauna measurements are superseded for this comparison.
+The block directory (16-byte header plus one 8-byte offset per block boundary)
+is counted on top of the frames, as for every external-block codec.
 
 ## Building and tests
 
@@ -132,7 +123,4 @@ The FFI catches upstream Rust panics and returns an error; it does not silently
 substitute another compressor. As with the research implementation, its frame
 decoder is intended for trusted benchmark output, not hostile files.
 
-`tests/recent/native_access.cpp` compares indexed queries with original full
-Fauna decoding on the same fitting batches, including explicit PMC/Swing
-residual-tail fixtures, segment/batch boundaries and serialized reopening.
-The CLI test checks that external `-b` does not affect Fauna's native layout.
+The CLI test checks that both entries use the external `-b` block layout.

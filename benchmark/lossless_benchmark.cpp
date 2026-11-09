@@ -1202,8 +1202,7 @@ void print_usage(const char *prog_name) {
     std::cerr << std::endl;
     std::cerr << "  -r <list>      Comma-separated list of range sizes (default: 10,100,1000,10000,100000)" << std::endl;
     std::cerr << "  -b <size>      Block size for block-based compressors (default: 1000)" << std::endl;
-    std::cerr << "                 Does not control Fauna or Pcodec native layouts." << std::endl;
-    std::cerr << "  --fauna-batch-size <N>   Native fitting batch (default: 65536)" << std::endl;
+    std::cerr << "                 Does not control Pcodec native layouts." << std::endl;
     std::cerr << "  --pcodec-chunk-size <N>  Native compression chunk maximum (default: 262144)" << std::endl;
     std::cerr << "  --pcodec-page-size <N>   Native page maximum (default: 262144)" << std::endl;
     std::cerr << "                 (Note: *_gef compressors use fixed UniformedPartitioner block size = " << GEF_UNIFORM_PARTITION_SIZE << ")" << std::endl;
@@ -1270,8 +1269,6 @@ int main(int argc, char *argv[]) {
             }
         } else if (arg == "-b" && i + 1 < argc) {
             block_size = std::stoull(argv[++i]);
-        } else if (arg == "--fauna-batch-size" && i + 1 < argc) {
-            native_options.fauna_batch_size = std::stoull(argv[++i]);
         } else if (arg == "--pcodec-chunk-size" && i + 1 < argc) {
             native_options.pcodec_chunk_size = std::stoull(argv[++i]);
         } else if (arg == "--pcodec-page-size" && i + 1 < argc) {
