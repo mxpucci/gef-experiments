@@ -9,7 +9,7 @@ future work; neither has a placeholder implementation.
 | --- | --- | --- | --- |
 | `fauna` | [Official Rust import](fauna.md) | Float32 conversion of input doubles, warning on changes | Native segments; direct models / residual prefix |
 | `macaque` | [Official Rust import](fauna.md) | Float32 conversion of input doubles, warning on changes | Full block, standalone MacaqueV |
-| `dexor` | [C++ port of official Java](dexor.md) | Float64 | Prefix scan within block |
+| `dexor` | [C++ port of official Java](dexor.md) | Float64; upstream tolerance-based acceptance (not always bit-exact) | Prefix scan within block |
 | `pcodec` | [Official Rust crate](pcodec.md) | Float64 | Native pages / in-page prefix |
 | `pcodec_i64` | [Official Rust crate](pcodec.md) | Unshifted int64 | Native pages / in-page prefix |
 | `elfstar` | [C++ port of official Java](elfstar.md) | Float64 | Prefix scan within block |
