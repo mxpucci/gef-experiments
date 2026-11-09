@@ -1,5 +1,6 @@
 #include "Fauna/Indexed.hpp"
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <iostream>
 #include <limits>
@@ -12,7 +13,7 @@ static uint64_t word(const std::vector<uint8_t>& bytes,size_t at){
     uint64_t value=0;for(size_t i=0;i<8;++i)value|=uint64_t(bytes.at(at+i))<<(8*i);return value;
 }
 static void append_word(std::vector<uint8_t>& bytes,uint64_t value){for(size_t i=0;i<8;++i)bytes.push_back(uint8_t(value>>(8*i)));}
-static void append_float(std::vector<uint8_t>& bytes,float value){uint32_t bits;std::memcpy(&bits,&value,4);for(size_t i=0;i<4;++i)bytes.push_back(uint8_t(bits>>(8*i)));}
+static void append_double(std::vector<uint8_t>& bytes,double value){uint64_t bits;std::memcpy(&bits,&value,8);append_word(bytes,bits);}
 static void append_bytes(std::vector<uint8_t>& bytes,const std::vector<uint8_t>& data){append_word(bytes,data.size());bytes.insert(bytes.end(),data.begin(),data.end());}
 template<class T,class Index> static void queries(Index& index,const std::vector<T>& expected){
     require(index.size()==expected.size(),"wrong index count");
@@ -35,53 +36,53 @@ template<class T,class Index> static void queries(Index& index,const std::vector
 }
 static void fauna_case(const std::vector<double>& input,size_t batch){
     using Index=gef_compressors::fauna::Indexed;
-    std::vector<double> expected;size_t changes=0;
-    for(double value:input){double converted=static_cast<float>(value);changes+=std::memcmp(&value,&converted,8)!=0;expected.push_back(converted);}
+    // Reference: full reconstruction by the authors' segment decoder for the
+    // same fitting batches. Swing lines are evaluated in f64, the same type as
+    // the values, so a model value may differ from the input by rounding.
+    std::vector<double> expected;
+    for(size_t first=0;first<input.size();first+=batch){
+        size_t n=std::min(batch,input.size()-first);
+        std::vector<double> values(input.begin()+first,input.begin()+first+n);
+        auto original=gef_compressors::fauna::decompress(gef_compressors::fauna::compress(values),n);
+        expected.insert(expected.end(),original.begin(),original.end());
+    }
+    for(size_t i=0;i<input.size();++i)require(std::fabs(expected[i]-input[i])<=1e-9,"Fauna f64 round trip outside 1e-9");
     std::vector<uint8_t> bytes;
     {
-        Index index(input,batch);require(index.changed_values()==changes,"wrong conversion count");queries(index,expected);bytes=index.bytes();
+        Index index(input,batch);require(index.changed_values()==0,"f64 input must not be converted");queries(index,expected);bytes=index.bytes();
     }
     Index reopened(bytes);queries(reopened,expected);
     auto truncated=bytes;truncated.pop_back();rejects([&]{Index bad(truncated);});
     rejects([&]{Index bad(input,0);});
-    // Compare the selected-access implementation against full reconstruction
-    // using the authors' unmodified segment decoder for the same fitting batches.
-    for(size_t first=0;first<input.size();first+=batch){
-        size_t n=std::min(batch,input.size()-first);
-        std::vector<float> values;for(size_t i=0;i<n;++i)values.push_back(static_cast<float>(input[first+i]));
-        auto encoded=gef_compressors::fauna::compress_f32(values);
-        auto original=gef_compressors::fauna::decompress_f32(encoded,n);
-        std::vector<double> actual(n);reopened.read(first,n,actual.data());
-        for(size_t i=0;i<n;++i){float value=static_cast<float>(actual[i]);require(!std::memcmp(&value,&original[i],4),"native point/range path differs from original grid");}
-    }
 }
 static void fauna_residual_fixture(bool swing){
     // Build a valid native model-plus-residual segment. Residual bits come
     // from the ORIGINAL Macaque encoder, with its initial raw value omitted.
     const size_t model_n=1024,n=model_n+3;
-    std::vector<float> values(n,4.0f);
-    if(swing)for(size_t i=0;i<model_n;++i)values[i]=4.0f+float(i)/4;
-    for(size_t i=model_n;i<n;++i)values[i]=values[model_n-1]+float(i-model_n+1)/4;
-    auto timestamps_frame=gef_compressors::fauna::compress_f32(std::vector<float>(n,4.0f));
-    const size_t times_n=word(timestamps_frame,24+25);
-    std::vector<uint8_t> times(timestamps_frame.begin()+24+33,timestamps_frame.begin()+24+33+times_n);
-    std::vector<float> residual_values{values[model_n-1],values[model_n],values[model_n+1],values[model_n+2]};
-    auto residual_frame=gef_compressors::macaque::compress_f32(residual_values);
-    std::vector<uint8_t> residuals(residual_frame.begin()+20,residual_frame.end());residuals.push_back(3);
+    std::vector<double> values(n,4.0);
+    if(swing)for(size_t i=0;i<model_n;++i)values[i]=4.0+double(i)/4;
+    for(size_t i=model_n;i<n;++i)values[i]=values[model_n-1]+double(i-model_n+1)/4;
+    // Segment layout: model(1), first/last(8+8), min/max(8+8), then length-prefixed bytes.
+    auto timestamps_frame=gef_compressors::fauna::compress(std::vector<double>(n,4.0));
+    const size_t times_n=word(timestamps_frame,24+33);
+    std::vector<uint8_t> times(timestamps_frame.begin()+24+41,timestamps_frame.begin()+24+41+times_n);
+    std::vector<double> residual_values{values[model_n-1],values[model_n],values[model_n+1],values[model_n+2]};
+    auto residual_frame=gef_compressors::macaque::compress(residual_values);
+    std::vector<uint8_t> residuals(residual_frame.begin()+24,residual_frame.end());residuals.push_back(3);
     std::vector<uint8_t> model_values;
-    if(swing){model_values.push_back(2);append_float(model_values,values[model_n-1]);}
+    if(swing){model_values.push_back(2);append_double(model_values,values[model_n-1]);}
     std::vector<uint8_t> segment{uint8_t(swing?1:0)};
-    append_word(segment,0);append_word(segment,n-1);append_float(segment,4.0f);append_float(segment,values.back());
+    append_word(segment,0);append_word(segment,n-1);append_double(segment,4.0);append_double(segment,values.back());
     append_bytes(segment,times);append_bytes(segment,model_values);append_bytes(segment,residuals);
-    std::vector<uint8_t> native{'G','F','F','A','U','0','0','1'};
+    std::vector<uint8_t> native{'G','F','F','A','U','0','0','2'};
     append_word(native,n);append_word(native,1);native.insert(native.end(),segment.begin(),segment.end());
-    auto reference=gef_compressors::fauna::decompress_f32(native,n);
-    require(!std::memcmp(reference.data(),values.data(),n*4),"residual fixture does not match original decoder");
-    std::vector<uint8_t> frame{'G','F','F','I','D','X','0','1'};
+    auto reference=gef_compressors::fauna::decompress(native,n);
+    require(!std::memcmp(reference.data(),values.data(),n*8),"residual fixture does not match original decoder");
+    std::vector<uint8_t> frame{'G','F','F','I','D','X','0','2'};
     for(uint64_t x:{uint64_t(n),uint64_t(1),uint64_t(65536),uint64_t(0),uint64_t(0),uint64_t(64),uint64_t(segment.size())})append_word(frame,x);
     frame.insert(frame.end(),segment.begin(),segment.end());
     gef_compressors::fauna::Indexed indexed(frame);
-    std::vector<double> expected(values.begin(),values.end());queries(indexed,expected);
+    const std::vector<double>& expected=values;queries(indexed,expected);
     for(size_t i=model_n-1;i<n;++i){double result;indexed.read(i,1,&result);require(result==expected[i],"model/residual boundary differs");}
 }
 int main(){

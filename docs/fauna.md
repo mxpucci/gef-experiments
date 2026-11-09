@@ -11,8 +11,9 @@ DOI [10.1109/ICDE65706.2026.00025](https://doi.org/10.1109/ICDE65706.2026.00025)
 uses original files from `ModelarDB-versions/ModelarDB-Macaque`; algorithms are
 neither copied into this repository nor rewritten. `build.rs` imports their
 modules by source path because upstream keeps the standalone MacaqueV module
-private. Only FFI, input checks and a compact serialization envelope are new.
-The original source headers and repository license remain in the fetched tree.
+private. Only FFI, input checks, a compact serialization envelope and the
+float64 patch below are new. The original source headers and repository license
+remain in the fetched tree.
 
 Two separate benchmark entries are available:
 
@@ -22,22 +23,54 @@ Two separate benchmark entries are available:
   Gorilla flags, at absolute error zero. At zero error the author's code disables
   value and bit rewriting. This entry does not pretend to be the full Fauna.
 
-The paper and implementation use **float32**. Both namespaces provide native
-`compress_f32(vector<float>)` / `decompress_f32(bytes, count)` functions. The
-`vector<double>` adapters accept only values that survive a float32 round trip
-bit for bit. A value such as double `0.1`, or integer `16777217`, is rejected;
-no rounding, quantization or fallback compressor is used by that strict API.
-The benchmark explicitly converts its input to float32 before calling
-the API. Inexact conversions produce one warning per dataset/codec and metrics
-are still emitted, with `input_conversion=float32` and `input_changed_values`
-recording how many original float64 values changed. This preprocessing is timed.
-Validation compares decoded values against the converted float32 input, expanded
-to the benchmark's double representation. A passing validation therefore does
-not claim lossless preservation of the original float64 or fixed-decimal input.
-The conversion can lose decimal digits as well as changing binary precision.
-Fauna's model fitting treats signed zero and NaNs
-numerically, so its adapter additionally rejects negative zero and nonfinite
-values. Standalone MacaqueV's native float32 API preserves their bit patterns.
+## Float64 values
+
+The paper and the upstream implementation use **float32**: upstream defines
+`pub type Value = f32` (`modelardb_types/src/types.rs`). The benchmark datasets
+are float64, and converting them to float32 changes most values, so the build
+widens that alias to f64. `lib/fauna-ffi/upstream-f64.patch` is applied by
+`PATCH_COMMAND` to the pristine checksummed archive; configuration fails if the
+fetched tree is not patched. The patch (17 hunks, 4 files) only changes what
+hard-codes the 32-bit representation:
+
+- `Value`/`ArrowValue` become `f64`/`Float64Type`; value byte sizes follow
+  from `size_of::<Value>()` upstream, except the swing parameter decoder's
+  literal lengths 5 and 8, which become 9 and 16 (flag + value, two values).
+- Gorilla/MacaqueV: `u32`/`f32` bit casts become `u64`/`f64`. The control fields
+  keep the Gorilla paper's 5-bit leading-zero and 6-bit length widths, using the
+  standard 64-bit layout of Facebook's Beringei (the same layout used by this
+  repository's Gorilla codec): leading zeros are capped at 31 and the
+  meaningful-bit length is stored minus one, so 64 fits in 6 bits. Upstream's
+  flag order (`10` for a repeated value), first-value handling and residual
+  seeding are unchanged.
+- The lossy bit-rewriting helpers (unused at error bound zero) use binary64
+  constants: 52 mantissa bits, 11 exponent bits, bias 1023.
+- Two type mismatches caused by the alias (`f32::NAN` and a relative-bound
+  comparison) are cast to `Value`.
+
+The algorithms and defaults are unchanged: error bound zero, Swing/PMC/Gorilla
+model selection, MacaqueV residuals and the 65,536-value fitting batch. The
+model selection still compares bytes per value against `size_of::<Value>()`,
+which is now 8 bytes. Values cross the FFI as `double`; no float32 conversion
+is performed, `input_conversion=none` and `input_changed_values=0`. Validation
+compares decoded values with the original float64 input. Compression ratios use
+64 bits per value like every other codec.
+
+Upstream fits float32 values in f64 arithmetic, which leaves headroom that the
+float64 version does not have. Two consequences are documented, not patched,
+because they do not prevent meaningful aggregate metrics; any affected values
+are reported by validation as mismatches:
+
+- A Swing line is decoded as `slope * t + intercept` in f64. At error bound zero
+  the fitted line can reproduce a value only to within f64 rounding, so a decoded
+  Swing value may differ from the input in its last bits (e.g. 0.1 decoded as
+  0.10000000000000002 for the series `0, 0.1, ..., 0.6`). PMC values and MacaqueV
+  residuals are exact. Validation records such values; tests require 1e-9.
+- Magnitudes near `f64::MAX` (above about 2^1000) can overflow the fitting
+  arithmetic (`inf - inf`) and decode as NaN; no benchmark dataset is near that
+  range. As before, the Fauna adapter rejects nonfinite values and negative
+  zero, which its model fitting identifies numerically. Standalone MacaqueV
+  preserves all 64-bit patterns.
 
 The value-series adapter supplies synthetic regular timestamps `0..n-1` because
 the GEF files contain values, not original timestamps. Fauna still encodes its
@@ -60,9 +93,10 @@ Standalone MacaqueV remains sequential and uses external `-b` blocks.
 
 The standalone serialization APIs retain their original frames. MacaqueV uses a 16-byte magic/version/count header followed by the exact upstream
 compressed bytes. Fauna uses a 24-byte magic/version/count/segment-count header.
+The float64 frames use version 002 (`GFMAC002`, `GFFAU002`, `GFFIDX02`).
 Every segment stores its model id (1 byte), start/end timestamps (16 bytes),
-minimum/maximum (8 bytes), and three byte vectors (timestamps, model values,
-residuals), each with an 8-byte length. Thus segment overhead is 49 bytes plus
+minimum/maximum (16 bytes), and three byte vectors (timestamps, model values,
+residuals), each with an 8-byte length. Thus segment overhead is 57 bytes plus
 the three payloads. All bytes returned by `compress` are counted. IDs and error
 fields are not serialized: the adapter always uses series id zero and error
 zero, and these fields are not needed to decode values. This is a self-contained
@@ -72,7 +106,7 @@ misreported as encoded storage.
 
 The benchmark's indexed Fauna container instead has a 32-byte header and a
 32-byte directory entry per native segment (first global position, batch base,
-payload offset and payload length), followed by the unchanged 49-byte-plus-payload
+payload offset and payload length), followed by the unchanged 57-byte-plus-payload
 segment representations. All bytes count; there is no additional external
 1,000-value block wrapper. CSV records `access_layout=native_segments`, the
 configured batch limit in `compression_unit_values`, and `native_page_values=0`.
@@ -88,9 +122,10 @@ Chrono is pinned to 0.4.39 to avoid its later `quarter()` conflict with Arrow 53
 No server, Java, Python, or GPU runtime is required.
 
 `tests/fauna_roundtrip.cpp` exercises both pipelines at empty/singleton and
-segment/block boundary lengths, repeated/linear/periodic/random inputs, bitwise
-MacaqueV random float patterns including nonfinite values, float64 eligibility
-and wrong-count rejection. It uses explicit checks, so Release builds retain
+segment/block boundary lengths, repeated/linear/periodic/random and decimal
+inputs, bitwise MacaqueV random float64 patterns including nonfinite values,
+float64 values that float32 cannot represent, negative-zero rejection and
+wrong-count rejection. It uses explicit checks, so Release builds retain
 validation. Round trips should also be checked on every benchmark dataset.
 
 The FFI catches upstream Rust panics and returns an error; it does not silently
