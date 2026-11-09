@@ -61,15 +61,13 @@ using Clock = std::chrono::steady_clock;
 double seconds(Clock::time_point start) {
     return std::max(std::chrono::duration<double>(Clock::now() - start).count(), 1e-9);
 }
-template<class T> size_t count_differences(const Values<T>& expected, const Values<T>& actual) {
+// Shared round-trip policy (benchmark_common.hpp): |error| > 1e-9 fails,
+// bit differences are also counted in bitwise_mismatches.
+template<class T> void count_differences(BenchmarkResult& result, const Values<T>& expected,
+    const Values<T>& actual, size_t first_index) {
     if (expected.size() != actual.size())
         throw std::runtime_error("codec decoded the wrong number of values; queries cannot be measured safely");
-    if (expected.empty() || !std::memcmp(expected.data(), actual.data(), expected.size()*sizeof(T)))
-        return 0;
-    size_t mismatches = 0;
-    for (size_t i=0; i<expected.size(); ++i)
-        mismatches += std::memcmp(&expected[i], &actual[i], sizeof(T)) != 0;
-    return mismatches;
+    check_roundtrip(result, expected.data(), actual.data(), expected.size(), first_index);
 }
 // Explicit benchmark preprocessing, kept separate from the strict codec API.
 // Count changes before encoding and validate against exactly this converted input.
@@ -144,13 +142,9 @@ BenchmarkResult benchmark_blocks(const Codec<T>& codec, const Values<T>& values,
         const size_t first = b*block_size, count = std::min(block_size, n-first);
         Values<T> expected(values.begin()+first, values.begin()+first+count);
         if (codec.float32_input) convert_to_float32(expected);
-        result.roundtrip_mismatches += count_differences(expected, codec.decode(blocks[b], count));
+        count_differences(result, expected, codec.decode(blocks[b], count), first);
     }
-    result.validation_status = result.roundtrip_mismatches ? "failed" : "passed";
-    if (result.roundtrip_mismatches) {
-        std::cerr << "\nWarning: " << codec.name << " reconstructed " << result.roundtrip_mismatches
-                  << "/" << n << " values incorrectly; emitting timing metrics with validation_status=failed.\n";
-    }
+    finish_roundtrip_validation(result);
     start = Clock::now();
     for (size_t b = 0; b < nb; ++b) {
         auto output = codec.decode(blocks[b], std::min(block_size, n-b*block_size));
@@ -232,13 +226,9 @@ BenchmarkResult benchmark_indexed(const std::string& name,const Values<T>& value
         Values<T> expected(values.begin()+first,values.begin()+first+count),decoded(count);
         if(float32_input) convert_to_float32(expected);
         index.read(first,count,decoded.data());
-        result.roundtrip_mismatches+=count_differences(expected,decoded);
+        count_differences(result,expected,decoded,first);
     }
-    result.validation_status=result.roundtrip_mismatches?"failed":"passed";
-    if(result.roundtrip_mismatches) {
-        std::cerr << "\nWarning: " << name << " reconstructed " << result.roundtrip_mismatches << "/" << n
-                  << " values incorrectly; emitting timing metrics with validation_status=failed.\n";
-    }
+    finish_roundtrip_validation(result);
     start=Clock::now();
     {
         Values<T> decoded(n);
