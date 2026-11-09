@@ -104,6 +104,26 @@ def cpu_node(cpu, nodes):
     raise SystemExit('CPU %d is not online' % cpu)
 
 
+def node_busy_fraction(cpus, interval=1.0):
+    """Mean busy fraction of the given CPUs over a short sample (all processes)."""
+    busy = []
+    def snap():
+        out = {}
+        with open('/proc/stat') as f:
+            for line in f:
+                parts = line.split()
+                if parts[0].startswith('cpu') and parts[0][3:].isdigit() and int(parts[0][3:]) in cpus:
+                    vals = list(map(int, parts[1:]))
+                    out[int(parts[0][3:])] = (sum(vals), vals[3] + (vals[4] if len(vals) > 4 else 0))
+        return out
+    a = snap(); time.sleep(interval); b = snap()
+    for c in cpus:
+        if c in a and c in b and b[c][0] > a[c][0]:
+            total = b[c][0] - a[c][0]
+            busy.append(1.0 - (b[c][1] - a[c][1]) / total)
+    return sum(busy) / len(busy) if busy else 0.0
+
+
 def sibling_threads(cpu):
     path = '/sys/devices/system/cpu/cpu%d/topology/thread_siblings_list' % cpu
     try:
@@ -303,6 +323,11 @@ def main():
                     help='required free node memory = factor x dataset file size (default 4)')
     ap.add_argument('--lock', default='/tmp/gef-bench.lock', help='flock file shared by all benchmark sessions')
     ap.add_argument('--cv-warn', type=float, default=0.05, help='flag throughput/latency metrics with CV above this')
+    ap.add_argument('--max-node-busy', type=float, default=0.15,
+                    help='before each run, wait until the pinned NUMA node is at most this busy (fraction of '
+                         'its CPUs, other processes; default 0.15). The measured value is recorded per run.')
+    ap.add_argument('--busy-timeout', type=float, default=3600,
+                    help='give up waiting for a quiet node after this many seconds and run anyway, flagged')
     ap.add_argument('--seed', type=int, default=1, help='seed for the per-repetition compressor order')
     ap.add_argument('--extra-args', default='', help='extra arguments passed to the benchmark (e.g. "-r 10,100")')
     a = ap.parse_args()
@@ -373,6 +398,7 @@ def main():
     rng = random.Random(a.seed)
     collected = {}
     failures = 0
+    noisy = 0
     preexec = make_preexec(cpu, node, bind, a.thp == 'off')
     env = dict(os.environ, OMP_NUM_THREADS='1', LC_ALL='C')
     for rep in range(a.reps):
@@ -387,8 +413,18 @@ def main():
                 lock_fd = os.open(a.lock, os.O_RDWR | os.O_CREAT, 0o666)
                 waited = time.time()
                 fcntl.flock(lock_fd, fcntl.LOCK_EX)
+                # Other users' jobs on the same node share its L3 and memory
+                # bandwidth: wait for the node to be quiet, and record it.
+                busy_wait = time.time()
+                node_busy = node_busy_fraction(nodes[node])
+                while node_busy > a.max_node_busy and time.time() - busy_wait < a.busy_timeout:
+                    time.sleep(10)
+                    node_busy = node_busy_fraction(nodes[node])
                 record = {'rep': rep, 'dataset': name, 'compressor': comp, 'cpu': cpu, 'node': node,
-                          'lock_wait_s': round(time.time() - waited, 3),
+                          'lock_wait_s': round(busy_wait - waited, 3),
+                          'busy_wait_s': round(time.time() - busy_wait, 3),
+                          'node_busy_before': round(node_busy, 3),
+                          'node_busy_exceeded': node_busy > a.max_node_busy,
                           'node_free_bytes': node_free_bytes(node), 'loadavg_before': loadavg(),
                           'sibling_busy_before': round(cpu_busy(sibling_threads(cpu), 0.2), 3)}
                 started = time.time()
@@ -400,6 +436,8 @@ def main():
                     record['loadavg_after'] = loadavg()
                     os.close(lock_fd)
                 record['returncode'] = proc.returncode
+                if record['node_busy_exceeded']:
+                    noisy += 1
                 if proc.returncode == 0 and os.path.exists(csv_path):
                     with open(csv_path) as f:
                         rows = list(csv.DictReader(f))
@@ -433,6 +471,7 @@ def main():
         w.writerows(medians)
     meta['finished'] = time.strftime('%Y-%m-%dT%H:%M:%S%z')
     meta['failures'] = failures
+    meta['runs_on_busy_node'] = noisy
     with open(os.path.join(out, 'metadata.json'), 'w') as f:
         json.dump(meta, f, indent=1)
     with open(os.path.join(out, 'summary.json'), 'w') as f:
@@ -446,6 +485,9 @@ def main():
             print('  %-40s %s' % (key, ', '.join(metrics)))
     if failures:
         print('%d benchmark process(es) failed; see runs.jsonl' % failures)
+    if noisy:
+        print('WARNING: %d run(s) started while the node was busier than --max-node-busy '
+              '(node_busy_exceeded in runs.jsonl); treat their numbers with caution' % noisy)
     return 1 if failures else 0
 
 
