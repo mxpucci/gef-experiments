@@ -1,0 +1,92 @@
+// Shared types/utilities used across benchmark translation units.
+// This exists so we can compile some benchmarks (e.g., ALP) with a different compiler
+// while still sharing the result/inputs structs.
+#pragma once
+
+#include <algorithm>
+#include <array>
+#include <cstdint>
+#include <atomic>
+#include <map>
+#include <ostream>
+#include <string>
+#include <utility>
+#include <vector>
+
+struct BenchmarkResult {
+    std::string compressor;
+    std::string dataset;
+    size_t num_values{};
+    size_t uncompressed_bits{};
+    size_t compressed_bits{};
+    double compression_ratio{};
+    double compression_throughput_mbs{};
+    double decompression_throughput_mbs{};
+    double random_access_ns{};
+    double random_access_mbs{};
+    std::vector<std::pair<size_t, double>> range_query_throughputs; // (range_size, MB/s)
+    std::string input_conversion{"none"};
+    size_t input_changed_values{};
+    size_t roundtrip_mismatches{};
+    std::string validation_status{"not_checked"};
+    std::string access_layout{"unspecified"};
+    size_t compression_unit_values{};
+    size_t native_page_values{};
+
+    void print_header(std::ostream &out) const;
+    void print(std::ostream &out) const;
+};
+
+struct BenchmarkData {
+    std::string filename;
+    std::vector<int64_t> raw_data;
+    std::vector<int64_t> shifted_data;
+    std::vector<double> double_data;
+    int64_t decimals{};
+    int64_t min_val{};
+    size_t uncompressed_bits{};
+
+    // Indices
+    std::vector<size_t> random_indices;
+    // Map range size to indices
+    std::map<size_t, std::vector<size_t>> range_query_indices;
+
+    // Defined in a strict-IEEE, non-LTO translation unit: callers may use
+    // fast-math, but reciprocal multiplication changes the decimal input bits.
+    void convert_shifted_to_double();
+};
+
+template<class T>
+inline void do_not_optimize(T const &value) {
+    // Prefer a portable implementation when building with strict toolchains.
+    // GNU/Clang inline asm gives the strongest "use" semantics; otherwise fall back
+    // to a compiler-only fence + volatile address-take.
+#if defined(__GNUC__) || defined(__clang__)
+    asm volatile("" : : "g"(value) : "memory");
+#else
+    std::atomic_signal_fence(std::memory_order_seq_cst);
+    auto const volatile* p = &value;
+    (void)p;
+    std::atomic_signal_fence(std::memory_order_seq_cst);
+#endif
+}
+
+// Portable compiler-only barrier to prevent reordering across timing points.
+// Prefer this over inline `asm volatile("" ::: "memory")` in benchmarks to reduce
+// toolchain-specific build issues (e.g., -Werror/-pedantic).
+inline void compiler_barrier() {
+    std::atomic_signal_fence(std::memory_order_seq_cst);
+}
+
+// External benchmark functions (compiled with different compilers for compatibility)
+// ALP: compiled with clang++ for AVX-512 support
+BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
+                              const std::vector<size_t> &range_sizes);
+
+// LeCo: compiled with GCC 11 due to GCC 13 std::is_integral<__uint128_t> conflict
+BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
+                               const std::vector<size_t> &range_sizes);
+
+BenchmarkResult benchmark_falcon(const BenchmarkData &, const std::vector<size_t> &, size_t block_size = 1000);
+
+BenchmarkResult benchmark_camel(const BenchmarkData &, const std::vector<size_t> &);

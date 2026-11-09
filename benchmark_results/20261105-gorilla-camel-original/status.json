@@ -1,0 +1,209 @@
+[
+  {
+    "dataset": "BP",
+    "status": "completed",
+    "started": "2026-11-05T12:56:41.290769",
+    "camel_integer_bits": 16,
+    "reused_existing_result": true,
+    "returncode": 0,
+    "finished": "2026-11-05T12:56:41.291394",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "BM",
+    "status": "completed",
+    "started": "2026-11-05T12:56:41.291808",
+    "camel_integer_bits": 16,
+    "reused_existing_result": true,
+    "returncode": 0,
+    "finished": "2026-11-05T12:56:41.292235",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "bitwise_failed"
+    }
+  },
+  {
+    "dataset": "BW",
+    "status": "completed",
+    "started": "2026-11-05T12:56:41.292662",
+    "camel_integer_bits": 16,
+    "reused_existing_result": true,
+    "returncode": 0,
+    "finished": "2026-11-05T12:56:41.293104",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "bitwise_failed"
+    }
+  },
+  {
+    "dataset": "BT",
+    "status": "completed",
+    "started": "2026-11-05T12:56:41.293574",
+    "camel_integer_bits": 16,
+    "reused_existing_result": true,
+    "returncode": 0,
+    "finished": "2026-11-05T12:56:41.294045",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "bitwise_failed"
+    }
+  },
+  {
+    "dataset": "DU",
+    "status": "completed",
+    "started": "2026-11-05T12:56:41.294566",
+    "camel_integer_bits": 16,
+    "reused_existing_result": true,
+    "returncode": 0,
+    "finished": "2026-11-05T12:56:41.295035",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "CT",
+    "status": "completed",
+    "started": "2026-11-05T12:56:41.295663",
+    "camel_integer_bits": 16,
+    "reused_existing_result": true,
+    "returncode": 0,
+    "finished": "2026-11-05T12:56:41.296148",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "DP",
+    "status": "completed",
+    "started": "2026-11-05T12:56:41.296744",
+    "camel_integer_bits": 16,
+    "reused_existing_result": true,
+    "returncode": 0,
+    "finished": "2026-11-05T12:56:41.297238",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "LAT",
+    "status": "completed",
+    "started": "2026-11-05T12:56:41.297873",
+    "camel_integer_bits": 19,
+    "returncode": 0,
+    "finished": "2026-11-05T12:57:05.400597",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "LON",
+    "status": "completed",
+    "started": "2026-11-05T12:57:05.401707",
+    "camel_integer_bits": 16,
+    "reused_existing_result": true,
+    "returncode": 0,
+    "finished": "2026-11-05T12:57:05.402348",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "GE",
+    "status": "completed",
+    "started": "2026-11-05T12:57:05.403072",
+    "camel_integer_bits": 16,
+    "reused_existing_result": true,
+    "returncode": 0,
+    "finished": "2026-11-05T12:57:05.403628",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "UK",
+    "status": "completed",
+    "started": "2026-11-05T12:57:05.404378",
+    "camel_integer_bits": 16,
+    "reused_existing_result": true,
+    "returncode": 0,
+    "finished": "2026-11-05T12:57:05.404930",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "AP",
+    "status": "completed",
+    "started": "2026-11-05T12:57:05.405713",
+    "camel_integer_bits": 16,
+    "reused_existing_result": true,
+    "returncode": 0,
+    "finished": "2026-11-05T12:57:05.406275",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "bitwise_failed"
+    }
+  },
+  {
+    "dataset": "WD",
+    "status": "completed",
+    "started": "2026-11-05T12:57:05.407106",
+    "camel_integer_bits": 16,
+    "reused_existing_result": true,
+    "returncode": 0,
+    "finished": "2026-11-05T12:57:05.407685",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "ECG",
+    "status": "completed",
+    "started": "2026-11-05T12:57:05.408547",
+    "camel_integer_bits": 16,
+    "reused_existing_result": true,
+    "returncode": 0,
+    "finished": "2026-11-05T12:57:05.409139",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "US",
+    "status": "completed",
+    "started": "2026-11-05T12:57:05.410047",
+    "camel_integer_bits": 16,
+    "reused_existing_result": true,
+    "returncode": 0,
+    "finished": "2026-11-05T12:57:05.410751",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "IT",
+    "status": "completed",
+    "started": "2026-11-05T12:57:05.411680",
+    "camel_integer_bits": 16,
+    "reused_existing_result": true,
+    "returncode": 0,
+    "finished": "2026-11-05T12:57:05.412286",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  }
+]

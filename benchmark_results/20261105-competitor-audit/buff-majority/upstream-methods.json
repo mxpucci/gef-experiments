@@ -1,0 +1,8 @@
+{
+  "commit": "d6550b25a247e34b0dd88079b05e1ce83905630f",
+  "source": "database/src/compress/buff_simd.rs",
+  "sha256": {
+    "pub fn buff_encode_majority": "b93ed5a1d43148c049ec6641f5e3f09fb5c402a8b4e31b09b09d2adc0a555f70",
+    "pub fn buff_decode_majority": "66d4f88f9a3975ed19096c5491a6a0d240213bf33bfc897c603f67fb4d368484"
+  }
+}

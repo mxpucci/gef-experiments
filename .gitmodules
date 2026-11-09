@@ -10,3 +10,6 @@
 [submodule "lib/buff"]
 	path = lib/buff
 	url = https://github.com/Tranway1/buff
+[submodule "lib/camel-upstream"]
+	path = lib/camel-upstream
+	url = https://github.com/yoyo185644/camel.git

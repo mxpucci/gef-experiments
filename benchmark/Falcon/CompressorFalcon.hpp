@@ -1,10 +1,12 @@
+// Legacy adapter, excluded from default comparisons at the user's request.
+// Original CPU sources could not be recovered; upstream fidelity is unverified.
 #pragma once
 
 /**
  * Falcon Compressor - Header-only C++ port from:
  * https://github.com/Spatio-Temporal-Lab/Falcon
  * 
- * This is a faithful port of the original CPU implementation from:
+ * Previously attributed to these CPU files (not independently verified):
  * - src/cpu/Falcon_basic_compressor.cpp
  * - src/utils/output_bit_stream.cc
  * 

@@ -86,3 +86,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
 // LeCo: compiled with GCC 11 due to GCC 13 std::is_integral<__uint128_t> conflict
 BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
                                const std::vector<size_t> &range_sizes);
+
+BenchmarkResult benchmark_falcon(const BenchmarkData &, const std::vector<size_t> &, size_t block_size = 1000);
+
+BenchmarkResult benchmark_camel(const BenchmarkData &, const std::vector<size_t> &);

@@ -1,0 +1,9 @@
+{
+  "upstream_alp": "31ca0ed11c93c99d3f5b5c30e01a3e1c3832d3ce",
+  "source_sha256": {
+    "CMakeLists.txt": "fc77ea32c84c8cfaa3c083e857bc54ec85da304c21b1a2f5b48a98920d3e786e",
+    "benchmark/alp_benchmark.cpp": "aa68ccab2545e2996c868e4570690dbf56fddb49120f5cea7b72f0d17da76a75",
+    "tests/alp_adapter.cpp": "279ba1cabe408cc412eb3e895e2683367db60be4051589bda5b77687deef6507",
+    "docs/alp.md": "eb887c1117ca4cfd1099bf0f68afb53840d635729a8f4b026d3177bac51850e2"
+  }
+}
