@@ -8,7 +8,7 @@
 #include <chrono>
 #include <cstring>
 #include <iostream>
-#include <unordered_map>
+#include <algorithm>
 
 BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
                                const std::vector<size_t> &range_sizes) {
@@ -117,43 +117,15 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
     result.random_access_ns = (q_count == 0) ? 0.0 : (static_cast<double>(ra_time_ns) / q_count);
     result.random_access_mbs = (q_count == 0) ? 0.0 : ((q_count * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9));
 
-    // Random-access correctness spot-check (after timing, to avoid warming caches / predictors):
-    // `randomdecodeArray8` uses a "wo_round" path in the library; verify it matches block decode.
-    {
-        const size_t check_queries = std::min<size_t>(200, bench_data.random_indices.size());
-        std::unordered_map<size_t, std::vector<T>> decoded_blocks; // block_id -> decoded block
-        decoded_blocks.reserve(check_queries);
-
-        for (size_t qi = 0; qi < check_queries; ++qi) {
-            const size_t idx = bench_data.random_indices[qi];
-            const size_t ib = idx / block_size;
-            const size_t offset_in_block = idx % block_size;
-
-            auto it = decoded_blocks.find(ib);
-            if (it == decoded_blocks.end()) {
-                int block_length = static_cast<int>(block_size);
-                if (ib == num_blocks - 1) {
-                    block_length = static_cast<int>(n - (num_blocks - 1) * block_size);
-                }
-
-                std::vector<T> block_buf(static_cast<size_t>(block_length));
-                codec.decodeArray8(block_start_vec[ib], static_cast<size_t>(block_length), block_buf.data(), ib);
-                it = decoded_blocks.emplace(ib, std::move(block_buf)).first;
-            }
-
-            const T ra_val = codec.randomdecodeArray8(block_start_vec[ib],
-                                                      static_cast<int>(offset_in_block),
-                                                      nullptr,
-                                                      n);
-
-            const T ref_val = static_cast<T>(data[idx]);
-            if (ra_val != ref_val) {
-                result.validation_status = "failed";
-                std::cerr << "Warning: LeCo random access mismatch at idx=" << idx
-                          << " (block " << ib << ", offset " << offset_in_block << ")"
-                          << " ref=" << ref_val << " ra=" << ra_val << std::endl;
-                break;
-            }
+    // Random-access correctness (after timing): every timed index, against the input.
+    for (auto idx : bench_data.random_indices) {
+        const T ra_val = codec.randomdecodeArray8(block_start_vec[idx / block_size],
+                                                  static_cast<int>(idx % block_size), nullptr, n);
+        if (ra_val != static_cast<T>(data[idx])) {
+            result.validation_status = "failed";
+            std::cerr << "Warning: LeCo random access mismatch at idx=" << idx
+                      << " ref=" << static_cast<T>(data[idx]) << " ra=" << ra_val << std::endl;
+            break;
         }
     }
     
@@ -164,13 +136,9 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
         
         const auto& range_indices = bench_data.range_query_indices.at(range);
         std::vector<T> out_buffer(range);
-        volatile T range_checksum = 0;  // volatile prevents optimization
-        
-        t1 = std::chrono::high_resolution_clock::now();
-        size_t q_count_range = 0;
-        for (auto start_idx : range_indices) {
-            if (q_count_range++ >= num_range_queries) break;
-            
+        std::vector<T> block_buffer(block_size);  // reused native-partition decode buffer
+        // Decode the native partitions overlapping [start_idx, start_idx + range).
+        auto decode_range = [&](size_t start_idx) {
             size_t start_block = start_idx / block_size;
             size_t end_block = (start_idx + range - 1) / block_size;
             
@@ -181,7 +149,6 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
                     block_length = n - (num_blocks - 1) * block_size;
                 }
                 
-                std::vector<T> block_buffer(block_length);
                 codec.decodeArray8(block_start_vec[ib], block_length, block_buffer.data(), ib);
                 
                 size_t block_start_global = ib * block_size;
@@ -191,6 +158,14 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
                 memcpy(out_buffer.data() + out_pos, block_buffer.data() + skip, take * sizeof(T));
                 out_pos += take;
             }
+        };
+        volatile T range_checksum = 0;  // volatile prevents optimization
+        
+        t1 = std::chrono::high_resolution_clock::now();
+        size_t q_count_range = 0;
+        for (auto start_idx : range_indices) {
+            if (q_count_range++ >= num_range_queries) break;
+            decode_range(start_idx);
             range_checksum += out_buffer[0];  // Force computation
             do_not_optimize(out_buffer);
         }
@@ -201,6 +176,19 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
         auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
         double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
         result.range_query_throughputs.emplace_back(range, throughput);
+
+        // Range correctness (after timing): every timed query, against the input.
+        q_count_range = 0;
+        for (auto start_idx : range_indices) {
+            if (q_count_range++ >= num_range_queries) break;
+            decode_range(start_idx);
+            if (!std::equal(out_buffer.begin(), out_buffer.end(), data.begin() + start_idx,
+                            [](T a, auto b) { return a == static_cast<T>(b); })) {
+                result.validation_status = "failed";
+                std::cerr << "Warning: LeCo range mismatch start=" << start_idx << " len=" << range << std::endl;
+                break;
+            }
+        }
     }
     
     // Cleanup
