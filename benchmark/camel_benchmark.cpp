@@ -1,6 +1,6 @@
 // Camel benchmark: native C++ translation of the authors' Java codec
-// (benchmark/Camel/camel.hpp), independent 1000-value blocks as in the
-// authors' experiments (Java CamelDecompressor.DEFAULT_BLOCK_SIZE), final
+// (benchmark/Camel/camel.hpp), independent blocks (harness -b, default 1000 as in the
+// authors' experiments, Java CamelDecompressor.DEFAULT_BLOCK_SIZE), final
 // partial block kept. Size = bytes actually written per block.
 #include "benchmark_common.hpp"
 #include "Camel/camel.hpp"
@@ -13,9 +13,9 @@
 #include <string>
 #include <vector>
 
-constexpr size_t kBlock = 1000;
-
-BenchmarkResult benchmark_camel(const BenchmarkData& bench_data, const std::vector<size_t>& range_sizes) {
+BenchmarkResult benchmark_camel(const BenchmarkData& bench_data, const std::vector<size_t>& range_sizes,
+                                size_t block_size) {
+    const size_t kBlock = block_size ? block_size : 1000; // harness -b, default 1000
     using Clock = std::chrono::high_resolution_clock;
     auto seconds = [](Clock::time_point a, Clock::time_point b) {
         return std::max(std::chrono::duration<double>(b - a).count(), 1e-9);
@@ -66,17 +66,18 @@ BenchmarkResult benchmark_camel(const BenchmarkData& bench_data, const std::vect
     do_not_optimize(decoded);
     r.decompression_throughput_mbs = mib / seconds(t1, t2);
 
-    size_t tolerance_failures = 0;
+    // Shared rule: |error| <= 1e-9 passes; failures are warnings, not fatal.
+    size_t bitwise = 0;
     for (size_t i = 0; i < n; ++i) {
-        r.roundtrip_mismatches += std::bit_cast<uint64_t>(data[i]) != std::bit_cast<uint64_t>(decoded[i]);
-        tolerance_failures += !(std::abs(data[i] - decoded[i]) < 1e-9);
+        bitwise += std::bit_cast<uint64_t>(data[i]) != std::bit_cast<uint64_t>(decoded[i]);
+        r.roundtrip_mismatches += !(std::abs(data[i] - decoded[i]) <= 1e-9);
     }
-    r.validation_status = tolerance_failures ? "failed" : (r.roundtrip_mismatches ? "passed" : "bitwise_passed");
-    if (tolerance_failures)
-        std::cerr << "WARNING: Camel: " << tolerance_failures << "/" << n << " values differ by >= 1e-9\n";
-    else if (r.roundtrip_mismatches)
+    r.validation_status = r.roundtrip_mismatches ? "failed" : "passed";
+    if (r.roundtrip_mismatches)
         std::cerr << "WARNING: Camel: " << r.roundtrip_mismatches << "/" << n
-                  << " values differ bitwise but within 1e-9\n";
+                  << " values differ by > 1e-9; emitting metrics with validation_status=failed\n";
+    else if (bitwise)
+        std::cerr << "Note: Camel: " << bitwise << " values differ bitwise but within 1e-9\n";
 
     // Random access: decode the containing block up to the requested offset.
     const size_t queries = std::min<size_t>(100000, bench_data.random_indices.size());
