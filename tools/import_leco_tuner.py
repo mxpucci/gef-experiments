@@ -22,11 +22,6 @@ REPLACEMENTS = [
     # 64-bit: normalise by 8-byte values; with 4 the ratio of a 64-bit sample
     # can exceed the initial minimum 1.0 and no candidate would be selected.
     ('(4 * times * sample_size * 1.0)', '(8 * times * sample_size * 1.0)', '8-byte denominator for uint64'),
-    # Upstream bug: the tail partition of the sample omitted the sample offset
-    # (pick_block * sample_size) and encoded values from the start of the data.
-    ('data+ (sample_size / block_size) * block_size',
-     'data + pick_block * sample_size + (sample_size / block_size) * block_size',
-     'tail partition reads the sampled subsequence (upstream offset bug)'),
 ]
 for old, new, _ in REPLACEMENTS:
     if s.count(old) != 1:
@@ -61,8 +56,8 @@ struct CODECFactory {
 '''
 footer = '''
 // Called once per dataset, as in the authors' search_hyper_regress.cpp: candidate grid
-// {200..10000}, one 1% sample. srand(1) restores the C default seed so the choice equals
-// a fresh single-dataset process (upstream never seeds rand()) regardless of run order.
+// {200..10000}, one 1% sample. Upstream runs one dataset per process with rand() unseeded,
+// which equals srand(1); our harness runs several datasets per process, so reseed to keep that.
 inline size_t choose(const uint64_t* data, size_t n) {
     int candidates[7] = {200, 400, 800, 1600, 3200, 6400, 10000};
     // An empty 1% sample (n < 100) cannot rank candidates (upstream asserts); n fits one partition.

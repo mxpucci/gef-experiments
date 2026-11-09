@@ -4,7 +4,6 @@
   "sha256": "270ce7ad447fe07c9e21b00844522997c15d7ece3a81e415056c3dccf6c9b0b4",
   "changes": [
     "8-byte denominator for uint64",
-    "tail partition reads the sampled subsequence (upstream offset bug)",
     "uint64 input pointer",
     "use local uint64 Leco_int adapter instead of codecfactory.h"
   ]

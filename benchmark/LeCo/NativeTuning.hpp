@@ -73,7 +73,7 @@ codec_vote pick_block_size(int bsize [],int choice, int times, double sample_rat
                 int block_length = sample_size - (sample_size / block_size) * block_size;
                 uint8_t *descriptor = (uint8_t *)malloc(block_length * sizeof(uint64_t)+1024);
                 uint8_t *res = descriptor;
-                res = codec.encodeArray8(data + pick_block * sample_size + (sample_size / block_size) * block_size, block_length, descriptor, sample_size / block_size);
+                res = codec.encodeArray8(data+ (sample_size / block_size) * block_size, block_length, descriptor, sample_size / block_size);
                 totalsize += (res - descriptor);
                 free(descriptor);
             }
@@ -96,8 +96,8 @@ codec_vote pick_block_size(int bsize [],int choice, int times, double sample_rat
 
 
 // Called once per dataset, as in the authors' search_hyper_regress.cpp: candidate grid
-// {200..10000}, one 1% sample. srand(1) restores the C default seed so the choice equals
-// a fresh single-dataset process (upstream never seeds rand()) regardless of run order.
+// {200..10000}, one 1% sample. Upstream runs one dataset per process with rand() unseeded,
+// which equals srand(1); our harness runs several datasets per process, so reseed to keep that.
 inline size_t choose(const uint64_t* data, size_t n) {
     int candidates[7] = {200, 400, 800, 1600, 3200, 6400, 10000};
     // An empty 1% sample (n < 100) cannot rank candidates (upstream asserts); n fits one partition.

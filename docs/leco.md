@@ -35,22 +35,21 @@ with candidate sizes {200, 400, 800, 1600, 3200, 6400, 10000}, one sample of 1%
 of the data, and keeps the candidate with the smallest encoded sample. We call
 the same function with the same arguments, using LeCo's own codec, once per
 dataset. Its time counts as compression time. `tools/import_leco_tuner.py`
-regenerates `benchmark/LeCo/NativeTuning.hpp` from the pinned file. It asserts
-each of these textual changes:
+regenerates `benchmark/LeCo/NativeTuning.hpp` from the pinned file. It changes
+only what is needed to run on 64-bit data, and asserts each change:
 
 - 64-bit: the input pointer is `uint64_t`, and the ratio's denominator is 8
   bytes per value instead of 4. Without the second change, 64-bit samples can
   score above the initial minimum of 1.0, and then no candidate is selected.
 - A small adapter replaces `codecfactory.h`, which only offers uint32 codecs,
   with the original uint64 `Leco_int`.
-- Upstream bug fix: the sample's last, partial partition was read from
-  `data + ...`, not from the sampled offset `data + pick_block*sample_size + ...`.
 
 Two changes are in our caller, not in the authors' code:
 
 - `srand(1)` before each search. Upstream never seeds `rand()` and runs one
-  dataset per process. Reseeding gives the same choice regardless of the order
-  in which datasets run.
+  dataset per process. An unseeded `rand()` behaves as if `srand(1)` had been
+  called at process start. Our harness runs several datasets in one process,
+  so we reseed before each search to keep the per-process upstream behaviour.
 - Fewer than 100 values give an empty 1% sample, which makes upstream assert.
   In that case we take the first candidate.
 
@@ -62,6 +61,13 @@ dataset at every candidate size. On 11 datasets the helper picked the best
 size. Over all 16, the size it picked was at most 6.0% larger than the best
 candidate (BW: it chose 1600, but 200 was best). The other gaps were CT 1.8%,
 US 0.5%, BT 0.25% and UK 0.05%. We report this and keep the authors' choice.
+
+Known upstream issue, left unpatched: the sample's last, partial partition is
+read from the start of the data instead of from the sample (`data + ...`
+without the `pick_block*sample_size` offset). Fixing it changed no chosen size
+and no compressed size on any of the 16 datasets. Following our policy of
+patching only bugs that stop us producing meaningful metrics, we keep
+upstream's code as is.
 
 ## Storage and queries
 
