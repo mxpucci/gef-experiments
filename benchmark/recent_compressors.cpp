@@ -9,7 +9,6 @@
 #endif
 #ifdef GEF_WITH_PCODEC
 #include "Pcodec/Pcodec.hpp"
-#include "Pcodec/Indexed.hpp"
 #endif
 #ifdef GEF_WITH_FLEA
 #include "FLEA/FLEA.hpp"
@@ -268,14 +267,6 @@ BenchmarkResult benchmark_recent_compressor(const std::string& name,
     if(name=="fauna") return benchmark_indexed(name,data.double_data,data,ranges,
         [&]{return gef_compressors::fauna::Indexed(data.double_data,native.fauna_batch_size);},
         true,"native_segments",native.fauna_batch_size,0);
-#endif
-#ifdef GEF_WITH_PCODEC
-    if(name=="pcodec") return benchmark_indexed(name,data.double_data,data,ranges,
-        [&]{return gef_compressors::pcodec::Indexed<double>(data.double_data,native.pcodec_chunk_size,native.pcodec_page_size);},
-        false,"native_pages",native.pcodec_chunk_size,native.pcodec_page_size);
-    if(name=="pcodec_i64") return benchmark_indexed(name,data.raw_data,data,ranges,
-        [&]{return gef_compressors::pcodec::Indexed<int64_t>(data.raw_data,native.pcodec_chunk_size,native.pcodec_page_size);},
-        false,"native_pages",native.pcodec_chunk_size,native.pcodec_page_size);
 #endif
     for (const auto& codec : integer_codecs())
         if (codec.name == name) return benchmark_blocks(codec, data.raw_data, data, ranges, block_size);

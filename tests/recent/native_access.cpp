@@ -1,5 +1,4 @@
 #include "Fauna/Indexed.hpp"
-#include "Pcodec/Indexed.hpp"
 #include <algorithm>
 #include <cstring>
 #include <iostream>
@@ -32,28 +31,6 @@ template<class T,class Index> static void queries(Index& index,const std::vector
         size_t length=std::min<size_t>(expected.size()-first,1+rng()%2000);
         std::vector<T> range(length);index.read(first,length,range.data());
         require(!std::memcmp(range.data(),expected.data()+first,length*sizeof(T)),"range query differs");
-    }
-}
-template<class T> static void pco_case(const std::vector<T>& input){
-    using Index=gef_compressors::pcodec::Indexed<T>;
-    std::vector<uint8_t> bytes;
-    {
-        Index index(input,4096,513);queries(index,input);bytes=index.bytes();
-    }
-    Index reopened(bytes);queries(reopened,input);
-    auto truncated=bytes;truncated.pop_back();rejects([&]{Index bad(truncated);});
-    rejects([&]{Index bad(input,0,513);});rejects([&]{Index bad(input,4096,0);});
-    if(input.size()>5000){
-        // An unrelated page may be damaged without being visited by a point
-        // query into a later native page of the SAME compression chunk.
-        const size_t chunks=word(bytes,24),pages=word(bytes,32);
-        require(chunks>1&&pages>chunks,"test did not exercise native multi-page chunks");
-        const size_t first=64+48*chunks;
-        const size_t off=word(bytes,first+24),len=word(bytes,first+32);
-        std::fill(bytes.begin()+off,bytes.begin()+off+len,0xff);
-        const size_t target=word(bytes,first+40);
-        Index selected(bytes);T result{};selected.read(target,1,&result);
-        require(!std::memcmp(&result,&input[target],sizeof(T)),"query decoded an unrelated page");
     }
 }
 static void fauna_case(const std::vector<double>& input,size_t batch){
@@ -108,16 +85,7 @@ static void fauna_residual_fixture(bool swing){
     for(size_t i=model_n-1;i<n;++i){double result;indexed.read(i,1,&result);require(result==expected[i],"model/residual boundary differs");}
 }
 int main(){
-    pco_case(std::vector<double>{});pco_case(std::vector<int64_t>{});
-    pco_case(std::vector<double>{-0.0});pco_case(std::vector<int64_t>{INT64_MIN,INT64_MAX});
-    std::mt19937_64 rng(71);std::vector<double> values;std::vector<int64_t> integers;
-    for(size_t i=0;i<12291;++i){uint64_t bits=rng();double value;int64_t integer;std::memcpy(&value,&bits,8);std::memcpy(&integer,&bits,8);values.push_back(value);integers.push_back(integer);}
-    pco_case(values);pco_case(integers);
-    gef_compressors::pcodec::Indexed<double> typed(values,4096,513);
-    rejects([&]{gef_compressors::pcodec::Indexed<int64_t> wrong(typed.bytes());});
-    // Default Pco sizes also cross a native chunk boundary.
-    values.resize(262144+19);for(size_t i=0;i<values.size();++i)values[i]=double(i%1000)/100;
-    gef_compressors::pcodec::Indexed<double> defaults(values);queries(defaults,values);
+    std::mt19937_64 rng(71);std::vector<double> values;
     fauna_case({},65536);fauna_case({4.0},65536);fauna_case({0.1,0.2,19705.4018},65536);
     values.resize(131077);
     for(size_t i=0;i<values.size();++i){
@@ -129,5 +97,5 @@ int main(){
     fauna_case(values,65536);
     fauna_case(std::vector<double>(values.begin(),values.begin()+4099),257);
     fauna_residual_fixture(false);fauna_residual_fixture(true);
-    std::cout << "Native indexed access: original-grid agreement, f64/i64 bits, pages, segments, boundaries, serialization and bounds passed\n";
+    std::cout << "Native indexed access: original-grid agreement, segments, boundaries, serialization and bounds passed\n";
 }
