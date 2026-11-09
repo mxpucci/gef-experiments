@@ -17,6 +17,15 @@
 
 namespace {
 
+// Partial last vector, following the authors' DuckDB integration: encode it
+// with its real value count and bit-pack only the needed prefix. FastLanes
+// puts value i in lane i % L (L = 1024/W lanes of W-bit words), so values
+// [0,n) live in the first ceil(ceil(n/L)*bw/W) words of every lane.
+inline size_t packed_words(size_t n, unsigned bw, unsigned w) {
+    const size_t lanes = alp::config::VECTOR_SIZE / w, rows = (n + lanes - 1) / lanes;
+    return lanes * ((rows * bw + w - 1) / w) * w / 64;
+}
+
 // Metadata structure mirroring the authors' alp_m struct (but adapted for in-memory)
 // See: lib/ALP/publication/source_code/bench_end_to_end/src/common/runtime/Import.cpp
 struct VectorMetadata {
@@ -27,6 +36,7 @@ struct VectorMetadata {
     uint8_t exponent;
     int64_t ffor_base;
     uint16_t exc_count;
+    uint16_t count = alp::config::VECTOR_SIZE; // values; derived from n, not stored
 
     // Offsets into the respective data vectors
     size_t ffor_offset;
@@ -46,11 +56,23 @@ inline void decode_vector(
     double* out_vec,
     std::vector<alp::state<double>>& rowgroups)
 {
+    // The partial vector stores a packed prefix; zero-fill the rest of a
+    // full FastLanes block so the original unpackers can be used unchanged.
+    alignas(64) uint64_t padded[16 * (64 + 16)];
+    const bool partial = meta.count < alp::config::VECTOR_SIZE;
     if (meta.rd) {
         auto& stt = rowgroups[meta.rd_group];
         alignas(64) uint64_t right[alp::config::VECTOR_SIZE];
         alignas(64) uint16_t left[alp::config::VECTOR_SIZE];
         const auto* packed = ffor_stream + meta.ffor_offset;
+        if (partial) {
+            const size_t rw = packed_words(meta.count, stt.right_bit_width, 64);
+            std::fill(std::begin(padded), std::end(padded), 0);
+            std::copy(packed, packed + rw, padded);
+            std::copy(packed + rw, packed + rw + packed_words(meta.count, stt.left_bit_width, 16),
+                      padded + 16 * stt.right_bit_width);
+            packed = padded;
+        }
         unffor::unffor(packed, right, stt.right_bit_width, &stt.right_for_base);
         unffor::unffor(reinterpret_cast<const uint16_t*>(packed + 16 * stt.right_bit_width),
                        left, stt.left_bit_width, &stt.left_for_base);
@@ -63,6 +85,11 @@ inline void decode_vector(
     // 1. FALP: Fused bit-unpacking + ALP decode in one pass (as per official implementation)
     static const uint64_t zero=0;
     const uint64_t* packed_ptr = meta.bit_width ? ffor_stream + meta.ffor_offset : &zero;
+    if (partial && meta.bit_width) {
+        std::fill(std::begin(padded), std::end(padded), 0);
+        std::copy(packed_ptr, packed_ptr + packed_words(meta.count, meta.bit_width, 64), padded);
+        packed_ptr = padded;
+    }
     uint64_t base_u64 = static_cast<uint64_t>(meta.ffor_base);
 
     generated::falp::fallback::scalar::falp(
@@ -100,8 +127,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     result.uncompressed_bits = bench_data.uncompressed_bits;
 
     constexpr size_t VEC = alp::config::VECTOR_SIZE;
-    const size_t n_full = (n / VEC) * VEC;
-    const size_t num_vecs = n_full / VEC;
+    const size_t num_vecs = (n + VEC - 1) / VEC; // last one may be partial
 
     // Streams follow the authors' end-to-end integration; RD exceptions
     // use their native uint16 representation in a separate stream.
@@ -127,23 +153,21 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     std::vector<double> sample_buf(SAMPLE_BUF_SIZE);
 
     std::vector<alp::state<double>> rowgroups;
-    std::vector<double> tail;
     size_t rd_vectors=0, alp_vectors=0;
     // Compression
     auto t1 = std::chrono::high_resolution_clock::now();
     {
-        tail.assign(data.begin()+n_full,data.end());
         constexpr size_t ROWGROUP_SIZE = alp::config::ROWGROUP_SIZE;
-        const size_t num_rowgroups = (n_full + ROWGROUP_SIZE - 1) / ROWGROUP_SIZE;
+        const size_t num_rowgroups = (n + ROWGROUP_SIZE - 1) / ROWGROUP_SIZE;
 
         for (size_t rg = 0; rg < num_rowgroups; ++rg) {
             const size_t rg_start = rg * ROWGROUP_SIZE;
-            const size_t rg_end = std::min(rg_start + ROWGROUP_SIZE, n_full);
+            const size_t rg_end = std::min(rg_start + ROWGROUP_SIZE, n);
 
             alp::state<double> stt;
-            alp::encoder<double>::init(data.data(), rg_start, n_full, sample_buf.data(), stt);
+            alp::encoder<double>::init(data.data(), rg_start, n, sample_buf.data(), stt);
             if (stt.scheme == alp::Scheme::ALP_RD) {
-                alp::rd_encoder<double>::init(data.data(), rg_start, n_full, sample_buf.data(), stt);
+                alp::rd_encoder<double>::init(data.data(), rg_start, n, sample_buf.data(), stt);
             }
 
             alp::state<double> decoder_state;
@@ -153,10 +177,25 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
             std::copy(std::begin(stt.left_parts_dict),std::end(stt.left_parts_dict),decoder_state.left_parts_dict);
             rowgroups.push_back(std::move(decoder_state));
             const size_t rg_vec_start = rg_start / VEC;
-            const size_t rg_vec_end = rg_end / VEC;
+            const size_t rg_vec_end = (rg_end + VEC - 1) / VEC;
 
             for (size_t v = rg_vec_start; v < rg_vec_end; ++v) {
                 const double* vec_in = data.data() + v * VEC;
+                // Partial vector: the upstream kernels read 1024 values, so
+                // repeat the last real value (no new min/max or exception
+                // positions < count), search exp/fac over count values via
+                // the upstream vector_size field, and drop pad exceptions.
+                const size_t count = std::min(VEC, n - v * VEC);
+                alignas(64) double padded_in[VEC];
+                if (count < VEC) {
+                    std::copy(vec_in, vec_in + count, padded_in);
+                    std::fill(padded_in + count, padded_in + VEC, vec_in[count - 1]);
+                    vec_in = padded_in;
+                    stt.vector_size = static_cast<uint16_t>(count);
+                }
+                auto drop_padding = [&](uint16_t& c, const uint16_t* pos) {
+                    while (c && pos[c - 1] >= count) --c;
+                };
 
                 alignas(64) int64_t temp_encoded[VEC];
                 alignas(64) double exc_buf[VEC] = {};
@@ -172,8 +211,9 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
                     alignas(64) uint64_t right[VEC];
                     alignas(64) uint16_t left[VEC], exceptions[VEC];
                     alp::rd_encoder<double>::encode(vec_in, exceptions, pos_buf, &exc_cnt, right, left, stt);
+                    drop_padding(exc_cnt, pos_buf);
                     VectorMetadata meta{};
-                    meta.rd=true; meta.rd_group=rg;
+                    meta.rd=true; meta.rd_group=rg; meta.count=static_cast<uint16_t>(count);
                     meta.exc_count=exc_cnt;
                     meta.ffor_offset=ffor_stream.size();
                     meta.exc_val_offset=rd_exc_stream.size();
@@ -182,6 +222,12 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
                     auto* packed=ffor_stream.data()+meta.ffor_offset;
                     ffor::ffor(right,packed,stt.right_bit_width,&stt.right_for_base);
                     ffor::ffor(left,reinterpret_cast<uint16_t*>(packed+16*stt.right_bit_width),stt.left_bit_width,&stt.left_for_base);
+                    if (count < VEC) { // keep only the packed prefixes, left after right
+                        const size_t rw=packed_words(count,stt.right_bit_width,64);
+                        const size_t lw=packed_words(count,stt.left_bit_width,16);
+                        std::memmove(packed+rw,packed+16*stt.right_bit_width,lw*sizeof(uint64_t));
+                        ffor_stream.resize(meta.ffor_offset+rw+lw);
+                    }
                     rd_exc_stream.insert(rd_exc_stream.end(),exceptions,exceptions+exc_cnt);
                     exc_pos_stream.insert(exc_pos_stream.end(),pos_buf,pos_buf+exc_cnt);
                     metadata_stream.push_back(std::move(meta));
@@ -189,6 +235,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
                     continue;
                 } else {
                     alp::encoder<double>::encode(vec_in, exc_buf, pos_buf, &exc_cnt, temp_encoded, stt);
+                    drop_padding(exc_cnt, pos_buf);
                     alp::encoder<double>::analyze_ffor(temp_encoded, bw, &for_base);
                     fac = stt.fac;
                     exp = stt.exp;
@@ -202,6 +249,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
                 meta.exponent = exp;
                 meta.ffor_base = for_base;
                 meta.exc_count = exc_cnt;
+                meta.count = static_cast<uint16_t>(count);
                 meta.ffor_offset = ffor_stream.size(); // Index in 64-bit words
                 meta.exc_val_offset = exc_val_stream.size();
                 meta.exc_pos_offset = exc_pos_stream.size();
@@ -213,6 +261,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
                     size_t current_size = ffor_stream.size();
                     ffor_stream.resize(current_size + ffor_words);
                     ffor::ffor(temp_encoded, reinterpret_cast<int64_t*>(&ffor_stream[current_size]), bw, &for_base);
+                    ffor_stream.resize(current_size + packed_words(count, bw, 64));
                 }
 
                 // Store Exceptions
@@ -255,13 +304,13 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     // Count a packed representation, not C++ struct padding/capacity:
     // count (8), one scheme byte per row group, RD widths/dictionary once per
     // group, three uint64 stream offsets per vector, and codec-specific fields.
-    // Raw tail is an explicit adapter boundary policy: no values are dropped.
-    size_t comp_bits = (stored_metadata.size() + tail.size()*sizeof(double))*8;
+    // The partial last vector is encoded like the others: no values are dropped.
+    size_t comp_bits = stored_metadata.size()*8;
     comp_bits += ffor_stream.size()*64 + exc_pos_stream.size()*16;
     for(const auto& meta:metadata_stream)
         comp_bits += meta.exc_count*(meta.rd ? 16 : 64);
     std::cerr << "ALP vectors=" << alp_vectors << " RD vectors=" << rd_vectors
-              << " raw tail=" << n-n_full << "\n";
+              << " partial vector values=" << n%VEC << "\n";
     result.access_layout="native_vectors";
     result.compression_unit_values=VEC;
     result.compressed_bits = comp_bits;
@@ -292,6 +341,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     for(size_t v=0;v<num_vecs;++v) {
         auto& m=metadata_stream[v];
         m.rd_group=v/alp::config::N_VECTORS_PER_ROWGROUP;
+        m.count=static_cast<uint16_t>(std::min(VEC,n-v*VEC));
         m.rd=rowgroups[m.rd_group].scheme==alp::Scheme::ALP_RD;
         uint64_t offsets[3];reader.read(offsets,sizeof(offsets));
         m.ffor_offset=offsets[0];m.exc_val_offset=offsets[1];m.exc_pos_offset=offsets[2];
@@ -304,7 +354,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     if(reader.get_size()!=stored_metadata.size()) throw std::runtime_error("ALP metadata length mismatch");
 
     // Full decompression - with checksum to prevent optimization
-    std::vector<double> decompressed(n);
+    std::vector<double> decompressed(num_vecs*VEC); // kernels write whole vectors
     volatile double decomp_checksum = 0;  // volatile prevents optimization
     t1 = std::chrono::high_resolution_clock::now();
     for (size_t v = 0; v < num_vecs; ++v) {
@@ -318,10 +368,10 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
         // Force actual computation by reading result
         decomp_checksum += decompressed[v * VEC];
     }
-    std::copy(tail.begin(),tail.end(),decompressed.begin()+n_full);
     compiler_barrier();  // Compiler barrier before timing ends
     t2 = std::chrono::high_resolution_clock::now();
     do_not_optimize(decompressed);
+    decompressed.resize(n);
     do_not_optimize(decomp_checksum);
     auto decomp_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     result.decompression_throughput_mbs = (n * sizeof(double) / 1024.0 / 1024.0) / (decomp_ns / 1e9);
@@ -340,8 +390,6 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     t1 = std::chrono::high_resolution_clock::now();
     for (size_t q = 0; q < num_ra_queries; ++q) {
         size_t idx = bench_data.random_indices[q];
-        if (idx >= n_full) { ra_sum += tail[idx-n_full]; continue; }
-
         size_t vec_idx = idx / VEC;
         size_t offset = idx % VEC;
 
@@ -373,8 +421,6 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
         const size_t check_queries = std::min<size_t>(200, num_ra_queries);
         for (size_t q = 0; q < check_queries; ++q) {
             const size_t idx = bench_data.random_indices[q];
-            if (idx >= n_full) continue;
-
             const size_t vec_idx = idx / VEC;
             const size_t offset = idx % VEC;
 
@@ -429,10 +475,6 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
 
                 memcpy(range_buf.data() + out_pos, vec_buf + skip, take * sizeof(double));
                 out_pos += take;
-            }
-            if(start_idx+range>n_full) {
-                const size_t tail_start=std::max(start_idx,n_full);
-                std::copy(tail.begin()+tail_start-n_full,tail.begin()+start_idx+range-n_full,range_buf.begin()+tail_start-start_idx);
             }
         };
         t1 = std::chrono::high_resolution_clock::now();
