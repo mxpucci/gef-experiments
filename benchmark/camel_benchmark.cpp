@@ -1,55 +1,120 @@
+// Camel benchmark: native C++ translation of the authors' Java codec
+// (benchmark/Camel/camel.hpp), independent 1000-value blocks as in the
+// authors' experiments (Java CamelDecompressor.DEFAULT_BLOCK_SIZE), final
+// partial block kept. Size = bytes actually written per block.
 #include "benchmark_common.hpp"
-#include <bit>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <limits>
-#include <cstdlib>
-#include <sys/wait.h>
-#include <unistd.h>
+#include "Camel/camel.hpp"
 
-BenchmarkResult benchmark_camel(const BenchmarkData& data,const std::vector<size_t>& ranges) {
-    BenchmarkResult r; r.compressor="Camel";r.dataset=data.filename;
-    r.num_values=data.double_data.size();r.uncompressed_bits=data.uncompressed_bits;
-    r.access_layout="original_java_independent_blocks";r.compression_unit_values=1000;
-    struct Temporary {
-        std::filesystem::path dir;
-        ~Temporary(){if(!dir.empty()){std::error_code ec;std::filesystem::remove_all(dir,ec);}}
-    } temp;
-    try {
-        std::string cp;
-        if(const char* env=std::getenv("GEF_CAMEL_CLASSPATH"))cp=env;
-        else {std::ifstream f(NEATS_CAMEL_CLASSPATH_FILE);std::getline(f,cp);}
-        if(cp.empty())throw std::runtime_error("original Camel is not built; run tools/build_camel_java.py");
-        auto pattern=(std::filesystem::temp_directory_path()/"gef-camel-XXXXXX").string();
-        char* name=mkdtemp(pattern.data());if(!name)throw std::runtime_error("cannot create Camel input directory");temp.dir=name;
-        auto input=temp.dir/"input.bin",output=temp.dir/"metrics.txt";
-        std::ofstream f(input,std::ios::binary);
-        auto put=[&](uint64_t v){for(unsigned i=0;i<8;i++)f.put(static_cast<char>(v>>(i*8)));};
-        put(data.double_data.size());for(double v:data.double_data)put(std::bit_cast<uint64_t>(v));
-        size_t q=std::min<size_t>(100000,data.random_indices.size());put(q);for(size_t i=0;i<q;i++)put(data.random_indices[i]);
-        size_t count=0;for(size_t range:ranges)if(range<r.num_values)++count;put(count);
-        for(size_t range:ranges)if(range<r.num_values){const auto& starts=data.range_query_indices.at(range);size_t n=std::min<size_t>(1000,starts.size());put(range);put(n);for(size_t i=0;i<n;i++)put(starts[i]);}
-        f.close();if(!f)throw std::runtime_error("failed writing Camel input");
-        // No shell. JVM startup and IPC are outside the Java codec timers.
-        pid_t child=fork();if(child<0)throw std::runtime_error("cannot start Camel JVM");
-        if(child==0){execlp("java","java","-Xmx32g","-cp",cp.c_str(),"CamelBenchmark",input.c_str(),output.c_str(),static_cast<char*>(nullptr));_exit(127);}
-        int status=0;if(waitpid(child,&status,0)<0 || !WIFEXITED(status) || WEXITSTATUS(status)!=0)throw std::runtime_error("original Camel JVM failed");
-        std::ifstream metrics(output);uint64_t comp,dec,ra,queries,range_count;
-        if(!(metrics>>r.compressed_bits>>comp>>dec>>r.roundtrip_mismatches>>ra>>queries>>range_count))throw std::runtime_error("missing Camel measurements");
-        auto mibs=[](double bytes,uint64_t ns){return ns?bytes/1048576.0/(double(ns)/1e9):0.0;};
-        r.compression_ratio=double(r.compressed_bits)/r.uncompressed_bits;
-        r.compression_throughput_mbs=mibs(r.num_values*8.0,comp);r.decompression_throughput_mbs=mibs(r.num_values*8.0,dec);
-        r.random_access_ns=queries?double(ra)/queries:0;r.random_access_mbs=mibs(queries*8.0,ra);
-        for(uint64_t k=0;k<range_count;k++){uint64_t range,ns,n;if(!(metrics>>range>>ns>>n))throw std::runtime_error("incomplete Camel range measurements");r.range_query_throughputs.emplace_back(range,mibs(range*8.0*n,ns));}
-        r.validation_status=r.roundtrip_mismatches?"bitwise_failed":"passed";
-        if(r.roundtrip_mismatches)std::cerr<<"WARNING: original Camel changed "<<r.roundtrip_mismatches<<" values; results are not lossless for this dataset\n";
-    } catch(const std::exception& e) {
-        r.validation_status="error";r.compression_ratio=std::numeric_limits<double>::quiet_NaN();
-        r.compression_throughput_mbs=r.decompression_throughput_mbs=r.random_access_ns=r.random_access_mbs=r.compression_ratio;
-        r.range_query_throughputs.clear();
-        for(size_t range:ranges)if(range<r.num_values)r.range_query_throughputs.emplace_back(range,r.compression_ratio);
-        std::cerr<<"WARNING: Camel: "<<e.what()<<'\n';
+#include <algorithm>
+#include <bit>
+#include <chrono>
+#include <cmath>
+#include <iostream>
+#include <string>
+#include <vector>
+
+constexpr size_t kBlock = 1000;
+
+BenchmarkResult benchmark_camel(const BenchmarkData& bench_data, const std::vector<size_t>& range_sizes) {
+    using Clock = std::chrono::high_resolution_clock;
+    auto seconds = [](Clock::time_point a, Clock::time_point b) {
+        return std::max(std::chrono::duration<double>(b - a).count(), 1e-9);
+    };
+    BenchmarkResult r;
+    r.compressor = "Camel";
+    r.dataset = bench_data.filename;
+    const auto& data = bench_data.double_data;
+    const size_t n = data.size();
+    r.num_values = n;
+    r.uncompressed_bits = bench_data.uncompressed_bits;
+    r.access_layout = "independent_blocks";
+    r.compression_unit_values = kBlock;
+    const double mib = n * sizeof(double) / 1048576.0;
+
+    const camel::Config cfg = camel::configure(bench_data.decimals);
+    std::cerr << "Camel configuration: decimal_max_count=" << cfg.decimal_max_count
+              << " (count field " << cfg.count_bits() << " bits), integer_bits=" << cfg.integer_bits << '\n';
+
+    const size_t num_blocks = (n + kBlock - 1) / kBlock;
+    std::vector<std::string> blocks(num_blocks);
+    size_t bytes = 0;
+    auto t1 = Clock::now();
+    for (size_t b = 0; b < num_blocks; ++b) {
+        camel::Compressor c(cfg);
+        for (size_t i = b * kBlock, end = std::min(n, i + kBlock); i < end; ++i) c.addValue(data[i]);
+        blocks[b] = c.close();
+        bytes += blocks[b].size();
+    }
+    compiler_barrier();
+    auto t2 = Clock::now();
+    r.compressed_bits = bytes * 8;
+    r.compression_ratio = double(r.compressed_bits) / r.uncompressed_bits;
+    r.compression_throughput_mbs = mib / seconds(t1, t2);
+
+    auto decoder = [&](size_t b) {
+        return camel::Decompressor(reinterpret_cast<const uint8_t*>(blocks[b].data()), blocks[b].size(), cfg);
+    };
+
+    std::vector<double> decoded(n);
+    t1 = Clock::now();
+    for (size_t b = 0; b < num_blocks; ++b) {
+        auto d = decoder(b);
+        for (size_t i = b * kBlock, end = std::min(n, i + kBlock); i < end; ++i) decoded[i] = d.next();
+    }
+    compiler_barrier();
+    t2 = Clock::now();
+    do_not_optimize(decoded);
+    r.decompression_throughput_mbs = mib / seconds(t1, t2);
+
+    size_t tolerance_failures = 0;
+    for (size_t i = 0; i < n; ++i) {
+        r.roundtrip_mismatches += std::bit_cast<uint64_t>(data[i]) != std::bit_cast<uint64_t>(decoded[i]);
+        tolerance_failures += !(std::abs(data[i] - decoded[i]) < 1e-9);
+    }
+    r.validation_status = tolerance_failures ? "failed" : (r.roundtrip_mismatches ? "passed" : "bitwise_passed");
+    if (tolerance_failures)
+        std::cerr << "WARNING: Camel: " << tolerance_failures << "/" << n << " values differ by >= 1e-9\n";
+    else if (r.roundtrip_mismatches)
+        std::cerr << "WARNING: Camel: " << r.roundtrip_mismatches << "/" << n
+                  << " values differ bitwise but within 1e-9\n";
+
+    // Random access: decode the containing block up to the requested offset.
+    const size_t queries = std::min<size_t>(100000, bench_data.random_indices.size());
+    volatile double sink = 0;
+    t1 = Clock::now();
+    for (size_t q = 0; q < queries; ++q) {
+        const size_t idx = bench_data.random_indices[q];
+        auto d = decoder(idx / kBlock);
+        double v = 0;
+        for (size_t k = 0; k <= idx % kBlock; ++k) v = d.next();
+        sink = sink + v;
+    }
+    compiler_barrier();
+    t2 = Clock::now();
+    r.random_access_ns = queries ? seconds(t1, t2) * 1e9 / queries : 0;
+    r.random_access_mbs = queries * sizeof(double) / 1048576.0 / seconds(t1, t2);
+
+    for (size_t range : range_sizes) {
+        if (range >= n) continue;
+        const auto& starts = bench_data.range_query_indices.at(range);
+        const size_t count = std::min<size_t>(1000, starts.size());
+        std::vector<double> out(range);
+        t1 = Clock::now();
+        for (size_t q = 0; q < count; ++q) {
+            const size_t start = starts[q], end = start + range;
+            size_t pos = 0;
+            for (size_t b = start / kBlock; b <= (end - 1) / kBlock; ++b) {
+                auto d = decoder(b);
+                const size_t lo = std::max(start, b * kBlock), hi = std::min(end, (b + 1) * kBlock);
+                for (size_t j = b * kBlock; j < lo; ++j) d.next();
+                for (size_t j = lo; j < hi; ++j) out[pos++] = d.next();
+            }
+            sink = sink + out[0];
+            do_not_optimize(out);
+        }
+        compiler_barrier();
+        t2 = Clock::now();
+        r.range_query_throughputs.emplace_back(range, range * sizeof(double) * count / 1048576.0 / seconds(t1, t2));
     }
     return r;
 }
