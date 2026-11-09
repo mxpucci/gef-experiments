@@ -37,8 +37,8 @@ std::vector<Codec<double>> codecs() {
         {"selfstar", [stream](const Values<double>& values) { return stream->compress_block(values); },
             gef_compressors::selfstar::decompress, gef_compressors::selfstar::decompress_prefix},
 #ifdef GEF_WITH_FAUNA
-        {"fauna", gef_compressors::fauna::compress, gef_compressors::fauna::decompress, {}, true},
-        {"macaque", gef_compressors::macaque::compress, gef_compressors::macaque::decompress, {}, true},
+        {"fauna", gef_compressors::fauna::compress, gef_compressors::fauna::decompress},
+        {"macaque", gef_compressors::macaque::compress, gef_compressors::macaque::decompress},
 #endif
         {"elfstar", gef_compressors::elfstar::compress, gef_compressors::elfstar::decompress, gef_compressors::elfstar::decompress_prefix},
         {"dexor", gef_compressors::dexor::compress, gef_compressors::dexor::decompress, gef_compressors::dexor::decompress_prefix},
@@ -277,7 +277,7 @@ BenchmarkResult benchmark_recent_compressor(const std::string& name,
 #ifdef GEF_WITH_FAUNA
     if(name=="fauna") return benchmark_indexed(name,data.double_data,data,ranges,
         [&]{return gef_compressors::fauna::Indexed(data.double_data,native.fauna_batch_size);},
-        true,"native_segments",native.fauna_batch_size,0);
+        false,"native_segments",native.fauna_batch_size,0);
 #endif
 #ifdef GEF_WITH_PCODEC
     if(name=="pcodec") return benchmark_indexed(name,data.double_data,data,ranges,

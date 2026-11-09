@@ -4,7 +4,7 @@ use super::*;
 use crate::types::CompressedSegmentBuilder;
 use std::ffi::c_void;
 
-const MAGIC: &[u8; 8] = b"GFFIDX01";
+const MAGIC: &[u8; 8] = b"GFFIDX02";
 const HEADER: usize = 32;
 const ENTRY: usize = 32;
 type Result<T> = std::result::Result<T, String>;
@@ -21,8 +21,8 @@ struct Segment<'a> {
     model: u8,
     first: usize,
     last: usize,
-    min: f32,
-    max: f32,
+    min: Value,
+    max: Value,
     times: &'a [u8],
     values: &'a [u8],
     residuals: &'a [u8],
@@ -32,8 +32,8 @@ fn segment(bytes: &[u8]) -> Result<Segment<'_>> {
     let model = r.take(1)?[0];
     let first = r.u64()? as usize;
     let last = r.u64()? as usize;
-    let min = r.f32()?;
-    let max = r.f32()?;
+    let min = r.value()?;
+    let max = r.value()?;
     let times = r.bytes()?;
     let values = r.bytes()?;
     let residuals = r.bytes()?;
@@ -110,23 +110,14 @@ impl Indexed {
         }
         Ok(obj)
     }
-    fn compress(values: &[f64], batch_size: usize) -> Result<(Self, usize)> {
+    fn compress(values: &[Value], batch_size: usize) -> Result<Self> {
         if batch_size == 0 || batch_size > i64::MAX as usize {
             return Err("batch size must be positive and bounded".into());
         }
         let mut payload = Vec::new();
         let mut entries = Vec::<[usize; 4]>::new();
-        let mut changed = 0;
         for (batch, src) in values.chunks(batch_size).enumerate() {
-            let floats: Vec<f32> = src
-                .iter()
-                .map(|&x| {
-                    let v = x as f32;
-                    changed += ((v as f64).to_bits() != x.to_bits()) as usize;
-                    v
-                })
-                .collect();
-            let frame = encode(&floats, false)?;
+            let frame = encode(src, false)?;
             let mut r = Reader {
                 bytes: &frame,
                 pos: 16,
@@ -137,7 +128,7 @@ impl Indexed {
                 r.take(1)?;
                 let first = r.u64()? as usize;
                 r.u64()?;
-                r.take(8)?;
+                r.take(2 * std::mem::size_of::<Value>())?;
                 for _ in 0..3 {
                     r.bytes()?;
                 }
@@ -170,9 +161,9 @@ impl Indexed {
             }
         }
         bytes.extend_from_slice(&payload);
-        Ok((Self::new(bytes)?, changed))
+        Self::new(bytes)
     }
-    fn read(&self, start: usize, dst: &mut [f64]) -> Result<()> {
+    fn read(&self, start: usize, dst: &mut [Value]) -> Result<()> {
         if start
             .checked_add(dst.len())
             .filter(|&end| end <= self.n)
@@ -214,7 +205,7 @@ impl Indexed {
     }
 }
 
-fn model_grid(s: &Segment<'_>, model_n: usize, lo: usize, hi: usize) -> Result<Vec<f32>> {
+fn model_grid(s: &Segment<'_>, model_n: usize, lo: usize, hi: usize) -> Result<Vec<Value>> {
     if lo >= hi {
         return Ok(Vec::new());
     }
@@ -259,7 +250,7 @@ fn model_grid(s: &Segment<'_>, model_n: usize, lo: usize, hi: usize) -> Result<V
     }
     Ok(values.values_slice().to_vec())
 }
-fn read_segment(s: &Segment<'_>, lo: usize, count: usize, dst: &mut [f64]) -> Result<()> {
+fn read_segment(s: &Segment<'_>, lo: usize, count: usize, dst: &mut [Value]) -> Result<()> {
     let n = s.last - s.first + 1;
     let residual_n = s.residuals.last().copied().unwrap_or(0) as usize;
     let model_n = n - residual_n;
@@ -270,7 +261,7 @@ fn read_segment(s: &Segment<'_>, lo: usize, count: usize, dst: &mut [f64]) -> Re
     if lo < model_n {
         let values = model_grid(s, model_n, lo, hi.min(model_n))?;
         for (out, &value) in dst.iter_mut().zip(&values) {
-            *out = value as f64;
+            *out = value;
         }
     }
     if hi > model_n {
@@ -293,7 +284,7 @@ fn read_segment(s: &Segment<'_>, lo: usize, count: usize, dst: &mut [f64]) -> Re
             .iter_mut()
             .zip(&values.values_slice()[offset..needed])
         {
-            *out = value as f64;
+            *out = value;
         }
     }
     Ok(())
@@ -305,14 +296,13 @@ fn slice_ok<T>(ptr: *const T, len: usize) -> bool {
 }
 #[no_mangle]
 pub unsafe extern "C" fn gef_fauna_indexed_compress(
-    src: *const f64,
+    src: *const Value,
     n: usize,
     batch: usize,
     out: *mut *mut c_void,
-    changed: *mut usize,
 ) -> i32 {
     ffi_call(|| {
-        if !slice_ok(src, n) || out.is_null() || changed.is_null() {
+        if !slice_ok(src, n) || out.is_null() {
             return Err("invalid indexed compression arguments".into());
         }
         let values = if n == 0 {
@@ -320,9 +310,8 @@ pub unsafe extern "C" fn gef_fauna_indexed_compress(
         } else {
             std::slice::from_raw_parts(src, n)
         };
-        let (object, count) = Indexed::compress(values, batch)?;
+        let object = Indexed::compress(values, batch)?;
         *out = Box::into_raw(Box::new(object)).cast();
-        *changed = count;
         Ok(())
     })
 }
@@ -368,7 +357,7 @@ pub unsafe extern "C" fn gef_fauna_indexed_read(
     handle: *const c_void,
     start: usize,
     n: usize,
-    dst: *mut f64,
+    dst: *mut Value,
 ) -> i32 {
     ffi_call(|| {
         if handle.is_null() || !slice_ok(dst, n) {

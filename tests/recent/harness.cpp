@@ -5,7 +5,6 @@
 int main() {
     BenchmarkData data;
     data.filename="synthetic.bin";
-    // Exactly representable in f32 as well as f64 for the Fauna implementations.
     for (size_t i=0;i<1031;++i) data.double_data.push_back(int(i%97)/4.0-8.0);
     for (size_t i=0;i<1031;++i) data.raw_data.push_back(int64_t(i%97)-48);
     data.uncompressed_bits=data.double_data.size()*64;

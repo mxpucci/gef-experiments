@@ -7,10 +7,12 @@
 #include <string>
 #include <vector>
 
+// The Rust library is built from upstream with its `Value` alias widened from
+// f32 to f64 (lib/fauna-ffi/upstream-f64.patch), so values cross the ABI as double.
 extern "C" {
 const char* gef_fauna_last_error();
-int gef_fauna_compress(const float*, std::size_t, bool, std::uint8_t**, std::size_t*);
-int gef_fauna_decompress(const std::uint8_t*, std::size_t, std::size_t, bool, float*);
+int gef_fauna_compress(const double*, std::size_t, bool, std::uint8_t**, std::size_t*);
+int gef_fauna_decompress(const std::uint8_t*, std::size_t, std::size_t, bool, double*);
 void gef_fauna_free(std::uint8_t*, std::size_t);
 }
 
@@ -18,7 +20,7 @@ namespace gef_compressors { namespace fauna_detail {
 inline void check(int status) {
     if (status) throw std::runtime_error(std::string("Fauna/Macaque: ") + gef_fauna_last_error());
 }
-inline std::vector<std::uint8_t> compress32(const std::vector<float>& values, bool macaque) {
+inline std::vector<std::uint8_t> compress64(const std::vector<double>& values, bool macaque) {
     std::uint8_t* bytes = nullptr;
     std::size_t size = 0;
     check(gef_fauna_compress(values.data(), values.size(), macaque, &bytes, &size));
@@ -28,56 +30,28 @@ inline std::vector<std::uint8_t> compress32(const std::vector<float>& values, bo
         return result;
     } catch (...) { gef_fauna_free(bytes, size); throw; }
 }
-inline std::vector<float> decompress32(const std::vector<std::uint8_t>& bytes,
-                                     std::size_t count, bool macaque) {
-    std::vector<float> values(count);
+inline std::vector<double> decompress64(const std::vector<std::uint8_t>& bytes,
+                                        std::size_t count, bool macaque) {
+    std::vector<double> values(count);
     check(gef_fauna_decompress(bytes.data(), bytes.size(), count, macaque, values.data()));
     return values;
-}
-// A float64 benchmark must never silently round its input to the author's f32 type.
-inline std::vector<float> exact_f32(const std::vector<double>& input) {
-    std::vector<float> values;
-    values.reserve(input.size());
-    for (double value : input) {
-        const float narrowed = static_cast<float>(value);
-        const double restored = static_cast<double>(narrowed);
-        if (std::memcmp(&value, &restored, sizeof(double)) != 0)
-            throw std::invalid_argument("Fauna/Macaque upstream supports f32 only; input is not exactly representable");
-        values.push_back(narrowed);
-    }
-    return values;
-}
-inline std::vector<double> expand(const std::vector<float>& values) {
-    return std::vector<double>(values.begin(), values.end());
 }
 } }
 
 namespace gef_compressors { namespace fauna {
-inline std::vector<std::uint8_t> compress_f32(const std::vector<float>& values) {
-    return fauna_detail::compress32(values, false);
-}
-inline std::vector<float> decompress_f32(const std::vector<std::uint8_t>& bytes, std::size_t count) {
-    return fauna_detail::decompress32(bytes, count, false);
-}
 inline std::vector<std::uint8_t> compress(const std::vector<double>& values) {
-    return compress_f32(fauna_detail::exact_f32(values));
+    return fauna_detail::compress64(values, false);
 }
 inline std::vector<double> decompress(const std::vector<std::uint8_t>& bytes, std::size_t count) {
-    return fauna_detail::expand(decompress_f32(bytes, count));
+    return fauna_detail::decompress64(bytes, count, false);
 }
 } }
 
 namespace gef_compressors { namespace macaque {
-inline std::vector<std::uint8_t> compress_f32(const std::vector<float>& values) {
-    return fauna_detail::compress32(values, true);
-}
-inline std::vector<float> decompress_f32(const std::vector<std::uint8_t>& bytes, std::size_t count) {
-    return fauna_detail::decompress32(bytes, count, true);
-}
 inline std::vector<std::uint8_t> compress(const std::vector<double>& values) {
-    return compress_f32(fauna_detail::exact_f32(values));
+    return fauna_detail::compress64(values, true);
 }
 inline std::vector<double> decompress(const std::vector<std::uint8_t>& bytes, std::size_t count) {
-    return fauna_detail::expand(decompress_f32(bytes, count));
+    return fauna_detail::decompress64(bytes, count, true);
 }
 } }
