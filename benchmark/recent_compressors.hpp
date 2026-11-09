@@ -9,8 +9,6 @@ std::vector<std::string> recent_compressor_names();
 bool recent_compressor_uses_integers(const std::string& name);
 bool is_recent_compressor(const std::string& name);
 struct NativeAccessOptions {
-    size_t pcodec_chunk_size=262144;
-    size_t pcodec_page_size=262144;
 };
 BenchmarkResult benchmark_recent_compressor(const std::string& name,
     const BenchmarkData& data, const std::vector<size_t>& ranges, size_t block_size,
