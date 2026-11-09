@@ -31,7 +31,7 @@ add_custom_command(OUTPUT "${GEF_FAUNA_LIBRARY}"
     COMMAND "${CMAKE_COMMAND}" -E env "GEF_FAUNA_UPSTREAM=${GEF_FAUNA_UPSTREAM}"
         "${CARGO_EXECUTABLE}" build --release --locked --manifest-path "${GEF_FAUNA_CRATE}/Cargo.toml"
     DEPENDS "${GEF_FAUNA_FFI_SOURCE}/src/lib.rs" "${GEF_FAUNA_CRATE}/build.rs"
-        "${GEF_FAUNA_FFI_SOURCE}/src/indexed.rs" "${GEF_FAUNA_FFI_SOURCE}/upstream-f64.patch"
+        "${GEF_FAUNA_FFI_SOURCE}/upstream-f64.patch"
         "${GEF_FAUNA_CRATE}/Cargo.toml" "${GEF_FAUNA_CRATE}/Cargo.lock"
     COMMENT "Building official Fauna/Macaque Rust implementation" VERBATIM)
 add_custom_target(gef_fauna_build DEPENDS "${GEF_FAUNA_LIBRARY}")

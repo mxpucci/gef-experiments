@@ -43,22 +43,8 @@ with tempfile.TemporaryDirectory(prefix="gef-codec-smoke-") as directory:
             raise RuntimeError('exact inputs did not pass validation')
         if int(row['input_changed_values']) != 0:
             raise RuntimeError('exact inputs were incorrectly reported as changed')
-        if row['compressor']=='fauna' and (row['access_layout']!='native_segments' or int(row['compression_unit_values'])!=65536):
-            raise RuntimeError('Fauna still uses external -b blocking')
-        if row['compressor'] in ['pcodec','pcodec_i64'] and (row['access_layout']!='external_blocks' or int(row['compression_unit_values'])!=16):
-            raise RuntimeError('Pcodec does not use external -b blocking')
-    # External -b must not change the native Fauna layout or stored size.
-    def native_run(block):
-        args=[binary,'-b',str(block),'-r','3,35','-c','fauna',
-              '--fauna-batch-size','53',str(exact)]
-        process=subprocess.run(args,capture_output=True,text=True)
-        if process.returncode:raise RuntimeError(process.stderr)
-        return {r['compressor']:r for r in csv.DictReader(io.StringIO(process.stdout))}
-    small,large=native_run(7),native_run(1000)
-    for name in small:
-        if small[name]['compressed_bits']!=large[name]['compressed_bits']:
-            raise RuntimeError('external block size changed native layout')
-        if small[name]['validation_status']!='passed':raise RuntimeError('native query validation failed')
+        if row['compressor'] in ['fauna','macaque','pcodec','pcodec_i64'] and (row['access_layout']!='external_blocks' or int(row['compression_unit_values'])!=16):
+            raise RuntimeError(row['compressor'] + ' must use external -b blocks')
     # The integer route must retain all 64 bits without passing through double.
     integers = root / "integers.bin"
     dataset(integers, [-(1 << 63) + i for i in range(97)])

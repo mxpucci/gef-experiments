@@ -2,7 +2,6 @@
 // directly from the pinned Apache-2.0 upstream source modules. cmake/Fauna.cmake
 // applies upstream-f64.patch, which widens the upstream `Value = f32` alias to f64.
 #![allow(dead_code)]
-mod indexed;
 include!(concat!(env!("OUT_DIR"), "/upstream.rs"));
 
 use arrow::array::{Array, BinaryArray, UInt8Array};
