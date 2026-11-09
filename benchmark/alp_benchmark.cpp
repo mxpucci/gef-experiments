@@ -446,10 +446,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     // Range queries - with volatile checksum to prevent optimization
     const size_t num_range_queries = 1000;
     for (auto range : range_sizes) {
-        if (range >= n) {
-            result.range_query_throughputs.emplace_back(range, 0.0);
-            continue;
-        }
+        if (range >= n) continue; // same convention as the other adapters/CSV header
 
         const auto& range_indices = bench_data.range_query_indices.at(range);
         std::vector<double> range_buf(range);
