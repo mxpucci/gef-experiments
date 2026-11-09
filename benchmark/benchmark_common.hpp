@@ -89,4 +89,4 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
 
 BenchmarkResult benchmark_falcon(const BenchmarkData &, const std::vector<size_t> &, size_t block_size = 1000);
 
-BenchmarkResult benchmark_camel(const BenchmarkData &, const std::vector<size_t> &);
+BenchmarkResult benchmark_camel(const BenchmarkData &, const std::vector<size_t> &, size_t block_size = 1000);
