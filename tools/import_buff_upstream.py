@@ -26,7 +26,8 @@ def item(file,needle):
 p='methods/prec_double.rs';b='methods/bit_packing.rs';s='compress/split_double.rs';m='compress/buff_simd.rs'
 out='''#![allow(warnings)]
 // Generated from the pinned authors repository by tools/import_buff_upstream.py.
-// Codec bodies are original; selective decode has the documented trailing-bit fix.
+// Codec bodies are original and unpatched (known upstream bugs are documented in
+// docs/buff-leco-native.txt; none changes size or crashes on the benchmark datasets).
 macro_rules! println { ($($t:tt)*) => {} }
 macro_rules! print { ($($t:tt)*) => {} }
 macro_rules! info { ($($t:tt)*) => {} }
@@ -60,10 +61,6 @@ for file,needle in [(s,'pub fn byte_fixed_encode'),(s,'pub fn byte_fixed_decode'
  x=item(file,needle)
  # Borrow compressed storage across the C ABI, without changing decoding logic.
  x=x.replace('bytes: Vec<u8>', "bytes: BorrowedBytes<'_>")
- if needle=='pub fn buff_decode_condition':
-  old='((cur as u64)<< remain as u64)'
-  assert x.count(old)==2
-  x=x.replace(old,'(cur as u64)')
  out+=x+'\n'
 out+='}\n'
 (repo/'lib/buff-ffi/src/upstream.rs').write_text(out)
