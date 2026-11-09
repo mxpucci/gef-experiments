@@ -54,60 +54,97 @@ Compile this codec in a separate translation unit with C++17 or later and
 this TU. Disabling contraction ensures reconstruction arithmetic agrees
 across compilers and machines. The header rejects `__FAST_MATH__` builds.
 
-## Correctness adjustments relative to upstream
 
-The port retains decimal prefix extraction, unsigned fixed-width suffix
-encoding, all four control cases, cached-prefix reuse, and the adaptive
-exponent exception handler. The following adjustments are explicit:
+## Fidelity to upstream
 
-* Upstream tests reconstruction against a decimal tolerance, which can admit
-  bitwise differences (e.g. `19.0000005`). Paper §5.3 specifies exact
-  reconstruction. The port checks the **actual decoder result bit-for-bit**
-  before committing decimal encoding and otherwise uses DeXOR's own exception
-  handler. This also preserves negative zero, infinities, NaN payloads, and
-  subnormals. It does not substitute a different codec or raw-block fallback.
-* The paper's locality-aware tail search is bounded to the encoded coordinate
-  domain `[-20,11]`. Out-of-range arithmetic is routed to the same exception
-  handler. The upstream Java high-precision string-length shortcut is not
-  reproduced: it misinterprets scientific notation and can index the power
-  table out of bounds. Bounded arithmetic search follows the paper instead.
-* Floating-to-integer casts are range checked; no C++ undefined overflow is
-  used. Java's round-toward-positive-infinity tie rule is reproduced.
-* The exception width cap is **10**, matching the actual official code
-  (the paper describes a possible range up to 12). Overflow at that width
-  uses the official full-64-bit exception encoding. Both encoder and decoder
-  reset the contraction counter on overflow; this makes their state symmetric.
-* Truncation, count mismatch, impossible coordinates/exponents, trailing
-  bytes, and nonzero final padding are rejected.
+The encoder and decoder follow `DoubleDeXOREncoder`/`DoubleDeXORDecoder` and
+`DeXORTools` statement by statement, including upstream's **tolerance-based
+acceptance** of decimal encodings (`comp(alpha + beta*pow, value, pow)`,
+`DoubleDeXOREncoder.java:113`). Decoding is therefore not always bit-exact,
+exactly as with the official Java. Java semantics are reproduced explicitly:
+saturating `(long)` casts and `Math.round` (NaN → 0, ties toward +∞), the
+`1e-23`/`1e-6` epsilons, unbounded tail search, and the high-precision tail
+search (`getEnd_HP`, used when the previous tail exponent is below −12) with a
+re-implementation of JDK 19+ `Double.toString` length/decimal-point position.
+Fixed-width fields keep only their low bits, as upstream's `StreamWriter` does.
 
-These corrections can change output size or speed relative to the Java
-artifact on inputs affected by upstream defects. Published Java performance
-numbers must not be presented as measurements of this C++ port.
+Known upstream behaviours that are therefore reproduced:
+
+* Most inexact values differ by about one ULP (`alpha + sign*beta*10^q` rounding).
+* The tail search treats values within `1e-6` of an integer multiple as
+  integral, e.g. `19.0000005 → 19` and `39999.997 → 40000` (when the previous
+  tail exponent is 4).
+* The decoder re-applies the prefix's sign to the residual
+  (`DoubleDeXORDecoder.java:109`), while only `|beta|` is written
+  (`DoubleDeXOREncoder.java:120`). A value just below a carry of the shared
+  prefix (previous `40000.002`, value `39999.997`) is reconstructed on the
+  wrong side (`→ 40000.003`); upstream's acceptance test uses the signed beta
+  and does not notice.
+* The encoder derives prefixes from the original previous value while the
+  decoder uses its decoded previous value, so an inexact value can perturb
+  the following ones (e.g. `39999.987 → 40000.087` after the case above).
+* NaN is treated as zero (`comp(NaN, 0) == 0`) and decodes as `+0.0`; `-0.0`
+  decodes as `+0.0`.
+
+On the full benchmark datasets the second to fourth behaviours cause errors above
+1e-9 on LAT, LON and AP (see Validation). Following the benchmark policy
+(patch only issues that prevent meaningful aggregate metrics), they are kept
+and reported as validation warnings.
+
+## Deviations from upstream
+
+All deviations apply only where upstream would crash or emit an undecodable
+stream:
+
+* **Index guard.** Upstream indexes its `10^k` table without bounds checks and
+  throws `ArrayIndexOutOfBoundsException` for some inputs (infinities, very
+  small or large magnitudes, tail search running past `10^±23`), aborting the
+  whole compression. Where Java would throw, the port encodes that value with
+  DeXOR's own exception encoding (lossless) instead. Java output is unchanged
+  for every input on which Java does not throw.
+* **Tail-coordinate field.** Upstream writes `q+20` into 5 bits unchecked. For
+  `q ∉ [-20, 11]` the field wraps and its own decoder loses synchronisation for
+  the rest of the block. Such values use the exception encoding instead.
+* **Decoder contraction counter.** Upstream's encoder resets `contract_step` on
+  every exponent overflow, its decoder only while `EL < 10`; the port's decoder
+  always resets it so both state machines agree (otherwise the decoder can lose
+  synchronisation after ten overflows). This does not change the bitstream.
+* **Framing and validation.** An 8-byte count header (counted as compressed
+  size) and decoder checks for truncation, count mismatch, impossible
+  coordinates/exponents, trailing bytes and nonzero padding; malformed input
+  throws instead of reading out of bounds. Prefix decoding as above.
+
+Earlier revisions of this port required bit-exact reconstruction, bounded the
+tail search to `[-20, 11]`, dropped the `Double.toString` path, and rejected
+over-wide suffixes. These were removed to follow the official implementation.
 
 ## Validation
 
-`tests/dexor_roundtrip.cpp` has a fixed golden bitstream generated by the
-unmodified official Java encoder at the pinned commit and also decoded by
-the unmodified Java decoder. The C++ payload matches it byte-for-byte. It
-exercises decimal control changes/reuse and the exception path. The remainder
-checks bitwise round trips for empty/constant/sign-changing data, the paper's
-decimal examples and rounding anomaly, 100,000 arbitrary binary64 bit
-patterns, 100,000 decimal samples, scales from `1e-300` through `1e300`, signed
-zeros, subnormals, extreme finite values, infinities, and multiple NaN payloads.
-Malformed/truncated stream cases are also checked. Every prefix of the Java
-fixture, decimal rounding examples, signed-zero sequence, and IEEE corner
-cases is checked bit-for-bit. A deliberately truncated suffix verifies that
-prefix decoding does not process the unread tail.
+`benchmark_results/20261109-dexor-upstream/` contains the comparison against
+the unmodified official Java (OpenJDK 21) and its harnesses:
 
-Standalone command:
+* 299 blocks of 1,000 values (298,746 values) from all 16 benchmark datasets:
+  payload byte-identical to stock Java on 299/299 blocks, and decoded values
+  identical to the stock Java decoder. 56,976 values (19%) decode inexactly,
+  all within 2.3e-16 relative error.
+* 3,009 synthetic vectors (decimal series of 0–16 decimals, high-precision
+  values exercising `getEnd_HP`, large integers, random bit patterns, specials):
+  byte-identical and decoder-identical on all 1,771 vectors where Java does not
+  throw; Java throws on the other 1,238, which the port encodes instead.
+* Full datasets (server, GCC 13.4, `full_upstream.csv`): 13 of 16 datasets decode
+  within 2.3e-16 relative error. Values above 1e-9: LAT 135,738 (max 0.32),
+  AP 5,648 (max 0.0101), LON 3,130 (max 0.01), out of 24.9M/137.7M/24.9M.
+  Size: 6.6–30.7 bits/value, versus 11.6–36.2 for the previous exact port.
+
+`tests/dexor_roundtrip.cpp` checks two bitstreams generated by the official Java
+encoder (the second also pins the official decoder's output, including the
+high-precision path and inexact values), tolerance-bounded round trips on
+decimal data, the documented anomalies above, exact infinities, agreement of
+prefix and full decoding, and rejection of malformed streams. It passes with
+Apple Clang (ASan/UBSan) and GCC 13.4 `-O3 -march=native`.
 
 ```sh
 c++ -std=c++17 -O2 -fno-fast-math -ffp-contract=off \
     tests/dexor_roundtrip.cpp -o dexor_roundtrip
 ./dexor_roundtrip
 ```
-
-Local validation passed with Apple Clang plus AddressSanitizer and
-UndefinedBehaviorSanitizer, and with GCC 14 at `-O3`.
-The same test also compiled and passed on the requested remote x86-64 machine
-using `/opt/rh/devtoolset-7/root/usr/bin/g++` at `-O3` (no system changes).
