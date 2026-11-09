@@ -1,6 +1,8 @@
 #![allow(warnings)]
 // Generated from the pinned authors repository by tools/import_buff_upstream.py.
-// Codec bodies are original; selective decode has the documented trailing-bit fix.
+// Codec bodies are original except the GEF-PATCH-marked fixes applied by the import tool:
+// three encoder bugs (min/max, power-of-two width, narrow-range underflow) and the
+// selective decoder's extra shift of the trailing low bits.
 macro_rules! println { ($($t:tt)*) => {} }
 macro_rules! print { ($($t:tt)*) => {} }
 macro_rules! info { ($($t:tt)*) => {} }
@@ -491,7 +493,8 @@ pub fn byte_fixed_encode<'a,T>(&self, seg: &mut Segment<T>) -> Vec<u8>
             if fixed<min {
                 min = fixed;
             }
-            else if fixed>max {
+            // GEF-PATCH 1: was `else if`; the first value must also update max.
+            if fixed>max {
                 max = fixed;
             }
             fixed_vec.push(fixed);
@@ -506,11 +509,13 @@ pub fn byte_fixed_encode<'a,T>(&self, seg: &mut Segment<T>) -> Vec<u8>
         if delta == 0 {
             single_val = true;
         }else {
-            cal_int_length = (delta as f64).log2().ceil();
+            // GEF-PATCH 2: was `(delta as f64).log2().ceil()`, one bit short for powers of two.
+            cal_int_length = (64 - (delta as u64).leading_zeros()) as f64;
         }
 
-        let fixed_len = cal_int_length as usize;
-        bound.set_length((cal_int_length as u64-dec_len), dec_len);
+        // GEF-PATCH 3: was `cal_int_length as usize`; pad to dec_len so `fixed_len - dec_len` cannot underflow.
+        let fixed_len = std::cmp::max(cal_int_length as usize, dec_len as usize);
+        bound.set_length((fixed_len as u64-dec_len), dec_len);
         let ilen = fixed_len -dec_len as usize;
         let dlen = dec_len as usize;
         println!("int_len:{},dec_len:{}",ilen as u64,dec_len);
@@ -871,7 +876,7 @@ pub fn buff_decode_condition(&self, bytes: BorrowedBytes<'_>, iter: Iter<usize>)
                 pre = *it.next().unwrap();
                 bitpack.skip((pre * remain) as usize);
                 cur = bitpack.read_bits(remain as usize).unwrap();
-                expected_datapoints.push((base_int + ((*(fixed_iter.next().unwrap()) as u64)|(cur as u64) ) as i64 ) as f64 / dec_scl);
+                expected_datapoints.push((base_int + ((*(fixed_iter.next().unwrap()) as u64)|(cur as u64) /* GEF-PATCH 4: was `(cur as u64)<< remain as u64`; trailing bits are the low bits */ ) as i64 ) as f64 / dec_scl);
 
                 for &entry in it{
                     delta = entry-pre;
@@ -879,7 +884,7 @@ pub fn buff_decode_condition(&self, bytes: BorrowedBytes<'_>, iter: Iter<usize>)
                         bitpack.skip(((delta-1) * remain));
                     }
                     cur = bitpack.read_bits(remain as usize).unwrap();
-                    expected_datapoints.push((base_int + ((*(fixed_iter.next().unwrap()) as u64)|(cur as u64) )as i64 ) as f64 / dec_scl);
+                    expected_datapoints.push((base_int + ((*(fixed_iter.next().unwrap()) as u64)|(cur as u64) /* GEF-PATCH 4: was `(cur as u64)<< remain as u64`; trailing bits are the low bits */ )as i64 ) as f64 / dec_scl);
                     pre = entry;
                 }
 

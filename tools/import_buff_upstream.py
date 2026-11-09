@@ -26,7 +26,9 @@ def item(file,needle):
 p='methods/prec_double.rs';b='methods/bit_packing.rs';s='compress/split_double.rs';m='compress/buff_simd.rs'
 out='''#![allow(warnings)]
 // Generated from the pinned authors repository by tools/import_buff_upstream.py.
-// Codec bodies are original; selective decode has the documented trailing-bit fix.
+// Codec bodies are original except the GEF-PATCH-marked fixes applied by the import tool:
+// three encoder bugs (min/max, power-of-two width, narrow-range underflow) and the
+// selective decoder's extra shift of the trailing low bits.
 macro_rules! println { ($($t:tt)*) => {} }
 macro_rules! print { ($($t:tt)*) => {} }
 macro_rules! info { ($($t:tt)*) => {} }
@@ -60,10 +62,37 @@ for file,needle in [(s,'pub fn byte_fixed_encode'),(s,'pub fn byte_fixed_decode'
  x=item(file,needle)
  # Borrow compressed storage across the C ABI, without changing decoding logic.
  x=x.replace('bytes: Vec<u8>', "bytes: BorrowedBytes<'_>")
+ if needle=='pub fn byte_fixed_encode':
+  # Minimal encoder bug fixes (same logic as the May 2026 adapter fixes on main,
+  # commits d50077d3 and 83a14323). Each replacement is asserted to apply once.
+  # Every block upstream encodes correctly is encoded byte-identically.
+  for old,rep in [
+   # GEF-PATCH 1: upstream's `else if` means the first value can never set max
+   # (e.g. [10,5,7,6] at scale 10 decodes as [6,5,5,6]).
+   ('''            else if fixed>max {''',
+    '''            // GEF-PATCH 1: was `else if`; the first value must also update max.
+            if fixed>max {'''),
+   # GEF-PATCH 2: log2().ceil() is one bit short when delta is a power of two
+   # (e.g. [1,2,3,17] decodes as [1,2,3,1]); use the exact bit length.
+   ('''            cal_int_length = (delta as f64).log2().ceil();''',
+    '''            // GEF-PATCH 2: was `(delta as f64).log2().ceil()`, one bit short for powers of two.
+            cal_int_length = (64 - (delta as u64).leading_zeros()) as f64;'''),
+   # GEF-PATCH 3: `fixed_len - dec_len` underflows for narrow ranges
+   # (delta < 2^dec_len); pad the width up to dec_len.
+   ('''        let fixed_len = cal_int_length as usize;
+        bound.set_length((cal_int_length as u64-dec_len), dec_len);''',
+    '''        // GEF-PATCH 3: was `cal_int_length as usize`; pad to dec_len so `fixed_len - dec_len` cannot underflow.
+        let fixed_len = std::cmp::max(cal_int_length as usize, dec_len as usize);
+        bound.set_length((fixed_len as u64-dec_len), dec_len);'''),
+  ]:
+   assert x.count(old)==1,old
+   x=x.replace(old,rep)
  if needle=='pub fn buff_decode_condition':
   old='((cur as u64)<< remain as u64)'
   assert x.count(old)==2
-  x=x.replace(old,'(cur as u64)')
+  # GEF-PATCH 4: the trailing `remain` bits are the low bits; upstream shifted them
+  # left by `remain` again (selective decode then disagrees with full decode).
+  x=x.replace(old,'(cur as u64) /* GEF-PATCH 4: was `(cur as u64)<< remain as u64`; trailing bits are the low bits */')
  out+=x+'\n'
 out+='}\n'
 (repo/'lib/buff-ffi/src/upstream.rs').write_text(out)
