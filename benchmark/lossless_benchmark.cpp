@@ -794,16 +794,16 @@ BenchmarkResult benchmark_buff(const BenchmarkData &bench_data,
     buff::decompress_block(column,decoded.data());
     do_not_optimize(decoded); compiler_barrier();
     result.decompression_throughput_mbs=mib/elapsed(start);
+    // Shared 1e-9 policy. BUFF truncates to 2^-dec_len fractional bits, so most
+    // values differ by up to 0.5/10^decimals and the row reports failed (warning only).
+    check_roundtrip(result,data,decoded);
+    finish_roundtrip_validation(result);
     size_t bound_failures=0;
     const double tolerance=0.5/static_cast<double>(scale);
-    for(size_t i=0;i<n;++i){
-        result.roundtrip_mismatches+=std::memcmp(&data[i],&decoded[i],sizeof(T))!=0;
-        bound_failures+=std::abs(data[i]-decoded[i])>tolerance;
-    }
-    result.validation_status=bound_failures ? "failed" : "precision_bounded";
-    std::cerr << "\nWarning: BUFF uses the authors' bounded-precision representation; "
-              << result.roundtrip_mismatches << "/" << n << " binary64 values differ; "
-              << bound_failures << " exceed the configured precision bound.\n";
+    for(size_t i=0;i<n;++i) bound_failures+=std::abs(data[i]-decoded[i])>tolerance;
+    if(bound_failures)
+        std::cerr << "Warning: BUFF: " << bound_failures << "/" << n
+                  << " values exceed BUFF's precision bound 0.5/10^decimals.\n";
     const size_t nq=std::min<size_t>(10000,bench_data.random_indices.size());
     volatile T sum=0;
     start=Clock::now();
@@ -815,7 +815,7 @@ BenchmarkResult benchmark_buff(const BenchmarkData &bench_data,
     size_t query_mismatches=0;
     for(size_t q=0;q<std::min<size_t>(nq,200);++q){
         const auto i=bench_data.random_indices[q];T value=buff::get_value_at(column,i);
-        query_mismatches+=std::memcmp(&value,&decoded[i],sizeof(T))!=0;
+        query_mismatches+=roundtrip_value_mismatch(decoded[i],value);
     }
     for(size_t range:range_sizes){
         if(range>=n)continue;
@@ -830,11 +830,15 @@ BenchmarkResult benchmark_buff(const BenchmarkData &bench_data,
         result.range_query_throughputs.emplace_back(range,queries*range*sizeof(T)/1024.0/1024.0/elapsed(start));
         for(size_t q=0;q<std::min<size_t>(queries,3);++q){
             buff::get_range(column,indices[q],range,output.data());
-            query_mismatches+=std::memcmp(output.data(),decoded.data()+indices[q],range*sizeof(T))!=0;
+            for(size_t k=0;k<range;++k) query_mismatches+=roundtrip_value_mismatch(decoded[indices[q]+k],output[k]);
         }
     }
+    // Point/range reads use the same 1e-9 rule against the full decode (which is
+    // itself checked against the input above), so this isolates the unpatched
+    // upstream selective-decoder bug (docs/buff-leco-native.txt). Warning only.
     if(query_mismatches){result.validation_status="failed";
-        std::cerr << "Warning: BUFF selective decode disagrees with full decode in " << query_mismatches << " checks; metrics retained.\n";}
+        std::cerr << "Warning: BUFF selective decode: " << query_mismatches
+                  << " point/range values differ from full decode by > 1e-9; metrics retained.\n";}
     return result;
 }
 #endif // NEATS_ENABLE_BUFF
