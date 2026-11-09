@@ -41,6 +41,7 @@
 #include "NeaTS/NeaTS.hpp"
 #include "NeaTS/algorithms.hpp"
 #include "benchmark_common.hpp"
+#include "range_queries.hpp"
 #include <cstring>
 #include "recent_compressors.hpp"
 
@@ -203,6 +204,9 @@ std::vector<size_t> generate_random_indices(size_t n, size_t num_queries, uint64
     return indices;
 }
 
+// Starts are uniform over [0, n - range - 1], drawn from mt19937(seed)
+// reseeded per range size, exactly as the NeaTS paper's simd_scan_speed();
+// every codec gets the same starts.
 std::vector<size_t> generate_range_indices(size_t n, size_t range, size_t num_queries, uint64_t seed = 1234) {
     std::mt19937 mt(seed);
     if (range >= n) range = n - 1;
@@ -222,7 +226,7 @@ template<typename T, typename T1_coeff>
 BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
                                       const std::vector<size_t> &range_sizes,
                                       const std::vector<size_t> &random_indices,
-                                      const std::map<size_t, std::vector<size_t>> &range_query_indices,
+                                      const BenchmarkData &bench_data,
                                       uint8_t max_bpc,
                                       const std::string &dataset_name,
                                       size_t uncompressed_bits) {
@@ -280,29 +284,12 @@ BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
-    // Range queries
-    const size_t num_range_queries = range_query_indices.begin()->second.size();
-    for (auto range : range_sizes) {
-        if (range >= processed_data.size()) continue;
-        
-        const auto& range_indices = range_query_indices.at(range);
-        std::vector<T> out_buffer(range);
-        volatile T range_checksum = 0;
-        
-        t1 = std::chrono::high_resolution_clock::now();
-        for (auto start_idx : range_indices) {
-            compressor.simd_scan(start_idx, start_idx + range, out_buffer.data());
-            range_checksum += out_buffer[0];
-            do_not_optimize(out_buffer);
-        }
-        compiler_barrier();
-        t2 = std::chrono::high_resolution_clock::now();
-        do_not_optimize(range_checksum);
-        
-        auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
-        result.range_query_throughputs.emplace_back(range, throughput);
-    }
+    // Range queries (range_queries.hpp). simd_scan adds model predictions to
+    // the destination, so it requires the zero-filled slot the runner provides.
+    run_range_queries(result, bench_data, range_sizes, processed_data.size(), decompressed.data(),
+        [&](size_t start, size_t length, std::vector<T> &out) {
+            compressor.simd_scan(start, start + length, out.data());
+        });
     
     return result;
 }
@@ -325,12 +312,12 @@ BenchmarkResult benchmark_neats(const BenchmarkData &bench_data,
     if (max_val > FLOAT_PRECISION_THRESHOLD) {
         // Use double precision for coefficients when values are large
         return benchmark_neats_impl<T, double>(processed_data, range_sizes, 
-                                                bench_data.random_indices, bench_data.range_query_indices,
+                                                bench_data.random_indices, bench_data,
                                                 max_bpc, bench_data.filename, bench_data.uncompressed_bits);
     } else {
         // Use float precision for coefficients when values are small (better compression)
         return benchmark_neats_impl<T, float>(processed_data, range_sizes,
-                                               bench_data.random_indices, bench_data.range_query_indices,
+                                               bench_data.random_indices, bench_data,
                                                max_bpc, bench_data.filename, bench_data.uncompressed_bits);
     }
 }
@@ -401,31 +388,11 @@ BenchmarkResult benchmark_dac(const BenchmarkData &bench_data,
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
-    // Range queries
-    const size_t num_range_queries = bench_data.range_query_indices.begin()->second.size();
-    for (auto range : range_sizes) {
-        if (range >= data.size()) continue;
-        
-        const auto& range_indices = bench_data.range_query_indices.at(range);
-        std::vector<uint64_t> out_buffer(range);
-        volatile uint64_t range_checksum = 0;
-        
-        t1 = std::chrono::high_resolution_clock::now();
-        for (auto start_idx : range_indices) {
-            std::copy(dac_vector.begin() + start_idx, 
-                      dac_vector.begin() + start_idx + range, 
-                      out_buffer.begin());
-            range_checksum += out_buffer[0];
-            do_not_optimize(out_buffer);
-        }
-        compiler_barrier();
-        t2 = std::chrono::high_resolution_clock::now();
-        do_not_optimize(range_checksum);
-        
-        auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
-        result.range_query_throughputs.emplace_back(range, throughput);
-    }
+    // Range queries (range_queries.hpp)
+    run_range_queries(result, bench_data, range_sizes, data.size(), decompressed.data(),
+        [&](size_t start, size_t length, std::vector<uint64_t> &out) {
+            std::copy(dac_vector.begin() + start, dac_vector.begin() + start + length, out.begin());
+        });
     
     return result;
 }
@@ -542,21 +509,9 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
-    // Range queries (requires block-wise decompression)
-    const size_t num_range_queries = 1000;
-    
-    for (auto range : range_sizes) {
-        if (range >= n) continue;
-        
-        const auto& range_indices = bench_data.range_query_indices.at(range);
-        std::vector<T> out_buffer(range);
-        volatile T range_checksum = 0;
-        
-        t1 = std::chrono::high_resolution_clock::now();
-        size_t q_count = 0;
-        for (auto start_idx : range_indices) {
-            if (q_count++ >= num_range_queries) break;
-            
+    // Range queries (range_queries.hpp; requires block-wise decompression)
+    run_range_queries(result, bench_data, range_sizes, n, decompressed.data(),
+        [&](size_t start_idx, size_t range, std::vector<T> &out_buffer) {
             size_t start_block = start_idx / block_size;
             size_t end_block = (start_idx + range - 1) / block_size;
             
@@ -586,17 +541,7 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
                     ++i;
                 }
             }
-            range_checksum += out_buffer[0];
-            do_not_optimize(out_buffer);
-        }
-        compiler_barrier();
-        t2 = std::chrono::high_resolution_clock::now();
-        do_not_optimize(range_checksum);
-        
-        auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
-        result.range_query_throughputs.emplace_back(range, throughput);
-    }
+        });
     
     return result;
 }
@@ -707,20 +652,9 @@ BenchmarkResult benchmark_tsxor(const BenchmarkData &bench_data,
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
-    // Range queries
-    const size_t num_range_queries = 1000;
-    for (auto range : range_sizes) {
-        if (range >= n) continue;
-        
-        const auto& range_indices = bench_data.range_query_indices.at(range);
-        std::vector<T> out_buffer(range);
-        volatile T range_checksum = 0;
-        
-        t1 = std::chrono::high_resolution_clock::now();
-        size_t q_count_range = 0;
-        for (auto start_idx : range_indices) {
-            if (q_count_range++ >= num_range_queries) break;
-            
+    // Range queries (range_queries.hpp)
+    run_range_queries(result, bench_data, range_sizes, n, decompressed.data(),
+        [&](size_t start_idx, size_t range, std::vector<T> &out_buffer) {
             size_t start_block = start_idx / block_size;
             size_t end_block = (start_idx + range - 1) / block_size;
             
@@ -748,17 +682,7 @@ BenchmarkResult benchmark_tsxor(const BenchmarkData &bench_data,
                     ++i;
                 }
             }
-            range_checksum += out_buffer[0];
-            do_not_optimize(out_buffer);
-        }
-        compiler_barrier();
-        t2 = std::chrono::high_resolution_clock::now();
-        do_not_optimize(range_checksum);
-        
-        auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
-        result.range_query_throughputs.emplace_back(range, throughput);
-    }
+        });
     
     return result;
 }
@@ -817,28 +741,18 @@ BenchmarkResult benchmark_buff(const BenchmarkData &bench_data,
         const auto i=bench_data.random_indices[q];T value=buff::get_value_at(column,i);
         query_mismatches+=roundtrip_value_mismatch(decoded[i],value);
     }
-    for(size_t range:range_sizes){
-        if(range>=n)continue;
-        const auto &indices=bench_data.range_query_indices.at(range);
-        const size_t queries=std::min<size_t>(1000,indices.size());
-        std::vector<T> output(range);
-        start=Clock::now();
-        for(size_t q=0;q<queries;++q){
-            buff::get_range(column,indices[q],range,output.data());do_not_optimize(output);
-        }
-        compiler_barrier();
-        result.range_query_throughputs.emplace_back(range,queries*range*sizeof(T)/1024.0/1024.0/elapsed(start));
-        for(size_t q=0;q<std::min<size_t>(queries,3);++q){
-            buff::get_range(column,indices[q],range,output.data());
-            for(size_t k=0;k<range;++k) query_mismatches+=roundtrip_value_mismatch(decoded[indices[q]+k],output[k]);
-        }
-    }
-    // Point/range reads use the same 1e-9 rule against the full decode (which is
+    // Point reads use the same 1e-9 rule against the full decode (which is
     // itself checked against the input above), so this isolates the unpatched
     // upstream selective-decoder bug (docs/buff-leco-native.txt). Warning only.
     if(query_mismatches){result.validation_status="failed";
         std::cerr << "Warning: BUFF selective decode: " << query_mismatches
-                  << " point/range values differ from full decode by > 1e-9; metrics retained.\n";}
+                  << " point values differ from full decode by > 1e-9; metrics retained.\n";}
+    // Range queries (range_queries.hpp): every query is checked against `decoded`
+    // with the same rule.
+    run_range_queries(result, bench_data, range_sizes, n, decoded.data(),
+        [&](size_t first, size_t length, std::vector<T> &output) {
+            buff::get_range(column, first, length, output.data());
+        });
     return result;
 }
 #endif // NEATS_ENABLE_BUFF
@@ -998,25 +912,15 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
-    // Range queries
-    const size_t num_range_queries = 1000;
-    for (auto range : range_sizes) {
-        if (range >= n) continue;
-        
-        const auto& range_indices = bench_data.range_query_indices.at(range);
-        std::vector<T> out_buffer(range);
-        volatile T range_checksum = 0;
-        
-        t1 = std::chrono::high_resolution_clock::now();
-        size_t q_count_range = 0;
-        for (auto start_idx : range_indices) {
-            if (q_count_range++ >= num_range_queries) break;
-            
+    // Range queries (range_queries.hpp). The block decode workspace is sized
+    // for the largest range and allocated once, outside the timed region.
+    size_t max_range = 0;
+    for (auto range : range_sizes) if (range < n) max_range = std::max(max_range, range);
+    std::vector<uint8_t> decompressed_bytes(max_range ? ((max_range - 1) / block_size + 2) * block_size * sizeof(T) + 1 : 0);
+    run_range_queries(result, bench_data, range_sizes, n, decompressed.data(),
+        [&](size_t start_idx, size_t range, std::vector<T> &out_buffer) {
             size_t start_block = start_idx / block_size;
             size_t end_block = (start_idx + range - 1) / block_size;
-            size_t buffer_blocks = end_block - start_block + 1;
-            
-            std::vector<uint8_t> decompressed_bytes(buffer_blocks * block_size * sizeof(T) + 1);
             size_t byte_offset = 0;
             
             for (size_t ib = start_block; ib <= end_block; ++ib) {
@@ -1037,17 +941,7 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
                 }
                 out_buffer[i] = value;
             }
-            range_checksum += out_buffer[0];
-            do_not_optimize(out_buffer);
-        }
-        compiler_barrier();
-        t2 = std::chrono::high_resolution_clock::now();
-        do_not_optimize(range_checksum);
-        
-        auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
-        result.range_query_throughputs.emplace_back(range, throughput);
-    }
+        });
     
     // Cleanup
     for (auto &block : compressed_blocks) {
@@ -1096,6 +990,13 @@ void print_usage(const char *prog_name) {
     for (const auto& name : recent_compressor_names()) std::cerr << name << " ";
     std::cerr << std::endl;
     std::cerr << "  -r <list>      Comma-separated list of range sizes (default: 10,100,1000,10000,100000)" << std::endl;
+    std::cerr << "  --range-queries <N>      Random range queries per size, same for every codec (default: 10000)" << std::endl;
+    std::cerr << "  --range-seed <S>         mt19937 seed of the shared range starts (default: 1234)" << std::endl;
+    std::cerr << "  --range-trials <T>       Timed repetitions; range_*_mbs reports the median (default: 1)" << std::endl;
+    std::cerr << "  --range-batch-bytes <B>  Output arena per timed batch, zeroed untimed (default: 262144)" << std::endl;
+    std::cerr << "  --no-range-verify        Skip the untimed check of every range query" << std::endl;
+    std::cerr << "  --range-trials-csv <f>   Write one row per (codec, dataset, size, trial) with decimal MB/s" << std::endl;
+    std::cerr << "                 (range_*_mbs columns of the main CSV are MiB/s, like the other *_mbs columns)" << std::endl;
     std::cerr << "  -b <size>      Block size for block-based compressors (default: 1000)" << std::endl;
     std::cerr << "                 (Note: *_gef compressors use fixed UniformedPartitioner block size = " << GEF_UNIFORM_PARTITION_SIZE << ")" << std::endl;
     std::cerr << "  -m <bpc>       Max bits per correction for NeaTS (default: 32)" << std::endl;
@@ -1143,6 +1044,8 @@ int main(int argc, char *argv[]) {
     size_t block_size = 1000;
     NativeAccessOptions native_options;
     uint8_t max_bpc = 32;
+    RangeQueryOptions range_options;
+    std::string range_trials_csv;
     std::string input_path;
     size_t failures = 0;
     
@@ -1161,6 +1064,18 @@ int main(int argc, char *argv[]) {
             }
         } else if (arg == "-b" && i + 1 < argc) {
             block_size = std::stoull(argv[++i]);
+        } else if (arg == "--range-queries" && i + 1 < argc) {
+            range_options.queries = std::stoull(argv[++i]);
+        } else if (arg == "--range-seed" && i + 1 < argc) {
+            range_options.seed = std::stoull(argv[++i]);
+        } else if (arg == "--range-trials" && i + 1 < argc) {
+            range_options.trials = std::max<size_t>(1, std::stoull(argv[++i]));
+        } else if (arg == "--range-batch-bytes" && i + 1 < argc) {
+            range_options.batch_bytes = std::max<size_t>(1, std::stoull(argv[++i]));
+        } else if (arg == "--no-range-verify") {
+            range_options.verify = false;
+        } else if (arg == "--range-trials-csv" && i + 1 < argc) {
+            range_trials_csv = argv[++i];
         } else if (arg == "-m" && i + 1 < argc) {
             max_bpc = std::stoi(argv[++i]);
         } else if (arg == "-h") {
@@ -1199,6 +1114,40 @@ int main(int argc, char *argv[]) {
     
     // Print header
     bool header_printed = false;
+
+    // Optional per-trial range-query output (decimal MB/s, explicit units).
+    std::ofstream trials_out;
+    if (!range_trials_csv.empty()) {
+        trials_out.open(range_trials_csv);
+        if (!trials_out) {
+            std::cerr << "Cannot open " << range_trials_csv << std::endl;
+            return 1;
+        }
+        trials_out << "compressor,dataset,num_values,range_size,trial,queries,seed,value_bytes,"
+                   << "bytes_returned,elapsed_ns,throughput_MB_per_s,throughput_MiB_per_s,queries_per_s,"
+                   << "verified_queries,mismatched_queries,validation_status\n";
+    }
+    auto emit = [&](const BenchmarkResult &result) {
+        if (!header_printed) {
+            result.print_header(*out);
+            header_printed = true;
+        }
+        result.print(*out);
+        out->flush();
+        if (!trials_out.is_open()) return;
+        for (const auto &t : result.range_trials) {
+            const double bytes = double(t.queries) * t.range * t.value_bytes;
+            const double seconds = t.elapsed_ns / 1e9;
+            trials_out << result.compressor << "," << extract_filename(result.dataset) << ","
+                       << result.num_values << "," << t.range << "," << t.trial << "," << t.queries << ","
+                       << range_options.seed << "," << t.value_bytes << "," << std::setprecision(0) << std::fixed
+                       << bytes << "," << t.elapsed_ns << "," << std::setprecision(6)
+                       << bytes / 1e6 / seconds << "," << bytes / 1048576.0 / seconds << ","
+                       << t.queries / seconds << "," << t.verified_queries << "," << t.mismatched_queries << ","
+                       << result.validation_status << "\n";
+        }
+        trials_out.flush();
+    };
     
     // Run benchmarks
     for (const auto &filename : files) {
@@ -1207,6 +1156,7 @@ int main(int argc, char *argv[]) {
         // Prepare data ONCE to avoid reloading and reprocessing for every compressor
         BenchmarkData bench_data;
         bench_data.filename = filename;
+        bench_data.range_options = range_options;
         
         try {
             auto loaded = load_custom_dataset(filename);
@@ -1226,7 +1176,8 @@ int main(int argc, char *argv[]) {
             // Generate range queries
             for(auto range : range_sizes) {
                  if (range < n) {
-                     bench_data.range_query_indices[range] = generate_range_indices(n, range, 10000);
+                     bench_data.range_query_indices[range] =
+                         generate_range_indices(n, range, range_options.queries, range_options.seed);
                  } else {
                      bench_data.range_query_indices[range] = {};
                  }
@@ -1280,11 +1231,7 @@ int main(int argc, char *argv[]) {
                 else result = benchmark_squash<int64_t>(comp, bench_data, range_sizes, block_size);
 #endif
                 
-                if (!header_printed) {
-                    result.print_header(*out);
-                    header_printed = true;
-                }
-                result.print(*out);
+                emit(result);
                 std::cerr << " done" << std::endl;
                 
             } catch (const std::exception &e) {
@@ -1334,11 +1281,7 @@ int main(int argc, char *argv[]) {
                     continue;
                 }
                 
-                if (!header_printed) {
-                    result.print_header(*out);
-                    header_printed = true;
-                }
-                result.print(*out);
+                emit(result);
                 std::cerr << " done" << std::endl;
                 
             } catch (const std::exception &e) {
@@ -1391,11 +1334,7 @@ int main(int argc, char *argv[]) {
                     continue;
                 }
 
-                if (!header_printed) {
-                    result.print_header(*out);
-                    header_printed = true;
-                }
-                result.print(*out);
+                emit(result);
                 std::cerr << " done" << std::endl;
                 
             } catch (const std::exception &e) {

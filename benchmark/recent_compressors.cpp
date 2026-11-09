@@ -1,4 +1,5 @@
 #include "recent_compressors.hpp"
+#include "range_queries.hpp"
 #include "DeXOR/DeXOR.hpp"
 #include "ElfStar/ElfStar.hpp"
 #include "SElfStar/SElfStar.hpp"
@@ -165,15 +166,19 @@ BenchmarkResult benchmark_blocks(const Codec<T>& codec, const Values<T>& values,
     const double access_time = seconds(start);
     result.random_access_ns = nq ? access_time*1e9/nq : 0;
     result.random_access_mbs = nq*sizeof(T)/(1024.0*1024.0)/access_time;
-    for (size_t range : ranges) {
-        if (range >= n || !range) continue;
-        const auto& indices = data.range_query_indices.at(range);
-        const size_t queries = std::min<size_t>(1000, indices.size());
-        Values<T> output(range);
-        start = Clock::now();
-        for (size_t q = 0; q < queries; ++q) {
-            const size_t begin = indices[q];
-            if (begin > n-range) throw std::out_of_range("range query index");
+    // Range queries (range_queries.hpp). Reference: the codec's own full
+    // decompression, built untimed (the timed full decode above discards it).
+    Values<T> reference;
+    if (data.range_options.verify) {
+        reference.resize(n);
+        for (size_t b = 0; b < nb; ++b) {
+            const size_t count = std::min(block_size, n-b*block_size);
+            const auto decoded = codec.decode(blocks[b], count);
+            std::copy(decoded.begin(), decoded.begin()+std::min(count, decoded.size()), reference.begin()+b*block_size);
+        }
+    }
+    run_range_queries(result, data, ranges, n, reference.empty() ? nullptr : reference.data(),
+        [&](size_t begin, size_t range, Values<T>& output) {
             for (size_t b = begin/block_size; b <= (begin+range-1)/block_size; ++b) {
                 const size_t count = std::min(block_size, n-b*block_size);
                 const size_t needed = std::min(count, begin+range-b*block_size);
@@ -184,11 +189,7 @@ BenchmarkResult benchmark_blocks(const Codec<T>& codec, const Values<T>& values,
                 std::copy(decoded.begin()+(lo-b*block_size), decoded.begin()+(hi-b*block_size),
                           output.begin()+(lo-begin));
             }
-            do_not_optimize(output);
-        }
-        result.range_query_throughputs.emplace_back(range,
-            double(queries)*range*sizeof(T)/(1024.0*1024.0)/seconds(start));
-    }
+        });
     return result;
 }
 
@@ -227,12 +228,10 @@ BenchmarkResult benchmark_indexed(const std::string& name,const Values<T>& value
         count_differences(result,expected,decoded,first);
     }
     finish_roundtrip_validation(result);
+    Values<T> full(n);  // kept as the range-query reference
     start=Clock::now();
-    {
-        Values<T> decoded(n);
-        index.read(0,n,decoded.data());
-        do_not_optimize(decoded);
-    }
+    index.read(0,n,full.data());
+    do_not_optimize(full);
     result.decompression_throughput_mbs=mib/seconds(start);
     const size_t nq=std::min<size_t>(100000,data.random_indices.size());
     start=Clock::now();
@@ -244,18 +243,8 @@ BenchmarkResult benchmark_indexed(const std::string& name,const Values<T>& value
     const double access_time=seconds(start);
     result.random_access_ns=nq?access_time*1e9/nq:0;
     result.random_access_mbs=nq*sizeof(T)/(1024.0*1024.0)/access_time;
-    for(size_t range:ranges) {
-        if(range>=n||!range) continue;
-        const auto& indices=data.range_query_indices.at(range);
-        const size_t queries=std::min<size_t>(1000,indices.size());
-        Values<T> output(range);
-        start=Clock::now();
-        for(size_t q=0;q<queries;++q) {
-            index.read(indices[q],range,output.data());
-            do_not_optimize(output);
-        }
-        result.range_query_throughputs.emplace_back(range,double(queries)*range*sizeof(T)/(1024.0*1024.0)/seconds(start));
-    }
+    run_range_queries(result,data,ranges,n,full.data(),
+        [&](size_t first,size_t range,Values<T>& output){index.read(first,range,output.data());});
     return result;
 }
 

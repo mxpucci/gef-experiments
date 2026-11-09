@@ -3,6 +3,7 @@
 // authors' experiments, Java CamelDecompressor.DEFAULT_BLOCK_SIZE), final
 // partial block kept. Size = bytes actually written per block.
 #include "benchmark_common.hpp"
+#include "range_queries.hpp"
 #include "Camel/camel.hpp"
 
 #include <algorithm>
@@ -95,14 +96,10 @@ BenchmarkResult benchmark_camel(const BenchmarkData& bench_data, const std::vect
     r.random_access_ns = queries ? seconds(t1, t2) * 1e9 / queries : 0;
     r.random_access_mbs = queries * sizeof(double) / 1048576.0 / seconds(t1, t2);
 
-    for (size_t range : range_sizes) {
-        if (range >= n) continue;
-        const auto& starts = bench_data.range_query_indices.at(range);
-        const size_t count = std::min<size_t>(1000, starts.size());
-        std::vector<double> out(range);
-        t1 = Clock::now();
-        for (size_t q = 0; q < count; ++q) {
-            const size_t start = starts[q], end = start + range;
+    // Range queries (range_queries.hpp): decode intersected blocks up to the end of the range.
+    run_range_queries(r, bench_data, range_sizes, n, decoded.data(),
+        [&](size_t start, size_t range, std::vector<double> &out) {
+            const size_t end = start + range;
             size_t pos = 0;
             for (size_t b = start / kBlock; b <= (end - 1) / kBlock; ++b) {
                 auto d = decoder(b);
@@ -110,12 +107,6 @@ BenchmarkResult benchmark_camel(const BenchmarkData& bench_data, const std::vect
                 for (size_t j = b * kBlock; j < lo; ++j) d.next();
                 for (size_t j = lo; j < hi; ++j) out[pos++] = d.next();
             }
-            sink = sink + out[0];
-            do_not_optimize(out);
-        }
-        compiler_barrier();
-        t2 = Clock::now();
-        r.range_query_throughputs.emplace_back(range, range * sizeof(double) * count / 1048576.0 / seconds(t1, t2));
-    }
+        });
     return r;
 }
