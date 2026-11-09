@@ -40,28 +40,7 @@ count input/output bit mismatches. Out-of-bound or query errors produce warnings
 and qualified metrics. This qualification must remain visible in comparisons.
 
 LeCo
-Paper: https://arxiv.org/pdf/2306.15374 (Sections 3.2.1 and 4.2).
-Source: https://github.com/yhliu918/Learn-to-Compress
-Pinned commit 28bf8bf3d0dd721baa2d6c714d8b454529af41aa.
-
-The codec was already the original C++ Leco_int template. The integration now
-uses its authors-demonstrated uint64 specialization on nonnegative shifted
-integers. Fixed-length native partitions remain part of the codec: replacing
-all partitions with one global regression would not reproduce LeCo.
-
-The generic benchmark -b 1000 no longer selects LeCo partitions. We use the
-published 1% sampling helper and the authors' candidate grid from
-experiments/search_hyper_regress.cpp: 200,400,800,1600,3200,6400,10000. The original
-search_hyper.h control flow is retained, with a thin API/type adapter from its
-uint32 factory API to the original uint64 codec (and an 8-byte denominator).
-If the 1% sample is shorter than the smallest candidate, the first candidate is
-used; all candidates otherwise encode that same short sample in the helper.
-Sampling is included in measured compression time. The selected native size is
-reported in compression_unit_values, with native_fixed_partitions_tuned layout.
-Point reads call original randomdecodeArray8 directly. Counted storage includes
-encoded partitions, the offset directory/count/partition-size metadata, and any
-native correction records. Existing GCC compatibility changes are confined to
-generated headers (duplicate type traits / register), not codec algorithms.
+Superseded: see docs/leco.md (2026-11-09) for the current LeCo configuration.
 
 Run handling
 The full-suite run was stopped at user request on 2026-11-04. Its partial
