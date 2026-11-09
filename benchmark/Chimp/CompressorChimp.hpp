@@ -114,7 +114,7 @@ public:
         return size;
     }
 
-    inline BitStream getBuffer() {
+    inline const BitStream &getBuffer() const {
         return this->out;
     }
 };

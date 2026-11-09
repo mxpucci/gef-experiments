@@ -63,15 +63,6 @@
 #include "Buff/CompressorBuff.hpp"
 #endif
 
-// GEF includes
-// NOTE: When running multiple GEF compressors sequentially with SIMD and OpenMP enabled,
-// you may encounter a bug where subsequent compressors produce astronomically large 
-// compressed sizes (compression ratio > 100x). This manifests on Linux with AVX-512.
-//
-// WORKAROUND: Use LosslessBenchmarkFullNoSIMD which is compiled with:
-//   -DGEF_DISABLE_SIMD=1 -DGEF_DISABLE_OPENMP=1
-// These flags force sequential partition construction and scalar gap computation.
-#include "gef/gef.hpp"
 
 // ============================================================================
 // Utility functions
@@ -178,7 +169,7 @@ void BenchmarkResult::print_header(std::ostream &out) const {
         out << ",range_" << range << "_mbs";
     }
     out << ",input_conversion,input_changed_values,roundtrip_mismatches,validation_status"
-        << ",access_layout,compression_unit_values,native_page_values";
+        << ",access_layout,compression_unit_values,native_page_values,bitwise_mismatches";
     out << std::endl;
 }
 
@@ -193,7 +184,8 @@ void BenchmarkResult::print(std::ostream &out) const {
     }
     out << "," << input_conversion << "," << input_changed_values
         << "," << roundtrip_mismatches << "," << validation_status
-        << "," << access_layout << "," << compression_unit_values << "," << native_page_values;
+        << "," << access_layout << "," << compression_unit_values << "," << native_page_values
+        << "," << bitwise_mismatches;
     out << std::endl;
 }
 
@@ -270,12 +262,8 @@ BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
     
     result.decompression_throughput_mbs = (processed_data.size() * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
-    for (size_t i = 0; i < processed_data.size(); ++i) {
-        if (processed_data[i] != decompressed[i]) {
-            std::cerr << "NeaTS decompression error at " << i << std::endl;
-            break;
-        }
-    }
+    check_roundtrip(result, processed_data, decompressed);
+    finish_roundtrip_validation(result);
     
     // Random access
     const size_t num_ra_queries = random_indices.size();
@@ -347,100 +335,6 @@ BenchmarkResult benchmark_neats(const BenchmarkData &bench_data,
     }
 }
 // ============================================================================
-// GEF Wrapper and Benchmark
-// ============================================================================
-
-static constexpr size_t GEF_UNIFORM_PARTITION_SIZE = 32000;
-
-template<typename GEFType, typename T = int64_t>
-BenchmarkResult benchmark_gef(const std::string &compressor_name,
-                              const BenchmarkData &bench_data,
-                              const std::vector<size_t> &range_sizes) {
-    BenchmarkResult result;
-    result.compressor = compressor_name;
-    result.dataset = bench_data.filename;
-    
-    // Use shifted data
-    const auto& data = bench_data.shifted_data;
-                   
-    result.num_values = data.size();
-    result.uncompressed_bits = bench_data.uncompressed_bits;
-    
-    // Compression
-    auto t1 = std::chrono::high_resolution_clock::now();
-    GEFType compressor(data);
-    compiler_barrier();
-    auto t2 = std::chrono::high_resolution_clock::now();
-    auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-    
-    result.compressed_bits = compressor.size_in_bytes() * 8;
-    result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
-    result.compression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
-    
-    // Full decompression
-    std::vector<T> decompressed(data.size());
-    volatile T decomp_checksum = 0;
-    t1 = std::chrono::high_resolution_clock::now();
-    compressor.get_elements(0, data.size(), decompressed);
-    decomp_checksum += decompressed[0];
-    compiler_barrier();
-    t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(decompressed);
-    do_not_optimize(decomp_checksum);
-    
-    auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-    result.decompression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
-    
-    for (size_t i = 0; i < data.size(); ++i) {
-        if (data[i] != decompressed[i]) {
-            std::cerr << compressor_name << " decompression error at " << i << std::endl;
-            break;
-        }
-    }
-    
-    // Random access
-    const size_t num_ra_queries = bench_data.random_indices.size();
-    
-    t1 = std::chrono::high_resolution_clock::now();
-    volatile T ra_sum = 0;
-    for (auto idx : bench_data.random_indices) {
-        ra_sum += compressor[idx];
-    }
-    compiler_barrier();
-    t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(ra_sum);
-    auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-    result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
-    result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
-    
-    // Range queries
-    const size_t num_range_queries = bench_data.range_query_indices.begin()->second.size();
-    for (auto range : range_sizes) {
-        if (range >= data.size()) continue;
-        
-        const auto& range_indices = bench_data.range_query_indices.at(range);
-        std::vector<T> out_buffer(range);
-        volatile T range_checksum = 0;
-        
-        t1 = std::chrono::high_resolution_clock::now();
-        for (auto start_idx : range_indices) {
-            compressor.get_elements(start_idx, range, out_buffer);
-            range_checksum += out_buffer[0];
-            do_not_optimize(out_buffer);
-        }
-        compiler_barrier();
-        t2 = std::chrono::high_resolution_clock::now();
-        do_not_optimize(range_checksum);
-        
-        auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
-        result.range_query_throughputs.emplace_back(range, throughput);
-    }
-    
-    return result;
-}
-
-// ============================================================================
 // DAC (Direct Access Codes) Benchmark
 // ============================================================================
 
@@ -489,12 +383,8 @@ BenchmarkResult benchmark_dac(const BenchmarkData &bench_data,
     
     result.decompression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
-    for (size_t i = 0; i < data.size(); ++i) {
-        if (u_data[i] != decompressed[i]) {
-            std::cerr << "DAC decompression error at " << i << std::endl;
-            break;
-        }
-    }
+    check_roundtrip(result, u_data, decompressed);
+    finish_roundtrip_validation(result);
     
     // Random access
     const size_t num_ra_queries = bench_data.random_indices.size();
@@ -617,13 +507,10 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
     
     result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
-    for (size_t i = 0; i < n; ++i)
-        result.roundtrip_mismatches += std::bit_cast<uint64_t>(data[i]) != std::bit_cast<uint64_t>(decompressed[i]);
-    result.validation_status = result.roundtrip_mismatches ? "bitwise_failed" : "bitwise_passed";
+    check_roundtrip(result, data, decompressed);
+    finish_roundtrip_validation(result);
     result.access_layout = "independent_blocks";
     result.compression_unit_values = block_size;
-    if (result.roundtrip_mismatches)
-        std::cerr << "WARNING: " << compressor_name << ": " << result.roundtrip_mismatches << " bitwise round-trip mismatches\n";
 
     // Random access (requires block decompression)
     const size_t num_ra_queries = 100000; // Fewer queries since it's slower
@@ -788,12 +675,10 @@ BenchmarkResult benchmark_tsxor(const BenchmarkData &bench_data,
     
     result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
-    for (size_t i = 0; i < n; ++i) {
-        if (std::abs(data[i] - decompressed[i]) >= 1e-9) {
-            std::cerr << "TSXor decompression error at " << i << std::endl;
-            break;
-        }
-    }
+    check_roundtrip(result, data, decompressed);
+    finish_roundtrip_validation(result);
+    result.access_layout = "independent_blocks";
+    result.compression_unit_values = block_size;
     
     // Random access
     const size_t num_ra_queries = 100000;
@@ -1019,8 +904,12 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
         size_t compressed_size = squash_codec_get_max_compressed_size(codec, uncompressed_size);
         auto *compressed_data = (uint8_t*)malloc(compressed_size);
         
-        squash_codec_compress_with_options(codec, &compressed_size, compressed_data,
+        const SquashStatus status = squash_codec_compress_with_options(codec, &compressed_size, compressed_data,
                                      uncompressed_size, data_bytes.data(), opts);
+        if (status != SQUASH_OK) {
+            free(compressed_data);
+            throw std::runtime_error(compressor_name + " compression failed: " + squash_status_to_string(status));
+        }
         
         compressed_blocks[ib] = {compressed_data, compressed_size};
         total_compressed_bits += compressed_size * CHAR_BIT;
@@ -1042,8 +931,12 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
         size_t decompressed_size = bs * sizeof(T) + 1;
         auto *decompressed_bytes = (uint8_t*)malloc(decompressed_size);
         
-        squash_codec_decompress_with_options(codec, &decompressed_size, decompressed_bytes,
+        const SquashStatus status = squash_codec_decompress_with_options(codec, &decompressed_size, decompressed_bytes,
                           compressed_blocks[ib].second, compressed_blocks[ib].first, opts);
+        if (status != SQUASH_OK || decompressed_size != bs * sizeof(T)) {
+            free(decompressed_bytes);
+            throw std::runtime_error(compressor_name + " decompression failed: " + squash_status_to_string(status));
+        }
         
         for (size_t i = 0; i < bs; ++i) {
             T value = 0;
@@ -1063,12 +956,10 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     
     result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
-    for (size_t i = 0; i < n; ++i) {
-        if (data[i] != decompressed[i]) {
-            std::cerr << compressor_name << " decompression error at " << i << std::endl;
-            break;
-        }
-    }
+    check_roundtrip(result, data, decompressed);
+    finish_roundtrip_validation(result);
+    result.access_layout = "independent_blocks";
+    result.compression_unit_values = block_size;
     
     // Random access
     const size_t num_ra_queries = 100000;
@@ -1177,7 +1068,7 @@ void print_usage(const char *prog_name) {
     std::cerr << "  -o <file>      Output CSV file (default: stdout)" << std::endl;
     std::cerr << "  -c <list>      Comma-separated list of compressors (default: all)" << std::endl;
 #if HAS_SQUASH
-    std::cerr << "                 Available: neats,dac,rle_gef,u_gef_approximate,u_gef_optimal,b_gef_approximate,b_gef_optimal,b_star_gef_approximate,b_star_gef_optimal,gorilla,chimp,chimp128,tsxor,elf,camel,falcon,alp";
+    std::cerr << "                 Available: neats,dac,rle_gef,u_gef_approximate,u_gef_optimal,b_gef_approximate,b_gef_optimal,b_star_gef_approximate,b_star_gef_optimal,gorilla,chimp,chimp128,tsxor,elf,camel,alp";
 #if defined(NEATS_ENABLE_LECO)
     std::cerr << ",leco";
 #endif
@@ -1186,7 +1077,7 @@ void print_usage(const char *prog_name) {
 #endif
     std::cerr << ",lz4,zstd,brotli,xz,snappy" << std::endl;
 #else
-    std::cerr << "                 Available: neats,dac,rle_gef,u_gef_approximate,u_gef_optimal,b_gef_approximate,b_gef_optimal,b_star_gef_approximate,b_star_gef_optimal,gorilla,chimp,chimp128,tsxor,elf,camel,falcon,alp";
+    std::cerr << "                 Available: neats,dac,rle_gef,u_gef_approximate,u_gef_optimal,b_gef_approximate,b_gef_optimal,b_star_gef_approximate,b_star_gef_optimal,gorilla,chimp,chimp128,tsxor,elf,camel,alp";
 #if defined(NEATS_ENABLE_BUFF)
     std::cerr << ",buff";
 #endif
@@ -1435,34 +1326,15 @@ int main(int argc, char *argv[]) {
                 } else if (comp == "dac") {
                     result = benchmark_dac<int64_t>(bench_data, range_sizes);
                 }
+                else if (is_gef_compressor(comp)) {
+                    result = benchmark_gef_compressor(comp, bench_data, range_sizes);
+                }
 #if defined(NEATS_ENABLE_LECO)
                 else if (comp == "leco") {
                     result = benchmark_leco(bench_data, range_sizes);
-                } else if (comp == "rle_gef") {
-#else
-                else if (comp == "rle_gef") {
+                }
 #endif
-                    using UP_RLE = gef::RLE_GEF<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
-                    result = benchmark_gef<UP_RLE, int64_t>("rle_gef", bench_data, range_sizes);
-                } else if (comp == "u_gef_approximate") {
-                    using UP_U = gef::U_GEF_APPROXIMATE<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
-                    result = benchmark_gef<UP_U, int64_t>("u_gef_approximate", bench_data, range_sizes);
-                } else if (comp == "u_gef_optimal") {
-                    using UP_U = gef::U_GEF<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
-                    result = benchmark_gef<UP_U, int64_t>("u_gef_optimal", bench_data, range_sizes);
-                } else if (comp == "b_gef_approximate") {
-                    using UP_B = gef::B_GEF_APPROXIMATE<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
-                    result = benchmark_gef<UP_B, int64_t>("b_gef_approximate", bench_data, range_sizes);
-                } else if (comp == "b_gef_optimal") {
-                    using UP_B = gef::B_GEF<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
-                    result = benchmark_gef<UP_B, int64_t>("b_gef_optimal", bench_data, range_sizes);
-                } else if (comp == "b_star_gef_approximate") {
-                    using UP_B_STAR = gef::B_STAR_GEF_APPROXIMATE<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
-                    result = benchmark_gef<UP_B_STAR, int64_t>("b_star_gef_approximate", bench_data, range_sizes);
-                } else if (comp == "b_star_gef_optimal") {
-                    using UP_B_STAR = gef::B_STAR_GEF<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
-                    result = benchmark_gef<UP_B_STAR, int64_t>("b_star_gef_optimal", bench_data, range_sizes);
-                } else {
+                else {
                     ++failures;
                     std::cerr << " unknown compressor, skipping" << std::endl;
                     continue;
@@ -1513,8 +1385,6 @@ int main(int argc, char *argv[]) {
                         "Elf", bench_data, range_sizes, block_size);
                 } else if (comp == "camel") {
                     result = benchmark_camel(bench_data, range_sizes, block_size);
-                } else if (comp == "falcon") {
-                    result = benchmark_falcon(bench_data, range_sizes);
                 } else if (comp == "alp") {
                     result = benchmark_alp(bench_data, range_sizes);
 #ifdef NEATS_ENABLE_BUFF
