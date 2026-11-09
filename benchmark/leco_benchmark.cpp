@@ -3,6 +3,7 @@
 
 #include "benchmark_common.hpp"
 #include "piecewise_fix_integer_template.h"
+#include "LeCo/NativeTuning.hpp"
 
 #include <chrono>
 #include <cstring>
@@ -10,9 +11,8 @@
 #include <unordered_map>
 
 BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
-                               const std::vector<size_t> &range_sizes,
-                               size_t block_size) {
-    using T = int64_t;
+                               const std::vector<size_t> &range_sizes) {
+    using T = uint64_t;
     
     BenchmarkResult result;
     result.compressor = "LeCo";
@@ -24,6 +24,11 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
     result.uncompressed_bits = bench_data.uncompressed_bits;
     
     const size_t n = data.size();
+    auto t1 = std::chrono::high_resolution_clock::now();
+    const size_t block_size = leco_native_tuning::choose(reinterpret_cast<const T*>(data.data()), n);
+    result.access_layout = "native_fixed_partitions_tuned";
+    result.compression_unit_values = block_size;
+    std::cerr << " LeCo native partition size=" << block_size << " (authors' 1% sampler)";
     const size_t num_blocks = (n / block_size) + (n % block_size != 0);
     
     Codecset::Leco_int<T> codec;
@@ -32,7 +37,6 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
     std::vector<uint8_t*> block_start_vec;
     size_t total_compressed_bits = 0;
     
-    auto t1 = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < num_blocks; i++) {
         int block_length = block_size;
         if (i == num_blocks - 1) {
@@ -54,6 +58,8 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
     auto t2 = std::chrono::high_resolution_clock::now();
     auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
     
+    // Persisted count/partition size, byte offsets, and native correction pairs.
+    total_compressed_bits += (16 + 8*(num_blocks+1) + 8*codec.mul_add_diff_set.size())*8;
     result.compressed_bits = total_compressed_bits;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
     result.compression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
@@ -81,12 +87,11 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
     
     result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
-    for (size_t i = 0; i < n; ++i) {
-        if (data[i] != decompressed[i]) {
-            std::cerr << "LeCo decompression error at " << i << std::endl;
-            break;
-        }
-    }
+    for (size_t i = 0; i < n; ++i)
+        result.roundtrip_mismatches += static_cast<T>(data[i]) != decompressed[i];
+    result.validation_status = result.roundtrip_mismatches ? "failed" : "passed";
+    if (result.roundtrip_mismatches)
+        std::cerr << "Warning: LeCo decompression mismatches=" << result.roundtrip_mismatches << "; metrics retained.\n";
 
     // Random access - with volatile checksum to prevent optimization
     // Keep this aligned with other true-random-access codecs in lossless_benchmark.cpp (NeaTS/GEF/DAC),
@@ -141,9 +146,10 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
                                                       nullptr,
                                                       n);
 
-            const T ref_val = it->second[offset_in_block];
+            const T ref_val = static_cast<T>(data[idx]);
             if (ra_val != ref_val) {
-                std::cerr << "LeCo random access mismatch at idx=" << idx
+                result.validation_status = "failed";
+                std::cerr << "Warning: LeCo random access mismatch at idx=" << idx
                           << " (block " << ib << ", offset " << offset_in_block << ")"
                           << " ref=" << ref_val << " ra=" << ra_val << std::endl;
                 break;

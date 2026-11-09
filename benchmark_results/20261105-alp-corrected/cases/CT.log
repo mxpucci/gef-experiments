@@ -1,0 +1,5 @@
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running alp...ALP vectors=2760 RD vectors=0 raw tail=414
+ done

@@ -1,0 +1,6 @@
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running gorilla... done
+  Running camel...WARNING: original Camel changed 12038 values; results are not lossless for this dataset
+ done

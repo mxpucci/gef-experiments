@@ -1,0 +1,31 @@
+{
+  "repository": "https://github.com/facebookarchive/beringei",
+  "commit": "75c3002b179d99c8709323d605e7d4b53484035c",
+  "methods": [
+    {
+      "file": "BitUtil.cpp",
+      "method": "void BitUtil::addValueToBitString(",
+      "sha256": "318f28f50eb2307ffac4c22b714a609a9074deedbbb01618aa2f4ed30ca32ea5"
+    },
+    {
+      "file": "BitUtil.cpp",
+      "method": "uint64_t BitUtil::readValueFromBitString(",
+      "sha256": "00ce73233e897f4a82b2adc1cc1b01e7ef2e1ea0e26e83aef6da09187718e655"
+    },
+    {
+      "file": "TimeSeriesStream.cpp",
+      "method": "void TimeSeriesStream::appendValue(",
+      "sha256": "3672cf23121259159062f51df38005b1e5221e5d21650cec325b5ca4eab1e8b1"
+    },
+    {
+      "file": "TimeSeriesStream.cpp",
+      "method": "double TimeSeriesStream::readNextValue(",
+      "sha256": "7d1987900b252efd13b754ef81c2d65ddef1579a036e6e46d4b0ce569d0e267c"
+    }
+  ],
+  "adaptations": [
+    "folly string containers replaced by standard equivalents",
+    "pointer type punning replaced by std::bit_cast",
+    "inline header-only linkage; reset state initialized as upstream"
+  ]
+}

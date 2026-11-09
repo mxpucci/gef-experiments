@@ -1,0 +1,48 @@
+warning: unnecessary parentheses around assigned value
+   --> /home/testPF/gef-experiments/lib/buff/bit-vec/src/lib.rs:641:32
+    |
+641 |             self.storage[ew] = (self.storage[ew] & mask);
+    |                                ^                       ^
+    |
+    = note: `#[warn(unused_parens)]` on by default
+help: remove these parentheses
+    |
+641 -             self.storage[ew] = (self.storage[ew] & mask);
+641 +             self.storage[ew] = self.storage[ew] & mask;
+    |
+
+warning: `my-bit-vec` (lib) generated 1 warning (run `cargo fix --lib -p my-bit-vec` to apply 1 suggestion)
+   Compiling buff-majority-audit v0.1.0 (/home/testPF/gef-experiments/benchmark_results/20261105-competitor-audit/buff-majority)
+warning: unused import: `std::ops::Range`
+ --> src/bit_vec_iter.rs:2:5
+  |
+2 | use std::ops::Range;
+  |     ^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `BitBlock`
+ --> src/bit_vec_iter.rs:1:26
+  |
+1 | use my_bit_vec::{BitVec, BitBlock};
+  |                          ^^^^^^^^
+
+warning: value assigned to `cached` is never read
+  --> src/bit_vec_iter.rs:54:5
+   |
+54 |     cached ^= t;
+   |     ^^^^^^
+   |
+   = help: maybe it is overwritten before being read?
+   = note: `#[warn(unused_assignments)]` on by default
+
+warning: function `get_right_most1` is never used
+  --> src/bit_vec_iter.rs:52:4
+   |
+52 | fn get_right_most1(mut cached: u32, )->u32{
+   |    ^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: `buff-majority-audit` (bin "buff-majority-audit") generated 4 warnings (run `cargo fix --bin "buff-majority-audit"` to apply 1 suggestion)
+    Finished `release` profile [optimized] target(s) in 0.80s

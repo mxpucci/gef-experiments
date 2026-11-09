@@ -51,7 +51,7 @@ algorithms have documented C++ ports.
 
 | CLI name | Implementation | Input |
 | --- | --- | --- |
-| `fauna`, `macaque` | Official Rust Fauna and standalone MacaqueV | Float32; double inputs must be exactly representable |
+| `fauna`, `macaque` | Official Rust Fauna and standalone MacaqueV | Float32 conversion; changed values produce warnings and flagged metrics |
 | `dexor` | C++ port of official DeXOR | Float64 |
 | `pcodec` | Official Rust Pcodec 1.0.2 | Float64 |
 | `pcodec_i64` | Same official Pcodec | Original int64 values |
@@ -70,16 +70,26 @@ For example:
 ctest --test-dir build --output-on-failure
 ```
 
-Fauna/Macaque never silently narrow doubles. Their adapters reject values such
-as double `0.1`; use them only on eligible datasets. FLEA explicitly rejects
-blocks outside the imported implementation's safe numeric envelope. Every new
-benchmark performs a bit-exact round-trip check before writing a result. A
-failed or unknown requested compressor gives a nonzero exit status.
+The Fauna/Macaque benchmark explicitly narrows doubles to float32 and continues
+with metrics when values change. It logs a warning and records `input_conversion`
+and `input_changed_values` in CSV. Validation checks the actual converted input;
+passing that check does not imply preservation of the original float64 values.
+All recent codecs report `validation_status` and `roundtrip_mismatches`; value
+mismatches warn and still emit measured metrics. The standalone codec APIs remain
+strict. FLEA rejects blocks outside its safe numeric envelope. Hard API errors,
+malformed decoded lengths and unknown codecs fail the affected case and give a
+nonzero exit status while the CLI continues subsequent cases. Unmeasurable
+operations do not receive invented metrics.
 
-SElf* carries adaptation across blocks and stores counted checkpoints for
-independent block decoding. Point/range access is an enclosing block mechanism,
-not a claim of native individual access. Sizes include codec headers and the
-block directory. See [docs/recent-compressors.md](docs/recent-compressors.md)
+Full Fauna and both Pcodec entries now use native segment/page access. `-b`
+does not split their compression units: Fauna defaults to 65,536-value fitting
+batches; Pcodec defaults to 262,144-value chunks/pages. Use
+`--fauna-batch-size`, `--pcodec-chunk-size` and `--pcodec-page-size` to configure
+these separately. CSV records the layout and native limits. All stored
+directories and metadata count toward compressed size.
+
+SElf* carries adaptation across external blocks and stores counted checkpoints
+for independent decoding. Sequential codecs retain the external `-b` wrapper. See [docs/recent-compressors.md](docs/recent-compressors.md)
 for measurement conventions and links to each implementation's provenance,
 input restrictions and tests.
 

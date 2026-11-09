@@ -1,6 +1,7 @@
 // FFI and serialization only. Compression/decompression algorithms are compiled
 // directly from the pinned, unmodified Apache-2.0 upstream source modules.
 #![allow(dead_code)]
+mod indexed;
 include!(concat!(env!("OUT_DIR"), "/upstream.rs"));
 
 use arrow::array::{Array, BinaryArray, Float32Array, UInt8Array};

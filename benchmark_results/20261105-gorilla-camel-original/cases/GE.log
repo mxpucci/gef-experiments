@@ -1,0 +1,5 @@
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running gorilla... done
+  Running camel... done

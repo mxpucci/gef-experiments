@@ -1,9 +1,11 @@
 include_guard(GLOBAL)
+include("${CMAKE_CURRENT_LIST_DIR}/BenchmarkInput.cmake")
 add_library(gef_recent_compressors STATIC
     "${CMAKE_CURRENT_LIST_DIR}/../benchmark/recent_compressors.cpp")
 target_compile_features(gef_recent_compressors PUBLIC cxx_std_17)
 target_compile_options(gef_recent_compressors PRIVATE -fno-fast-math -ffp-contract=off)
 target_include_directories(gef_recent_compressors PUBLIC "${CMAKE_CURRENT_LIST_DIR}/../benchmark")
+target_link_libraries(gef_recent_compressors PUBLIC gef_benchmark_input)
 
 option(GEF_WITH_PCODEC "Build official Rust Pcodec adapter" ON)
 if(GEF_WITH_PCODEC)

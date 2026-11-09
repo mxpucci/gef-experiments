@@ -99,7 +99,12 @@ add_library(neats_alp STATIC
     lib/ALP/src/fastlanes_unffor.cpp
 )
 target_include_directories(neats_alp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/ALP/include)
-target_compile_options(neats_alp PUBLIC -fPIC)
+target_compile_options(neats_alp PUBLIC -fPIC PRIVATE -fno-fast-math -ffp-contract=off -fno-lto -fwrapv)
+set_property(TARGET neats_alp PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+# Upstream candidate evaluation multiplies signed integers beyond their range.
+# Define wrapping arithmetic without modifying the pinned codec source.
+set_source_files_properties(benchmark/alp_benchmark.cpp PROPERTIES
+    COMPILE_OPTIONS "-fno-fast-math;-ffp-contract=off;-fno-lto;-fwrapv")
 
 # Correct two vector-type typos in the pinned ALP header in the build tree.
 # The load/store intrinsics copy index bits unchanged; matching their vector
@@ -119,7 +124,7 @@ target_include_directories(neats_alp BEFORE PUBLIC "${NEATS_ALP_COMPAT_INCLUDE}"
 set(NEATS_ALP_BENCH_OBJ "${CMAKE_CURRENT_BINARY_DIR}/alp_benchmark_clang.o")
 set(NEATS_ALP_BENCH_SRC "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/alp_benchmark.cpp")
 
-# --- BUFF compressor (Rust FFI, no external Rust dependencies) ---
+# --- BUFF compressor (authors' Rust method bodies through a thin FFI) ---
 # The Rust crate in lib/buff-ffi is compiled with `cargo build --release` and linked
 # as a static library.  If cargo is not found the compressor is silently omitted.
 option(NEATS_WITH_BUFF "Build with BUFF compressor (requires Rust/cargo)" ON)
@@ -140,7 +145,9 @@ if(NEATS_WITH_BUFF)
                     "${CARGO_EXECUTABLE}" build --release
                         --manifest-path "${BUFF_FFI_SRC_DIR}/Cargo.toml"
             DEPENDS "${BUFF_FFI_SRC_DIR}/Cargo.toml"
+                    "${BUFF_FFI_SRC_DIR}/Cargo.lock"
                     "${BUFF_FFI_SRC_DIR}/src/lib.rs"
+                    "${BUFF_FFI_SRC_DIR}/src/upstream.rs"
             COMMENT "Building BUFF FFI Rust library"
             VERBATIM
         )
@@ -210,6 +217,7 @@ if(NEATS_ALP_HYBRID_CLANG)
                     ${NEATS_ALP_ARCH_FLAGS_LIST}
                     ${NEATS_ALP_COMMON_OPT_FLAGS_LIST}
                     -fno-openmp
+                    -fno-fast-math -ffp-contract=off -fno-lto -fwrapv
                     -std=gnu++20
                     -fPIC
                     ${NEATS_ALP_STDLIB_FLAG}
@@ -266,6 +274,7 @@ if(NEATS_WITH_LECO)
                 -std=gnu++17
                 -fPIC
             DEPENDS "${NEATS_LECO_BENCH_SRC}" "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/benchmark_common.hpp"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/LeCo/NativeTuning.hpp"
             VERBATIM
         )
         add_custom_target(neats_leco_bench_obj DEPENDS "${NEATS_LECO_BENCH_OBJ}")
@@ -444,6 +453,23 @@ if(NEATS_WITH_SQUASH)
     endif()
 endif()
 
+foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
+    if(TARGET ${bench_target})
+        target_sources(${bench_target} PRIVATE benchmark/camel_benchmark.cpp)
+        target_compile_definitions(${bench_target} PRIVATE
+            NEATS_CAMEL_CLASSPATH_FILE="${CMAKE_CURRENT_BINARY_DIR}/camel-java/classpath.txt")
+    endif()
+endforeach()
+
+# Falcon decimal reconstruction must not become reciprocal multiplication.
+set_source_files_properties(benchmark/falcon_benchmark.cpp PROPERTIES
+    COMPILE_OPTIONS "-fno-fast-math;-ffp-contract=off;-fno-lto")
+foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
+    if(TARGET ${bench_target})
+        target_sources(${bench_target} PRIVATE benchmark/falcon_benchmark.cpp)
+    endif()
+endforeach()
+
 # New compressors use strict IEEE arithmetic independently of GEF's fast-math flags.
 include(cmake/RecentCompressors.cmake)
 foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
@@ -454,5 +480,14 @@ endforeach()
 
 include(CTest)
 if(BUILD_TESTING)
+    add_executable(gorilla_adapter_test tests/gorilla_adapter.cpp)
+    target_compile_features(gorilla_adapter_test PRIVATE cxx_std_20)
+    target_compile_options(gorilla_adapter_test PRIVATE -UNDEBUG)
+    add_test(NAME gorilla_adapter COMMAND gorilla_adapter_test)
+    add_executable(alp_adapter_test tests/alp_adapter.cpp)
+    target_link_libraries(alp_adapter_test PRIVATE neats_alp)
+    target_compile_options(alp_adapter_test PRIVATE -fno-fast-math -ffp-contract=off -fno-lto -fwrapv)
+    set_property(TARGET alp_adapter_test PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+    add_test(NAME alp_adapter COMMAND alp_adapter_test)
     add_subdirectory(tests/recent)
 endif()

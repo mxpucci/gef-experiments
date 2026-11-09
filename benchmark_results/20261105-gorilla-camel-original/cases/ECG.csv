@@ -1,0 +1,3 @@
+compressor,dataset,num_values,uncompressed_bits,compressed_bits,compression_ratio,compression_throughput_mbs,decompression_throughput_mbs,random_access_ns,random_access_mbs,range_10_mbs,range_100_mbs,range_1000_mbs,range_10000_mbs,range_100000_mbs,input_conversion,input_changed_values,roundtrip_mismatches,validation_status,access_layout,compression_unit_values,native_page_values
+Gorilla,ECG,225750000,14448000000,10161680576,0.7033,215.2745,157.5046,23693.5108,0.3220,3.4124,30.3119,122.2150,172.8510,176.1455,none,0,0,bitwise_passed,independent_blocks,1000,0
+Camel,ECG,225750000,14448000000,3132918064,0.2168,90.0060,163.5714,21287.3079,0.3584,1.9614,11.9498,115.7533,162.7897,167.1147,none,0,0,passed,original_java_independent_blocks,1000,0

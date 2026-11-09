@@ -1,0 +1,60 @@
+{
+  "camel-java": {
+    "configuration": "https://github.com/yoyo185644/camel\nc4b55c2226163b0bfb6c330aa78b7c0a97d872b3\nOnly source change: DECIMAL_MAX_COUNT 3 -> 4 (README configuration).\n",
+    "classes": {
+      "CamelBenchmark.class": "31c821f49668874c2f5d48c755ad209d8d84a54ae98f69837a2a6cd1bdc70d3f",
+      "fi/iki/yak/ts/compression/gorilla/Value.class": "83bdf3f00e43c0fce2d45c3a24d53a043d56b4a22d29a1eb1061582a6245f8a4",
+      "gr/aueb/delorean/chimp/InputBitStream.class": "738a4460cac85d3f5ad65be996c34bb2597830e093b678e0d5f4627fe8240d5d",
+      "gr/aueb/delorean/chimp/OutputBitStream.class": "f5f410d759d51f6ae4c5e22fdd682fb843502d51a8582cfec7fe8dd7dc81716f",
+      "yyy/ts/compress/camel/FlagTrueNode.class": "a909838a389424323837d9fbce0ab308ea5e4c3e6fd30925154c429ff0dcb361",
+      "yyy/ts/compress/camel/DecimalNode.class": "7d53bb0814a4451d38d28520fbfaea5ea912aea80f0a2d65498d54bc336e9362",
+      "yyy/ts/compress/camel/BPlusTree2.class": "a3770b13835a6fb60a015e432cbebfcfc5ab6cff4844178db2f2c427f9db29ec",
+      "yyy/ts/compress/camel/SkipList.class": "43027eb107fc01802adaa9cbdf8fbb5d58a18514abc718dbff695625ad4c5f1e",
+      "yyy/ts/compress/camel/Camel.class": "80e6c0d6b8949891f09988785809c099dd59c497673a38e77abec1d86c3a63d1",
+      "yyy/ts/compress/camel/SourceTreeNode.class": "47477f63d2f32fee6087a8b0597c5c09747216b4d0231e1bea10d593d4bfca31",
+      "yyy/ts/compress/camel/SkiplistNode.class": "af8039b0a75f645f8b8bad2bdc323367c5a40d4a09f9d7956b9ab798ee51a1ae",
+      "yyy/ts/compress/camel/BPlusDecimalTree.class": "2cd10c144a52ad187c5b8d0aea9f804fa661c5354b645ceb125c589fe81e5515",
+      "yyy/ts/compress/camel/IntKeyNode2.class": "df431333005b9b66a3cda8078a5c0e4ee509121dd681202265d8fbe50c5f0ab9",
+      "yyy/ts/compress/camel/CamelDecompressor.class": "e7b46d1da4b98f165b3c75587cf44c22b012807381d522887f34ef2328375e9b",
+      "yyy/ts/compress/camel/SourceBTree.class": "083ede2daaef231643b4f5f61bbf0d75b27da9ac70ce9831ece0b7a7d35ed4b7",
+      "yyy/ts/compress/camel/BPlusTreeNode2.class": "540361c017064f6b2cbb6ca86291173e02d6dfbc36cdf4999597ff630accaede",
+      "yyy/ts/compress/camel/CamelUtils.class": "794d07f2fe38a01b6957570f7f39636ee8349068d36043a332eb306c51e4c861",
+      "yyy/ts/compress/camel/IntKeyNode.class": "41ce5911c32aaf9023bf1398ef9fc51cfe4e9744e05327c67273186e1c83645d",
+      "yyy/ts/compress/camel/KeyNode.class": "1b96922b260b46aba077ccc58ec0df5cb4f619255a581381e216612b163e1e22",
+      "yyy/ts/compress/camel/BPlusDecimalTreeNode.class": "3a7d58bc84daa801168d85c53cad4c98f91a600bd8822a65f28472d812fdffb1",
+      "yyy/ts/compress/camel/SBPNode.class": "f8060fbf5affc00e8c236ecdfae12a0b818bd5e1e98f6cfa26da63c1ae0dabd7",
+      "yyy/ts/compress/camel/BPlusTreeNode.class": "b2059452639ec9275e1a30fc497e49aae1d66b9a49a33a37ce3f8537e974e5b7",
+      "yyy/ts/compress/camel/FlagFalseNode.class": "f96722677172ffb762cc6b853d5d81354c3387bd8530c84f6b9cc2771bb01df2",
+      "yyy/ts/compress/camel/BPlusTree.class": "e3c9fec8453688dff219b7a4fa59a0097b2ffe896495dd46e8ea81a693c46a32"
+    }
+  },
+  "camel-java-int19": {
+    "configuration": "https://github.com/yoyo185644/camel\nc4b55c2226163b0bfb6c330aa78b7c0a97d872b3\nSource configuration: DECIMAL_MAX_COUNT 3 -> 4; integer difference width 16 -> 19 (README configuration); matching size counter.\n",
+    "classes": {
+      "CamelBenchmark.class": "31c821f49668874c2f5d48c755ad209d8d84a54ae98f69837a2a6cd1bdc70d3f",
+      "fi/iki/yak/ts/compression/gorilla/Value.class": "83bdf3f00e43c0fce2d45c3a24d53a043d56b4a22d29a1eb1061582a6245f8a4",
+      "gr/aueb/delorean/chimp/InputBitStream.class": "738a4460cac85d3f5ad65be996c34bb2597830e093b678e0d5f4627fe8240d5d",
+      "gr/aueb/delorean/chimp/OutputBitStream.class": "f5f410d759d51f6ae4c5e22fdd682fb843502d51a8582cfec7fe8dd7dc81716f",
+      "yyy/ts/compress/camel/FlagTrueNode.class": "a909838a389424323837d9fbce0ab308ea5e4c3e6fd30925154c429ff0dcb361",
+      "yyy/ts/compress/camel/DecimalNode.class": "7d53bb0814a4451d38d28520fbfaea5ea912aea80f0a2d65498d54bc336e9362",
+      "yyy/ts/compress/camel/BPlusTree2.class": "a3770b13835a6fb60a015e432cbebfcfc5ab6cff4844178db2f2c427f9db29ec",
+      "yyy/ts/compress/camel/SkipList.class": "43027eb107fc01802adaa9cbdf8fbb5d58a18514abc718dbff695625ad4c5f1e",
+      "yyy/ts/compress/camel/Camel.class": "15ab5f5c7c30d98328252f2e40c9dfc7901f661bce2f2bcda5a0bd285e1da5b1",
+      "yyy/ts/compress/camel/SourceTreeNode.class": "47477f63d2f32fee6087a8b0597c5c09747216b4d0231e1bea10d593d4bfca31",
+      "yyy/ts/compress/camel/SkiplistNode.class": "af8039b0a75f645f8b8bad2bdc323367c5a40d4a09f9d7956b9ab798ee51a1ae",
+      "yyy/ts/compress/camel/BPlusDecimalTree.class": "2cd10c144a52ad187c5b8d0aea9f804fa661c5354b645ceb125c589fe81e5515",
+      "yyy/ts/compress/camel/IntKeyNode2.class": "df431333005b9b66a3cda8078a5c0e4ee509121dd681202265d8fbe50c5f0ab9",
+      "yyy/ts/compress/camel/CamelDecompressor.class": "8dd0028da756a23642ae5294e7b0a9e4b590f8ba4b3d57187277194a7e355726",
+      "yyy/ts/compress/camel/SourceBTree.class": "083ede2daaef231643b4f5f61bbf0d75b27da9ac70ce9831ece0b7a7d35ed4b7",
+      "yyy/ts/compress/camel/BPlusTreeNode2.class": "540361c017064f6b2cbb6ca86291173e02d6dfbc36cdf4999597ff630accaede",
+      "yyy/ts/compress/camel/CamelUtils.class": "794d07f2fe38a01b6957570f7f39636ee8349068d36043a332eb306c51e4c861",
+      "yyy/ts/compress/camel/IntKeyNode.class": "41ce5911c32aaf9023bf1398ef9fc51cfe4e9744e05327c67273186e1c83645d",
+      "yyy/ts/compress/camel/KeyNode.class": "1b96922b260b46aba077ccc58ec0df5cb4f619255a581381e216612b163e1e22",
+      "yyy/ts/compress/camel/BPlusDecimalTreeNode.class": "3a7d58bc84daa801168d85c53cad4c98f91a600bd8822a65f28472d812fdffb1",
+      "yyy/ts/compress/camel/SBPNode.class": "f8060fbf5affc00e8c236ecdfae12a0b818bd5e1e98f6cfa26da63c1ae0dabd7",
+      "yyy/ts/compress/camel/BPlusTreeNode.class": "b2059452639ec9275e1a30fc497e49aae1d66b9a49a33a37ce3f8537e974e5b7",
+      "yyy/ts/compress/camel/FlagFalseNode.class": "f96722677172ffb762cc6b853d5d81354c3387bd8530c84f6b9cc2771bb01df2",
+      "yyy/ts/compress/camel/BPlusTree.class": "e3c9fec8453688dff219b7a4fa59a0097b2ffe896495dd46e8ea81a693c46a32"
+    }
+  }
+}

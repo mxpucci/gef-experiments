@@ -1,0 +1,2 @@
+compressor,dataset,num_values,uncompressed_bits,compressed_bits,compression_ratio,compression_throughput_mbs,decompression_throughput_mbs,random_access_ns,random_access_mbs,range_10_mbs,range_100_mbs,range_1000_mbs,range_10000_mbs,range_100000_mbs,input_conversion,input_changed_values,roundtrip_mismatches,validation_status,access_layout,compression_unit_values,native_page_values
+ALP,CT,2826654,180905856,28083168,0.1552,1443.6562,7553.0531,496.0782,15.3794,185.8290,1743.5189,9276.0175,14828.8186,14642.3145,none,0,0,passed,native_vectors,1024,0
