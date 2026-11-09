@@ -66,6 +66,9 @@ are reported by validation as mismatches:
   Swing value may differ from the input in its last bits (e.g. 0.1 decoded as
   0.10000000000000002 for the series `0, 0.1, ..., 0.6`). PMC values and MacaqueV
   residuals are exact. Validation records such values; tests require 1e-9.
+  With the benchmark's 1,000-value blocks, one dataset (IT) also has 589 of
+  477M Fauna values off by more than 1e-9 (up to 1.62); this upstream behaviour
+  is reported by validation warnings, not patched.
 - Magnitudes near `f64::MAX` (above about 2^1000) can overflow the fitting
   arithmetic (`inf - inf`) and decode as NaN; no benchmark dataset is near that
   range. As before, the Fauna adapter rejects nonfinite values and negative
