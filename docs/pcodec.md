@@ -39,37 +39,25 @@ the stream remains independently decodable by upstream tools. All f64 bits,
 including signed zeros, infinities, subnormals, and NaN payloads, are preserved.
 The integer API avoids loss from converting int64 values to double.
 
-## Native page access in the benchmark
+## Benchmark layout
 
-The benchmark uses `Pcodec/Indexed.hpp` and the original **wrapped** API,
-for both `pcodec` (f64) and `pcodec_i64`. The standalone functions above remain
-available, but are no longer used to implement benchmark point/range queries.
-The compression layout matches the pinned authors' `pco_cli/src/bench/codecs/pcopage.rs`:
-level 8, automatic mode/delta selection, balanced chunks and balanced pages
-using `PagingSpec::EqualPagesUpTo`. Both native size limits default to 262,144.
-`--pcodec-chunk-size` controls statistical chunks and `--pcodec-page-size`
-controls independently decodable pages within them. External `-b` does not
-change either size. Smaller native pages can be evaluated without forcing
-1,000-value statistical chunks; the chosen settings must accompany results.
+Pcodec does not support random access to individual values, so both `pcodec`
+(f64) and `pcodec_i64` use the harness's independent external blocks, like the
+other codecs without native random access (DeXOR, Elf*, Macaque, FLEA). Each
+`-b` block (default 1,000 values) is one complete standalone `.pco` file
+produced by the official `simple_compress_into` with the default
+`ChunkConfig` (level 8, automatic mode/delta selection). A point query
+decodes its whole block with the official decompressor and selects the value; a
+range query decodes the blocks it covers. Compressed size counts every `.pco`
+byte plus the shared block directory (16 bytes and 8 bytes per block offset);
+see [recent-compressors.md](recent-compressors.md). CSV rows report
+`access_layout=external_blocks` and `compression_unit_values` equal to `-b`.
 
-A counted directory locates the requested page and its shared chunk metadata.
-The original `PageDecompressor` starts at that page and consumes only the
-necessary prefix, in its required 256-value batches. It cannot seek directly
-to an arbitrary value inside a page. Full pages and contiguous requested spans
-are decoded directly into the output buffer. Each query includes native
-metadata/decoder initialization; chunk metadata is reused across pages within
-a range query. No expanded decoder tables or decoded values persist between
-queries. Allocation, prefix decoding and result copying are timed.
-
-The self-contained indexed frame contains a 64-byte header, 48 bytes per
-chunk, 40 bytes per page, the original wrapped file header, original chunk
-metadata and original page bytes. All of these bytes count toward compressed
-size. This container is new integration code, not the standalone `.pco` file
-format; the compression and decompression algorithms are unchanged upstream.
-`access_layout=native_pages`, `compression_unit_values` and `native_page_values`
-record the layout and configured limits in CSV (actual balanced sizes may be
-smaller). Older benchmark runs using external 1,000-value standalone streams
-are superseded for this comparison.
+Very small standalone files carry fixed header/chunk metadata, so 1,000-value
+blocks compress worse than Pcodec's large default chunks. This is the stated
+fairness convention for codecs without random access, not an adapter change to
+the algorithm. An interim layout with 262,144-value native chunks/pages and a
+custom page directory has been removed; its results are superseded.
 
 ## Build and checks
 
@@ -92,8 +80,5 @@ sequences, and data crossing the default chunk boundary. It also rejects
 wrong types/counts, every truncated prefix of a valid small file, and trailing
 bytes. It uses explicit checks that remain active in release builds.
 
-The main/recent build also runs `native_access`: out-of-order point/range reads,
-multiple pages per chunk, default-size boundaries, f64 bit patterns, int64
-extremes, reopening from serialized bytes, and reading a later page after an
-earlier page's payload is damaged. The CLI test verifies that changing `-b`
-does not change native compressed size.
+The main/recent build also runs a CLI smoke test checking that both Pcodec
+entries are validated on `-b` blocks.

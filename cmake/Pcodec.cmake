@@ -13,7 +13,6 @@ add_custom_command(OUTPUT "${GEF_PCODEC_LIBRARY}"
     DEPENDS "${GEF_PCODEC_MANIFEST}"
         "${GEF_PCODEC_ROOT}/lib/pcodec-ffi/Cargo.lock"
         "${GEF_PCODEC_ROOT}/lib/pcodec-ffi/src/lib.rs"
-        "${GEF_PCODEC_ROOT}/lib/pcodec-ffi/src/indexed.rs"
     COMMENT "Building official Pcodec 1.0.2 Rust dependency and C ABI adapter"
     VERBATIM)
 add_custom_target(gef_pcodec_build DEPENDS "${GEF_PCODEC_LIBRARY}")

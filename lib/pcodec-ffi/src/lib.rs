@@ -1,5 +1,4 @@
 //! Thin C ABI over the official pco crate. All format/algorithm work stays upstream.
-mod indexed;
 use pco::data_types::Number;
 use pco::standalone::{self, DecompressorItem, FileDecompressor};
 use pco::{ChunkConfig, PagingSpec};

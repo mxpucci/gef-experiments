@@ -10,8 +10,8 @@ future work; neither has a placeholder implementation.
 | `fauna` | [Official Rust import](fauna.md) | Float32 conversion of input doubles, warning on changes | Native segments; direct models / residual prefix |
 | `macaque` | [Official Rust import](fauna.md) | Float32 conversion of input doubles, warning on changes | Full block, standalone MacaqueV |
 | `dexor` | [C++ port of official Java](dexor.md) | Float64 | Prefix scan within block |
-| `pcodec` | [Official Rust crate](pcodec.md) | Float64 | Native pages / in-page prefix |
-| `pcodec_i64` | [Official Rust crate](pcodec.md) | Unshifted int64 | Native pages / in-page prefix |
+| `pcodec` | [Official Rust crate](pcodec.md) | Float64 | Full block, standalone `.pco` |
+| `pcodec_i64` | [Official Rust crate](pcodec.md) | Unshifted int64 | Full block, standalone `.pco` |
 | `elfstar` | [C++ port of official Java](elfstar.md) | Float64 | Prefix scan within block |
 | `selfstar` | [C++ port of official Java](selfstar.md) | Float64 | Checkpoint restoration and prefix scan |
 | `flea` | [Official C++ import](flea.md) | Unshifted, already scaled int64 | Full block/FFT |
@@ -58,10 +58,9 @@ encoded timestamp/model metadata and Macaque residual bytes count.
 ## Measurement conventions
 
 Sequential codecs use independent blocks following `-b` (default 1,000).
-Full Fauna and both Pcodec entries use their native layouts, independently of
-`-b`: Fauna fitting batches default to 65,536, and Pcodec chunks/pages each
-default to 262,144. The flags `--fauna-batch-size`, `--pcodec-chunk-size` and
-`--pcodec-page-size` expose those settings. Their directories and native
+Pcodec has no native random access and therefore uses the same independent
+`-b` blocks. Full Fauna uses its native layout, independently of `-b`: fitting
+batches default to 65,536 (`--fauna-batch-size`). Its directory and native
 metadata are fully counted; see the per-codec format documents.
 
 For the external-block entries, compressed
@@ -81,8 +80,7 @@ access wrapper, as in the official streaming encoder. See its format document.
 
 Point/range access uses a directory for the relevant native unit or external block. DeXOR/Elf*/SElf* stop decoding at the
 requested index/end, matching the existing streaming competitors' prefix-scan
-approach. Full Fauna selects native model/residual segments; Pcodec selects native pages
-and decodes the required prefix using the original wrapped API. Standalone
+approach. Full Fauna selects native model/residual segments. Pcodec, standalone
 Macaque and FLEA use their full-block APIs.
 None of these wrappers is described as native constant-time individual access.
 Reported query counts are the actual number executed. Range output copying and
@@ -99,10 +97,10 @@ throughput. Consult per-codec documents for further restrictions.
 
 CSV fields `access_layout`, `compression_unit_values` and `native_page_values`
 identify these layouts and their configured limits. Legacy entries default to
-`unspecified`/zero in these new fields. Native Pcodec defaults follow the
-original paginated benchmark; a smaller-page tradeoff is a separate, explicitly
-configured experiment. Earlier results using externally blocked Fauna/Pcodec
-must not be presented as the corrected native-access measurements.
+`unspecified`/zero in these new fields. Earlier results using externally
+blocked Fauna must not be presented as the corrected native-access measurements;
+Pcodec results from the interim 262,144-value native-page layout are superseded
+by its 1,000-value block results.
 
 New numerical codecs compile in a separate translation unit with
 `-fno-fast-math -ffp-contract=off`. Those options do not propagate to GEF. The
