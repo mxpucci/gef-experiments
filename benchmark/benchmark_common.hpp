@@ -185,3 +185,7 @@ BenchmarkResult benchmark_gef_compressor(const std::string &name, const Benchmar
                                          const std::vector<size_t> &range_sizes);
 
 BenchmarkResult benchmark_camel(const BenchmarkData &, const std::vector<size_t> &, size_t block_size = 1000);
+#if defined(GEF_ENABLE_PEF)
+// Partitioned Elias-Fano (ds2i) on the prefix sums of shifted_data; benchmark/pef_benchmark.cpp.
+BenchmarkResult benchmark_pef(const BenchmarkData &, const std::vector<size_t> &);
+#endif

@@ -967,6 +967,9 @@ void print_usage(const char *prog_name) {
     std::cerr << "  -c <list>      Comma-separated list of compressors (default: all)" << std::endl;
 #if HAS_SQUASH
     std::cerr << "                 Available: neats,dac,rle_gef,u_gef_approximate,u_gef_optimal,b_gef_approximate,b_gef_optimal,b_star_gef_approximate,b_star_gef_optimal,gorilla,chimp,chimp128,tsxor,elf,camel,alp";
+#if defined(GEF_ENABLE_PEF)
+    std::cerr << ",pef";
+#endif
 #if defined(NEATS_ENABLE_LECO)
     std::cerr << ",leco";
 #endif
@@ -976,6 +979,9 @@ void print_usage(const char *prog_name) {
     std::cerr << ",lz4,zstd,brotli,xz,snappy" << std::endl;
 #else
     std::cerr << "                 Available: neats,dac,rle_gef,u_gef_approximate,u_gef_optimal,b_gef_approximate,b_gef_optimal,b_star_gef_approximate,b_star_gef_optimal,gorilla,chimp,chimp128,tsxor,elf,camel,alp";
+#if defined(GEF_ENABLE_PEF)
+    std::cerr << ",pef";
+#endif
 #if defined(NEATS_ENABLE_BUFF)
     std::cerr << ",buff";
 #endif
@@ -1021,6 +1027,9 @@ int main(int argc, char *argv[]) {
                                             "b_gef_approximate", "b_gef_optimal", "b_star_gef_approximate", "b_star_gef_optimal",
                                             "gorilla", "chimp", "chimp128", "tsxor",
                                             "elf", "camel", "alp",
+#if defined(GEF_ENABLE_PEF)
+                                            "pef",
+#endif
 #if defined(NEATS_ENABLE_LECO)
                                             "leco",
 #endif
@@ -1033,6 +1042,9 @@ int main(int argc, char *argv[]) {
                                             "b_gef_approximate", "b_gef_optimal", "b_star_gef_approximate", "b_star_gef_optimal",
                                             "gorilla", "chimp", "chimp128", "tsxor",
                                             "elf", "camel", "alp",
+#if defined(GEF_ENABLE_PEF)
+                                            "pef",
+#endif
 #if defined(NEATS_ENABLE_BUFF)
                                             "buff",
 #endif
@@ -1204,6 +1216,9 @@ int main(int argc, char *argv[]) {
             } else
 #endif
             if (comp == "neats" || comp == "dac" || comp == "rle_gef"
+#if defined(GEF_ENABLE_PEF)
+                || comp == "pef"
+#endif
 #if defined(NEATS_ENABLE_LECO)
                 || comp == "leco"
 #endif
@@ -1267,6 +1282,11 @@ int main(int argc, char *argv[]) {
                 } else if (comp == "dac") {
                     result = benchmark_dac<int64_t>(bench_data, range_sizes);
                 }
+#if defined(GEF_ENABLE_PEF)
+                else if (comp == "pef") {
+                    result = benchmark_pef(bench_data, range_sizes);
+                }
+#endif
                 else if (is_gef_compressor(comp)) {
                     result = benchmark_gef_compressor(comp, bench_data, range_sizes);
                 }

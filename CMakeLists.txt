@@ -465,6 +465,31 @@ foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFu
     endif()
 endforeach()
 
+# Partitioned Elias-Fano: the authors' ds2i (lib/ds2i, header-only use of
+# partitioned_sequence) with its succinct submodule. Needs Boost headers only.
+option(GEF_WITH_PEF "Benchmark Partitioned Elias-Fano (ot/ds2i)" ON)
+if(GEF_WITH_PEF AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/ds2i/partitioned_sequence.hpp")
+    find_package(Boost QUIET)
+    if(Boost_FOUND)
+        # ds2i's CMake generates this from succinct_config.hpp.in; same defaults,
+        # with the popcount instruction enabled (available on every target CPU).
+        set(GEF_PEF_GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/ds2i-gen")
+        file(WRITE "${GEF_PEF_GEN_DIR}/succinct_config.hpp"
+            "#pragma once\n#define SUCCINCT_USE_LIBCXX 0\n#define SUCCINCT_USE_INTRINSICS 1\n#define SUCCINCT_USE_POPCNT 1\n")
+        set_source_files_properties(benchmark/pef_benchmark.cpp PROPERTIES
+            INCLUDE_DIRECTORIES "${GEF_PEF_GEN_DIR};${CMAKE_CURRENT_SOURCE_DIR}/lib/ds2i;${Boost_INCLUDE_DIRS}")
+        foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
+            if(TARGET ${bench_target})
+                target_sources(${bench_target} PRIVATE benchmark/pef_benchmark.cpp)
+                target_compile_definitions(${bench_target} PRIVATE GEF_ENABLE_PEF=1)
+            endif()
+        endforeach()
+        message(STATUS "PEF (ds2i) enabled; Boost headers: ${Boost_INCLUDE_DIRS}")
+    else()
+        message(STATUS "PEF (ds2i) disabled: Boost headers not found")
+    endif()
+endif()
+
 # GEF keeps the `gef` target's flags (including -ffast-math) in its own
 # translation unit. Competitor codecs compiled in lossless_benchmark.cpp
 # (Elf, Chimp, Chimp128, TSXor, Gorilla, NeaTS, DAC, BUFF/Squash adapters) use
