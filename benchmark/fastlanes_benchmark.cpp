@@ -57,7 +57,6 @@ Encoded encode(const std::vector<int64_t> &data, bool delta) {
     e.bw.resize(e.vectors);
     e.offset.resize(e.vectors + 1);
     if (delta) e.lane_bases.resize(e.vectors * LANES);
-    e.packed.reserve(e.n); // grows as needed
     alignas(64) uint64_t in[V], t[V], d[V];
     for (size_t v = 0; v < e.vectors; ++v) {
         const size_t start = v * V, len = std::min(V, e.n - start);
@@ -112,6 +111,7 @@ BenchmarkResult benchmark_fastlanes(const BenchmarkData &bench_data, const std::
     result.native_page_values = V;
     const double mib = n * sizeof(int64_t) / 1048576.0;
 
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto t1 = Clock::now();
     Encoded e = encode(data, delta);
     compiler_barrier();
@@ -119,6 +119,8 @@ BenchmarkResult benchmark_fastlanes(const BenchmarkData &bench_data, const std::
     do_not_optimize(e);
     result.compressed_bits = e.bits();
     result.compression_ratio = double(result.compressed_bits) / result.uncompressed_bits;
+    e.packed.shrink_to_fit(); // untimed: adapter container capacity
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs = mib / seconds(t1, t2);
 
     std::vector<int64_t> decompressed(e.vectors * V);

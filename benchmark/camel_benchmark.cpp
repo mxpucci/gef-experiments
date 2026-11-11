@@ -39,6 +39,7 @@ BenchmarkResult benchmark_camel(const BenchmarkData& bench_data, const std::vect
     const size_t num_blocks = (n + kBlock - 1) / kBlock;
     std::vector<std::string> blocks(num_blocks);
     size_t bytes = 0;
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto t1 = Clock::now();
     for (size_t b = 0; b < num_blocks; ++b) {
         camel::Compressor c(cfg);
@@ -50,6 +51,7 @@ BenchmarkResult benchmark_camel(const BenchmarkData& bench_data, const std::vect
     auto t2 = Clock::now();
     r.compressed_bits = bytes * 8;
     r.compression_ratio = double(r.compressed_bits) / r.uncompressed_bits;
+    r.ram_bytes = gef_heap_delta(gef_ram0);
     r.compression_throughput_mbs = mib / seconds(t1, t2);
 
     auto decoder = [&](size_t b) {

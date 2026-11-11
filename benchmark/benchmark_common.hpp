@@ -37,6 +37,12 @@ struct RangeTrial {
     size_t mismatched_queries{};
 };
 
+
+// Live heap bytes from tools/heapcount (LD_PRELOAD); 0 when the counter is not loaded.
+extern "C" size_t gef_heap_live_bytes() __attribute__((weak));
+inline size_t gef_live_heap_bytes() { return gef_heap_live_bytes ? gef_heap_live_bytes() : 0; }
+inline size_t gef_heap_delta(size_t before) { const size_t now = gef_live_heap_bytes(); return now > before ? now - before : 0; }
+
 struct BenchmarkResult {
     std::string compressor;
     std::string dataset;
@@ -57,6 +63,7 @@ struct BenchmarkResult {
     size_t compression_unit_values{};
     size_t native_page_values{};
     size_t bitwise_mismatches{}; // informational: values whose bits differ
+    size_t ram_bytes{}; // heap bytes held by the compressed representation once built (needs LD_PRELOAD heapcount)
     std::vector<RangeTrial> range_trials;  // not part of the main CSV
     size_t range_mismatched_queries{};     // not part of the main CSV
 

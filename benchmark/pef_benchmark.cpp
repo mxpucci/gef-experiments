@@ -60,6 +60,7 @@ BenchmarkResult benchmark_pef(const BenchmarkData &bench_data, const std::vector
 
     // Compression: prefix sums + partitioned Elias-Fano construction.
     ds2i::global_parameters params;
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto t1 = Clock::now();
     std::vector<uint64_t> prefix(n);
     uint64_t sum = 0;
@@ -80,6 +81,7 @@ BenchmarkResult benchmark_pef(const BenchmarkData &bench_data, const std::vector
     do_not_optimize(bits);
     result.compressed_bits = bits.size() + 2 * 64; // + n and universe
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs = mib / seconds(t1, t2);
 
     PefSequence::enumerator e(bits, 0, universe, n, params);

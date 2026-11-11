@@ -170,7 +170,7 @@ void BenchmarkResult::print_header(std::ostream &out) const {
         out << ",range_" << range << "_mbs";
     }
     out << ",input_conversion,input_changed_values,roundtrip_mismatches,validation_status"
-        << ",access_layout,compression_unit_values,native_page_values,bitwise_mismatches";
+        << ",access_layout,compression_unit_values,native_page_values,bitwise_mismatches,ram_bytes";
     out << std::endl;
 }
 
@@ -186,7 +186,7 @@ void BenchmarkResult::print(std::ostream &out) const {
     out << "," << input_conversion << "," << input_changed_values
         << "," << roundtrip_mismatches << "," << validation_status
         << "," << access_layout << "," << compression_unit_values << "," << native_page_values
-        << "," << bitwise_mismatches;
+        << "," << bitwise_mismatches << "," << ram_bytes;
     out << std::endl;
 }
 
@@ -241,6 +241,7 @@ BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
     // T1_coeff is either float (for small values) or double (for large values)
     pfa::neats::compressor<uint64_t, T, double, T1_coeff, double> compressor(max_bpc);
     
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto t1 = std::chrono::high_resolution_clock::now();
     compressor.partitioning(processed_data.begin(), processed_data.end());
     compiler_barrier();
@@ -249,6 +250,7 @@ BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
     
     result.compressed_bits = compressor.size_in_bits();
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs = (processed_data.size() * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression
@@ -343,6 +345,7 @@ BenchmarkResult benchmark_dac(const BenchmarkData &bench_data,
                    [](int64_t x) { return static_cast<uint64_t>(x); });
     
     // Compression
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto t1 = std::chrono::high_resolution_clock::now();
     sdsl::dac_vector_dp<> dac_vector(u_data);
     compiler_barrier();
@@ -352,6 +355,7 @@ BenchmarkResult benchmark_dac(const BenchmarkData &bench_data,
     
     result.compressed_bits = sdsl::size_in_bytes(dac_vector) * 8;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression
@@ -424,6 +428,7 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
     size_t total_compressed_bits = 0;
     std::vector<std::unique_ptr<Compressor>> compressed_blocks;
     
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto t1 = std::chrono::high_resolution_clock::now();
     for (size_t ib = 0; ib < num_blocks; ++ib) {
         const size_t bs = std::min(block_size, n - ib * block_size);
@@ -446,6 +451,7 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
     
     result.compressed_bits = total_compressed_bits;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression
@@ -571,6 +577,7 @@ BenchmarkResult benchmark_tsxor(const BenchmarkData &bench_data,
     size_t total_compressed_bits = 0;
     std::vector<std::vector<uint8_t>> compressed_blocks(num_blocks);
     
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto t1 = std::chrono::high_resolution_clock::now();
     for (size_t ib = 0; ib < num_blocks; ++ib) {
         const size_t bs = std::min(block_size, n - ib * block_size);
@@ -592,6 +599,7 @@ BenchmarkResult benchmark_tsxor(const BenchmarkData &bench_data,
 
     result.compressed_bits = total_compressed_bits;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression
@@ -706,10 +714,12 @@ BenchmarkResult benchmark_buff(const BenchmarkData &bench_data,
     using Clock=std::chrono::high_resolution_clock;
     auto elapsed=[](auto start){return std::chrono::duration<double>(Clock::now()-start).count();};
     const double mib=n*sizeof(T)/1024.0/1024.0;
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto start=Clock::now();
     // One original BUFF column for the complete input. No external 1k wrapper.
     auto column=buff::compress_block(data.data(),n,scale);
     compiler_barrier();
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs=mib/elapsed(start);
     result.compressed_bits=column.data.size()*8;
     result.compression_ratio=double(result.compressed_bits)/result.uncompressed_bits;
@@ -806,6 +816,7 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     size_t total_compressed_bits = 0;
     std::vector<std::pair<uint8_t*, size_t>> compressed_blocks(num_blocks);
     
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto t1 = std::chrono::high_resolution_clock::now();
     for (size_t ib = 0; ib < num_blocks; ++ib) {
         const size_t bs = std::min(block_size, n - ib * block_size);
@@ -838,6 +849,9 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     
     result.compressed_bits = total_compressed_bits;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
+    for (auto& block : compressed_blocks) // untimed: release the max-size slack of each output buffer
+        if (void* p = realloc(block.first, block.second ? block.second : 1)) block.first = static_cast<uint8_t*>(p);
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression

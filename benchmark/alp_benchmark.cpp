@@ -133,6 +133,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     // Streams follow the authors' end-to-end integration; RD exceptions
     // use their native uint16 representation in a separate stream.
     // 1. Metadata Stream
+    const size_t gef_ram0 = gef_live_heap_bytes(); // before the output streams are reserved
     std::vector<VectorMetadata> metadata_stream;
     metadata_stream.reserve(num_vecs);
 
@@ -316,6 +317,10 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
     result.compression_unit_values=VEC;
     result.compressed_bits = comp_bits;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
+    // untimed: drop the conservative reservations, keep what ALP wrote
+    metadata_stream.shrink_to_fit(); ffor_stream.shrink_to_fit(); exc_val_stream.shrink_to_fit();
+    rd_exc_stream.shrink_to_fit(); exc_pos_stream.shrink_to_fit(); std::vector<double>().swap(sample_buf);
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs = (n * sizeof(double) / 1024.0 / 1024.0) / (comp_ns / 1e9);
 
     // Reopen solely from counted metadata: no fitting state or unrecorded

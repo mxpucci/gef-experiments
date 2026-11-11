@@ -50,6 +50,7 @@ BenchmarkResult benchmark_gef(const std::string &compressor_name,
     result.uncompressed_bits = bench_data.uncompressed_bits;
     
     // Compression
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto t1 = std::chrono::high_resolution_clock::now();
     GEFType compressor(data);
     compiler_barrier();
@@ -58,6 +59,7 @@ BenchmarkResult benchmark_gef(const std::string &compressor_name,
     
     result.compressed_bits = compressor.size_in_bytes() * 8;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression

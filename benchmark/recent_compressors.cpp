@@ -130,6 +130,7 @@ BenchmarkResult benchmark_blocks(const Codec<T>& codec, const Values<T>& values,
     result.input_conversion = codec.float32_input ? "float32" : "none";
     result.access_layout = "external_blocks";
     result.compression_unit_values = block_size;
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto start = Clock::now();
     for (size_t b = 0; b < nb; ++b) {
         const size_t first = b * block_size;
@@ -147,6 +148,8 @@ BenchmarkResult benchmark_blocks(const Codec<T>& codec, const Values<T>& values,
     result.compressed_bits = (16 + offsets.size()*sizeof(uint64_t) + offsets.back())*8;
     result.compression_ratio = double(result.compressed_bits)/result.uncompressed_bits;
     const double mib = double(n)*sizeof(T)/(1024.0*1024.0);
+    for (auto& block : blocks) block.shrink_to_fit(); // untimed: harness container capacity
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs = mib/encode_time;
     // Validate outside timing. Value mismatches warn and remain visible in CSV;
     // malformed output/counts still fail the case instead of timing invalid queries.
@@ -217,6 +220,7 @@ BenchmarkResult benchmark_indexed(const std::string& name,const Values<T>& value
     result.uncompressed_bits=data.uncompressed_bits;
     result.input_conversion=float32_input?"float32":"none";
     result.access_layout=layout;result.compression_unit_values=unit_size;result.native_page_values=page_size;
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto start=Clock::now();
     auto index=make();
     const double encode_time=seconds(start);
@@ -230,6 +234,7 @@ BenchmarkResult benchmark_indexed(const std::string& name,const Values<T>& value
     result.compressed_bits=index.size_in_bytes()*8;
     result.compression_ratio=double(result.compressed_bits)/result.uncompressed_bits;
     const double mib=double(n)*sizeof(T)/(1024.0*1024.0);
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs=mib/encode_time;
     // Whole-input validation is untimed. Temporary validation windows do NOT
     // define compressed storage or point-access granularity.
