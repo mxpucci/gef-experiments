@@ -1,5 +1,6 @@
 // Partitioned Elias-Fano (Ottaviano & Venturini, SIGIR 2014), official ds2i
-// implementation (lib/ds2i, ot/ds2i @ 2cf8237), used unmodified.
+// implementation (lib/ds2i, ot/ds2i @ 2cf8237), with two 32-bit truncation
+// fixes applied at build time (see CMakeLists.txt).
 //
 // Elias-Fano codes require a monotone sequence. As discussed in the paper for
 // arbitrary sequences, the (positive) shifted values s_1..s_n are mapped to

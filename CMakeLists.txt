@@ -476,6 +476,25 @@ if(GEF_WITH_PEF AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/ds2i/partitioned_seq
         set(GEF_PEF_GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/ds2i-gen")
         file(WRITE "${GEF_PEF_GEN_DIR}/succinct_config.hpp"
             "#pragma once\n#define SUCCINCT_USE_LIBCXX 0\n#define SUCCINCT_USE_INTRINSICS 1\n#define SUCCINCT_USE_POPCNT 1\n")
+        # Two upstream 32-bit truncations break large-universe sequences (our prefix
+        # sums exceed 2^32): the single-partition path declares its upper bound as
+        # `auto ub = 0` (int), and the partitioner's cost model uses uint32_t
+        # values. Patched copies are generated here; the submodule is untouched.
+        foreach(pef_patch
+                "partitioned_sequence.hpp|auto ub = 0|uint64_t ub = 0"
+                "optimal_partition.hpp|typedef uint32_t posting_t|typedef uint64_t posting_t")
+            string(REPLACE "|" ";" pef_patch "${pef_patch}")
+            list(GET pef_patch 0 pef_file)
+            list(GET pef_patch 1 pef_from)
+            list(GET pef_patch 2 pef_to)
+            file(READ "${CMAKE_CURRENT_SOURCE_DIR}/lib/ds2i/${pef_file}" pef_text)
+            string(FIND "${pef_text}" "${pef_from}" pef_pos)
+            if(pef_pos EQUAL -1)
+                message(FATAL_ERROR "PEF patch target not found in ${pef_file}: ${pef_from}")
+            endif()
+            string(REPLACE "${pef_from}" "${pef_to}" pef_text "${pef_text}")
+            file(WRITE "${GEF_PEF_GEN_DIR}/${pef_file}" "${pef_text}")
+        endforeach()
         set_source_files_properties(benchmark/pef_benchmark.cpp PROPERTIES
             INCLUDE_DIRECTORIES "${GEF_PEF_GEN_DIR};${CMAKE_CURRENT_SOURCE_DIR}/lib/ds2i;${Boost_INCLUDE_DIRS}")
         foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
