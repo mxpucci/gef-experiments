@@ -13,6 +13,9 @@
 #ifdef GEF_WITH_FLEA
 #include "FLEA/FLEA.hpp"
 #endif
+#ifdef GEF_WITH_FASTPFOR
+#include "FastPFor/FastPFor.hpp"
+#endif
 #include <chrono>
 #include <cstring>
 #include <functional>
@@ -53,6 +56,10 @@ std::vector<Codec<int64_t>> integer_codecs() {
 #endif
 #ifdef GEF_WITH_PCODEC
         {"pcodec_i64", gef_compressors::pcodec::compress_i64, gef_compressors::pcodec::decompress_i64},
+#endif
+#ifdef GEF_WITH_FASTPFOR
+        {"fastpfor", gef_compressors::fastpfor::compress_for_i64, gef_compressors::fastpfor::decompress_for_i64},
+        {"fastpfor_delta", gef_compressors::fastpfor::compress_delta_i64, gef_compressors::fastpfor::decompress_delta_i64},
 #endif
     };
 }
