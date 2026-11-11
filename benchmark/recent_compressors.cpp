@@ -16,6 +16,9 @@
 #ifdef GEF_WITH_FASTPFOR
 #include "FastPFor/FastPFor.hpp"
 #endif
+#ifdef GEF_WITH_BTRBLOCKS
+#include "BtrBlocks/BtrBlocks.hpp"
+#endif
 #include <chrono>
 #include <cstring>
 #include <functional>
@@ -46,6 +49,9 @@ std::vector<Codec<double>> codecs() {
         {"dexor", gef_compressors::dexor::compress, gef_compressors::dexor::decompress, gef_compressors::dexor::decompress_prefix},
 #ifdef GEF_WITH_PCODEC
         {"pcodec", gef_compressors::pcodec::compress, gef_compressors::pcodec::decompress},
+#endif
+#ifdef GEF_WITH_BTRBLOCKS
+        {"btrblocks", gef_compressors::btrblocks::compress, gef_compressors::btrblocks::decompress},
 #endif
     };
 }

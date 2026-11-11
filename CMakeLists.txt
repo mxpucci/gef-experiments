@@ -559,3 +559,19 @@ if(BUILD_TESTING)
     add_test(NAME camel_roundtrip COMMAND camel_roundtrip)
     add_subdirectory(tests/recent)
 endif()
+
+# FastLanes (cwida/FastLanes): generated FFOR / transpose / rsum kernels from a
+# FastLanes build tree (libFastLanes). Point GEF_FASTLANES_ROOT at the source dir.
+set(GEF_FASTLANES_ROOT "" CACHE PATH "cwida/FastLanes source tree with build/src/libFastLanes.a")
+if(GEF_FASTLANES_ROOT AND EXISTS "${GEF_FASTLANES_ROOT}/build/src/libFastLanes.a")
+    set_source_files_properties(benchmark/fastlanes_benchmark.cpp PROPERTIES
+        INCLUDE_DIRECTORIES "${GEF_FASTLANES_ROOT}/src/include" COMPILE_OPTIONS "-std=c++20")
+    foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
+        if(TARGET ${bench_target})
+            target_sources(${bench_target} PRIVATE benchmark/fastlanes_benchmark.cpp)
+            target_compile_definitions(${bench_target} PRIVATE GEF_ENABLE_FASTLANES=1)
+            target_link_libraries(${bench_target} PRIVATE "${GEF_FASTLANES_ROOT}/build/src/libFastLanes.a")
+        endif()
+    endforeach()
+    message(STATUS "FastLanes enabled: ${GEF_FASTLANES_ROOT}")
+endif()

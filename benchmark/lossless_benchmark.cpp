@@ -970,6 +970,9 @@ void print_usage(const char *prog_name) {
 #if defined(GEF_ENABLE_PEF)
     std::cerr << ",pef";
 #endif
+#if defined(GEF_ENABLE_FASTLANES)
+    std::cerr << ",fastlanes,fastlanes_delta";
+#endif
 #if defined(NEATS_ENABLE_LECO)
     std::cerr << ",leco";
 #endif
@@ -981,6 +984,9 @@ void print_usage(const char *prog_name) {
     std::cerr << "                 Available: neats,dac,rle_gef,u_gef_approximate,u_gef_optimal,b_gef_approximate,b_gef_optimal,b_star_gef_approximate,b_star_gef_optimal,gorilla,chimp,chimp128,tsxor,elf,camel,alp";
 #if defined(GEF_ENABLE_PEF)
     std::cerr << ",pef";
+#endif
+#if defined(GEF_ENABLE_FASTLANES)
+    std::cerr << ",fastlanes,fastlanes_delta";
 #endif
 #if defined(NEATS_ENABLE_BUFF)
     std::cerr << ",buff";
@@ -1030,6 +1036,9 @@ int main(int argc, char *argv[]) {
 #if defined(GEF_ENABLE_PEF)
                                             "pef",
 #endif
+#if defined(GEF_ENABLE_FASTLANES)
+                                            "fastlanes", "fastlanes_delta",
+#endif
 #if defined(NEATS_ENABLE_LECO)
                                             "leco",
 #endif
@@ -1044,6 +1053,9 @@ int main(int argc, char *argv[]) {
                                             "elf", "camel", "alp",
 #if defined(GEF_ENABLE_PEF)
                                             "pef",
+#endif
+#if defined(GEF_ENABLE_FASTLANES)
+                                            "fastlanes", "fastlanes_delta",
 #endif
 #if defined(NEATS_ENABLE_BUFF)
                                             "buff",
@@ -1219,6 +1231,9 @@ int main(int argc, char *argv[]) {
 #if defined(GEF_ENABLE_PEF)
                 || comp == "pef"
 #endif
+#if defined(GEF_ENABLE_FASTLANES)
+                || comp == "fastlanes" || comp == "fastlanes_delta"
+#endif
 #if defined(NEATS_ENABLE_LECO)
                 || comp == "leco"
 #endif
@@ -1285,6 +1300,11 @@ int main(int argc, char *argv[]) {
 #if defined(GEF_ENABLE_PEF)
                 else if (comp == "pef") {
                     result = benchmark_pef(bench_data, range_sizes);
+                }
+#endif
+#if defined(GEF_ENABLE_FASTLANES)
+                else if (comp == "fastlanes" || comp == "fastlanes_delta") {
+                    result = benchmark_fastlanes(bench_data, range_sizes, comp == "fastlanes_delta");
                 }
 #endif
                 else if (is_gef_compressor(comp)) {

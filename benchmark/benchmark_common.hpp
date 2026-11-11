@@ -189,3 +189,7 @@ BenchmarkResult benchmark_camel(const BenchmarkData &, const std::vector<size_t>
 // Partitioned Elias-Fano (ds2i) on the prefix sums of shifted_data; benchmark/pef_benchmark.cpp.
 BenchmarkResult benchmark_pef(const BenchmarkData &, const std::vector<size_t> &);
 #endif
+#if defined(GEF_ENABLE_FASTLANES)
+// FastLanes FFOR / transposed delta on 1,024-value vectors; benchmark/fastlanes_benchmark.cpp.
+BenchmarkResult benchmark_fastlanes(const BenchmarkData &, const std::vector<size_t> &, bool delta);
+#endif
