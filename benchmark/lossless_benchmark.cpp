@@ -1231,6 +1231,7 @@ int main(int argc, char *argv[]) {
         std::vector<std::string> double_data_compressors;  // gorilla, chimp, etc.
         
         for (const auto &comp : compressors) {
+            if (is_gef_f64_compressor(comp)) { double_data_compressors.push_back(comp); continue; }
             if (recent_compressor_uses_integers(comp)) {
                 raw_data_compressors.push_back(comp);
                 continue;
@@ -1358,7 +1359,9 @@ int main(int argc, char *argv[]) {
             BenchmarkResult result;
             
             try {
-                if (is_recent_compressor(comp)) {
+                if (is_gef_f64_compressor(comp)) {
+                    result = benchmark_gef_f64_compressor(comp, bench_data, range_sizes);
+                } else if (is_recent_compressor(comp)) {
                     result = benchmark_recent_compressor(comp, bench_data, range_sizes, block_size, native_options);
                 } else if (comp == "gorilla") {
                     result = benchmark_bitstream_compressor<CompressorGorilla<double>, DecompressorGorilla<double>, double>(

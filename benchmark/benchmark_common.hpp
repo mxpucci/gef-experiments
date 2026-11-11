@@ -188,6 +188,10 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
 // fast-math flags; competitor code in lossless_benchmark.cpp is strict IEEE.
 inline constexpr size_t GEF_UNIFORM_PARTITION_SIZE = 32000;
 bool is_gef_compressor(const std::string &name);
+// GEF floating-point forks (gef/gef_fp.hpp, double in / double out): rle_gef_f64, b_star_gef_approximate_f64.
+bool is_gef_f64_compressor(const std::string &name);
+BenchmarkResult benchmark_gef_f64_compressor(const std::string &name, const BenchmarkData &bench_data,
+                                             const std::vector<size_t> &range_sizes);
 BenchmarkResult benchmark_gef_compressor(const std::string &name, const BenchmarkData &bench_data,
                                          const std::vector<size_t> &range_sizes);
 
