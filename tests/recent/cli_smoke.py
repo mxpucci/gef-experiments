@@ -45,12 +45,12 @@ with tempfile.TemporaryDirectory(prefix="gef-codec-smoke-") as directory:
             raise RuntimeError('exact float32 inputs were incorrectly reported as changed')
         if row['compressor']=='fauna' and (row['access_layout']!='native_segments' or int(row['compression_unit_values'])!=65536):
             raise RuntimeError('Fauna still uses external -b blocking')
-        if row['compressor'] in ['pcodec','pcodec_i64'] and (row['access_layout']!='native_pages' or int(row['compression_unit_values'])!=262144):
-            raise RuntimeError('Pcodec still uses external -b blocking')
-    # External -b must not change native compression layouts or stored size.
+        if row['compressor'] in ['pcodec','pcodec_i64'] and (row['access_layout']!='external_blocks' or int(row['compression_unit_values'])!=16):
+            raise RuntimeError('Pcodec does not use external -b blocking')
+    # External -b must not change the native Fauna layout or stored size.
     def native_run(block):
-        args=[binary,'-b',str(block),'-r','3,35','-c','fauna,pcodec,pcodec_i64',
-              '--fauna-batch-size','53','--pcodec-chunk-size','61','--pcodec-page-size','19',str(exact)]
+        args=[binary,'-b',str(block),'-r','3,35','-c','fauna',
+              '--fauna-batch-size','53',str(exact)]
         process=subprocess.run(args,capture_output=True,text=True)
         if process.returncode:raise RuntimeError(process.stderr)
         return {r['compressor']:r for r in csv.DictReader(io.StringIO(process.stdout))}
@@ -59,7 +59,6 @@ with tempfile.TemporaryDirectory(prefix="gef-codec-smoke-") as directory:
         if small[name]['compressed_bits']!=large[name]['compressed_bits']:
             raise RuntimeError('external block size changed native layout')
         if small[name]['validation_status']!='passed':raise RuntimeError('native query validation failed')
-        if name.startswith('pcodec') and small[name]['native_page_values']!='19':raise RuntimeError('native page option ignored')
     # The integer route must retain all 64 bits without passing through double.
     integers = root / "integers.bin"
     dataset(integers, [-(1 << 63) + i for i in range(97)])
