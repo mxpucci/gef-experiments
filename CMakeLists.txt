@@ -453,11 +453,13 @@ if(NEATS_WITH_SQUASH)
     endif()
 endif()
 
+# Camel: native C++ translation of the authors' Java codec; like the Java it
+# relies on exact IEEE double arithmetic, so it must not inherit fast-math.
+set_source_files_properties(benchmark/camel_benchmark.cpp PROPERTIES
+    COMPILE_OPTIONS "-fno-fast-math;-ffp-contract=off;-fno-lto")
 foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
     if(TARGET ${bench_target})
         target_sources(${bench_target} PRIVATE benchmark/camel_benchmark.cpp)
-        target_compile_definitions(${bench_target} PRIVATE
-            NEATS_CAMEL_CLASSPATH_FILE="${CMAKE_CURRENT_BINARY_DIR}/camel-java/classpath.txt")
     endif()
 endforeach()
 
@@ -500,5 +502,11 @@ if(BUILD_TESTING)
     target_compile_options(alp_adapter_test PRIVATE -fno-fast-math -ffp-contract=off -fno-lto -fwrapv)
     set_property(TARGET alp_adapter_test PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
     add_test(NAME alp_adapter COMMAND alp_adapter_test)
+    foreach(camel_tool camel_roundtrip camel_dump)
+        add_executable(${camel_tool} tests/${camel_tool}.cpp)
+        target_compile_features(${camel_tool} PRIVATE cxx_std_20)
+        target_compile_options(${camel_tool} PRIVATE -UNDEBUG -fno-fast-math -ffp-contract=off -fno-lto)
+    endforeach()
+    add_test(NAME camel_roundtrip COMMAND camel_roundtrip)
     add_subdirectory(tests/recent)
 endif()

@@ -161,4 +161,4 @@ bool is_gef_compressor(const std::string &name);
 BenchmarkResult benchmark_gef_compressor(const std::string &name, const BenchmarkData &bench_data,
                                          const std::vector<size_t> &range_sizes);
 
-BenchmarkResult benchmark_camel(const BenchmarkData &, const std::vector<size_t> &);
+BenchmarkResult benchmark_camel(const BenchmarkData &, const std::vector<size_t> &, size_t block_size = 1000);
