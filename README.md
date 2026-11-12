@@ -43,69 +43,63 @@ This will produce the benchmark executables, primarily:
 *   `LosslessBenchmark`: Minimal benchmark binary.
 *   `LosslessBenchmarkFull`: Full benchmark suite including comparisons with other compressors (requires Squash).
 
-## Recent compressor integrations
+## Competitors
 
-The new entries are available in `LosslessBenchmark` and the optional Full
-variants. Native dependencies are imported at pinned revisions; the Java-only
-algorithms have documented C++ ports.
+We use each compressor's official implementation whenever one exists in C, C++, Rust or Go, imported at a pinned revision. Only when the authors published Java alone do we port their code to C++. The only differences from upstream are those needed to run the code here: build and binding glue, 64-bit inputs, and fixes for upstream bugs that would crash, produce undecodable output, or distort compressed size or throughput. Upstream bugs whose only effect is that some decoded values are wrong are left unpatched. The harness reports them as validation warnings (see *Validation* below).
 
-| CLI name | Implementation | Input |
+| CLI name | Implementation | Access layout |
 | --- | --- | --- |
-| `fauna`, `macaque` | Official Rust Fauna and standalone MacaqueV | Float32 conversion; changed values produce warnings and flagged metrics |
-| `dexor` | C++ port of official DeXOR | Float64 |
-| `pcodec` | Official Rust Pcodec 1.0.2 | Float64 |
-| `pcodec_i64` | Same official Pcodec | Original int64 values |
-| `elfstar`, `selfstar` | C++ ports of official Elf*/SElf* | Float64 |
-| `flea` | Official C++ FLEA with FFTW | Original scaled int64 values |
+| `alp` | Official C++ (cwida/ALP) | Native 1,024-value vectors |
+| `buff` | Official Rust (Tranway1/buff), plain variant | Native, whole column |
+| `camel` | C++ translation of the official Java (yoyo185644/camel) | 1,000-value blocks |
+| `chimp`, `chimp128` | C++ implementations from the NeaTS authors' benchmark (and-gue/NeaTS) | 1,000-value blocks |
+| `dac` | sdsl-lite `dac_vector_dp` | Native |
+| `dexor` | C++ port of the official Java | 1,000-value blocks |
+| `elf` | C++ port of the official Java (Spatio-Temporal-Lab/elf) | 1,000-value blocks |
+| `elfstar`, `selfstar` | C++ ports of the official Java | 1,000-value blocks |
+| `fauna`, `macaque` | Official Rust (PlatypusMacaque) | 1,000-value blocks |
+| `flea` | Official C++ | 1,000-value blocks |
+| `gorilla` | Facebook Beringei codec, extracted verbatim | 1,000-value blocks |
+| `leco` | Official C++ LeCo-fix (Learn-to-Compress) | Native partitions |
+| `neats` | Official C++ (and-gue/NeaTS) | Native |
+| `pcodec`, `pcodec_i64` | Official `pco_c` C bindings, v1.0.2 | 1,000-value blocks |
+| `tsxor` | C++ implementation from the NeaTS authors' benchmark (and-gue/NeaTS) | 1,000-value blocks |
+| `lz4`, `zstd`, `snappy`, `xz`, `brotli` | Squash 0.7 | 1,000-value blocks |
 
-**Kangaroo and EAS are deferred at the user’s request** and are outside this
-integration’s current scope. Their source searches and the details missing
-from the papers are recorded in
-[docs/kangaroo.md](docs/kangaroo.md) and [docs/eas.md](docs/eas.md).
+Codecs without native random access are measured on independent 1,000-value blocks (`-b`). A point query decodes the block that holds the value; a range query decodes the blocks it covers. All block directories, headers and metadata count toward compressed size.
 
-For example:
+### Deviations from upstream
 
-```sh
-./build/LosslessBenchmark -c dexor,pcodec,pcodec_i64,elfstar,selfstar,flea -b 1000 data.bin
-ctest --test-dir build --output-on-failure
-```
+- **ALP:** upstream kernels handle only complete 1,024-value vectors. As in the ALP authors' DuckDB integration, the last partial vector is padded with its last value, and only the real values are encoded and stored. The codec is compiled without fast-math, because fast-math folds away ALP's rounding step.
+- **BUFF:** the authors' plain scalar code (Tranway1/buff @ d6550b2), extracted verbatim, one column per dataset; the BUFF-major variant is not used, because its selective decoder is unimplemented upstream. Known upstream encoder bugs do not trigger on our datasets. A bug in the selective decoder's trailing bits makes some point/range results wrong on 14 of 16 datasets without affecting size or throughput, so it is left unpatched and reported as a warning. BUFF stores values to the dataset's declared decimal precision.
+- **Camel:** the authors published only Java, so we use a statement-by-statement C++ translation. With the authors' 4-decimal setting its output is byte-identical to theirs on all 16 datasets. Upstream's format stores at most 4 decimals; for datasets with more, the decimal-count field is widened and the remainder is encoded with the paper's own rule (Algorithm 2). Upstream's 16-bit integer-difference field is kept, so one LAT value decodes incorrectly, exactly as in upstream, and is reported as a warning.
+- **DeXOR:** upstream is Java-only, so we use a C++ port that is byte-identical to the official code (SuDIS-ZJU/DeXOR@06128b3) on sampled blocks from all 16 datasets. That includes upstream's tolerance-based acceptance, so some values decode inexactly. On LAT, LON and AP, upstream's own decoding errors exceed 1e-9 and are reported as validation warnings. The only deviations cover inputs on which upstream crashes or writes a stream it cannot decode.
+- **Elf\* / SElf\*:** C++ ports of the official Java (SElfStar@457ceb0); the Elf* output is byte-identical to Java on sampled blocks. The authors' only C++ Elf* (Serf/Crush) implements the paper's no-Huffman variant, so we do not use it. Our SElf* adds per-block restart checkpoints so that blocks decode independently. These are counted in compressed size.
+- **Fauna / Macaque:** upstream supports float32 only. We build the authors' code with its `Value` type widened to f64 by a small patch applied at build time: 64-bit bit casts, Beringei's 64-bit Gorilla field layout, and value-size constants. The algorithms are unchanged. Both run on independent 1,000-value blocks; for Fauna, each block is one fitting batch. MacaqueV is bit-exact. Fauna's Swing models are evaluated in f64, so some values decode with rounding error: at most 1e-12 on 15 datasets, while on IT 589 of 477M values exceed 1e-9 and are reported as validation warnings.
+- **Falcon:** excluded, because its upstream repository is no longer available.
+- **Gorilla:** the value codec is taken verbatim from Facebook's Beringei, the production implementation from the Gorilla authors' team. Only the containers and bit casts are adapted to compile without folly.
+- **LeCo:** the authors' unmodified LeCo-fix codec (`Leco_int<uint64_t>`, @28bf8bf). Partition size is chosen by their released 1% sampling search (`search_hyper.h`, candidates 200 to 10,000), run once per dataset. The changes are the 64-bit adaptation needed to run it, and reseeding `rand()` before each search to reproduce upstream's one-dataset-per-process runs. Point reads use LeCo's per-element access, and the search time counts toward compression time.
+- **Pcodec:** the official `pco_c` bindings from pcodec v1.0.2, built unmodified as a static library at the default level (8). Each block is a complete standalone `.pco` file.
+- **Kangaroo, EAS:** not included; no implementation is available (see [docs/kangaroo.md](docs/kangaroo.md), [docs/eas.md](docs/eas.md)).
 
-The Fauna/Macaque benchmark explicitly narrows doubles to float32 and continues
-with metrics when values change. It logs a warning and records `input_conversion`
-and `input_changed_values` in CSV. Validation checks the actual converted input;
-passing that check does not imply preservation of the original float64 values.
-All recent codecs report `validation_status` and `roundtrip_mismatches`; value
-mismatches warn and still emit measured metrics. The standalone codec APIs remain
-strict. FLEA rejects blocks outside its safe numeric envelope. Hard API errors,
-malformed decoded lengths and unknown codecs fail the affected case and give a
-nonzero exit status while the CLI continues subsequent cases. Unmeasurable
-operations do not receive invented metrics.
+### Validation and floating-point input
 
-Full Fauna and both Pcodec entries now use native segment/page access. `-b`
-does not split their compression units: Fauna defaults to 65,536-value fitting
-batches; Pcodec defaults to 262,144-value chunks/pages. Use
-`--fauna-batch-size`, `--pcodec-chunk-size` and `--pcodec-page-size` to configure
-these separately. CSV records the layout and native limits. All stored
-directories and metadata count toward compressed size.
+Datasets store scaled integers. Codecs that take doubles receive `value / 10^decimals`, computed in a translation unit compiled with strict IEEE arithmetic, so that every double is the correctly rounded decimal. Competitor code is compiled without fast-math. After each run, decoded values are compared with the input: a value counts as a mismatch only if it differs by more than 1e-9. A mismatch logs a warning, and the metrics are still reported. `validation_status` and `roundtrip_mismatches` hold the result, and `bitwise_mismatches` gives the bit-level count for information.
 
-SElf* carries adaptation across external blocks and stores counted checkpoints
-for independent decoding. Sequential codecs retain the external `-b` wrapper. See [docs/recent-compressors.md](docs/recent-compressors.md)
-for measurement conventions and links to each implementation's provenance,
-input restrictions and tests.
+### Building the full suite on Linux
 
-On the Linux x86-64 server, the following builds with a user-owned GCC 13.4 and
-Rust 1.87 toolchain (no root access or GitHub Actions required):
+`LosslessBenchmarkFull` adds the Squash codecs (LZ4, Zstd, Snappy, XZ, Brotli); LeCo needs GMP, Eigen and Boost. If these dependencies live outside `/usr/local`, pass their locations explicitly:
 
 ```sh
-./scripts/build_remote.sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH=$DEPS -DNEATS_WITH_SQUASH=ON -DNEATS_WITH_LECO=ON \
+  -DSQUASH_INCLUDE_DIR=$SQUASH/include/squash-0.7 \
+  -DSQUASH_SHARED_LIB=$SQUASH/lib64/libsquash0.7.so \
+  "-DNEATS_LECO_EXTRA_INCLUDES=$DEPS/include;$DEPS/include/eigen3"
+cmake --build build --target LosslessBenchmark LosslessBenchmarkFull -j
 ```
 
-This helper builds the main benchmark with all new codecs and BUFF. Optional
-Squash and LeCo are disabled because they require additional system libraries;
-their existing build options remain available. Native CPU flags target the
-build machine. CMake and network access are needed initially. To build without
-individual fetched codecs, set `GEF_WITH_PCODEC`, `GEF_WITH_FAUNA`, or
-`GEF_WITH_FLEA` to `OFF`. Full test builds default to `BUILD_TESTING=ON`.
+At run time, set `SQUASH_PLUGINS` to Squash's plugin directory. `scripts/build_remote.sh` builds the minimal configuration (no Squash, no LeCo) with a user-owned GCC 13.4 and Rust 1.87 toolchain.
 
 ## Integer-sequence competitors, GEF on doubles and memory
 
@@ -214,7 +208,7 @@ The benchmark expects binary files (`.bin`) containing 64-bit integers. Two form
 **1. Standard Format (with Decimals parameter):**
 *   **Header (16 bytes):**
     *   `uint64_t` : Number of values ($N$)
-    *   `uint64_t` : Decimals parameter (used by some float compressors like Camel/Falcon)
+    *   `uint64_t` : Decimals parameter (used to reconstruct the decimal values passed to floating-point compressors)
 *   **Body:**
     *   $N \times$ `int64_t` : The data values
 
