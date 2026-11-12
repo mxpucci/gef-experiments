@@ -1,0 +1,22 @@
+--- original/CompressorGorilla.hpp
++++ diagnostic/CompressorGorilla.hpp
+@@ -51,10 +51,6 @@
+                 leadingZeros = 31;
+             }
+ 
+-            if (leadingZeros == trailingZeros) {
+-                xor_ = xor_ >> 1 << 1;
+-                trailingZeros = 1;
+-            }
+ 
+             // Store bit '1'
+             bs_values.push_back(1);
+@@ -67,7 +63,7 @@
+             } else {
+                 int significantBits = 64 - leadingZeros - trailingZeros;
+ 
+-                bs_values.append((((0x20 ^ leadingZeros) << 6) ^ (significantBits)), 12);
++                bs_values.append((((0x20 ^ leadingZeros) << 6) ^ (significantBits & 0x3f)), 12);
+                 xor_ >>= trailingZeros;                  // Length of meaningful bits in the next 6 bits
+                 bs_values.append(xor_, significantBits); // Store the meaningful bits of XOR
+ 

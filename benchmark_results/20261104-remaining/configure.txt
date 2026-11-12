@@ -1,0 +1,101 @@
+-- Target Architecture Flags: -march=native -mtune=native -mfpmath=sse
+-- LTO enabled
+-- TLX CMAKE_CXX_FLAGS: -Wshadow -Wold-style-cast -std=c++20 -W -Wall -Wextra -fPIC  -march=native -mtune=native -mfpmath=sse -O3 -DNDEBUG -fno-math-errno -funroll-loops -ftree-vectorize -Wcast-qual -Winit-self -Wnoexcept -Woverloaded-virtual -Wredundant-decls
+-- Found cargo: /home/testPF/.local/share/gef-toolchain/envs/build/bin/cargo — BUFF compressor enabled
+-- LeCo will be compiled with: /home/testPF/gef-benchmark-runs/20261104-remaining/leco-cxx
+-- Found Squash headers: /dev/shm/testPF-gef-extra-20261104/squash-install/include/squash-0.7
+-- Found PkgConfig: /dev/shm/testPF-gef-extra-20261104/deps/bin/pkg-config (found version "0.29.2") 
+-- Checking for module 'liblz4'
+--   Found liblz4, version 1.10.0
+-- Checking for module 'libzstd'
+--   Found libzstd, version 1.5.7
+-- Checking for module 'snappy'
+--   Found snappy, version 1.2.2
+-- Checking for modules 'libbrotlienc;libbrotlidec;libbrotlicommon'
+--   Found libbrotlienc, version 1.2.1
+--   Found libbrotlidec, version 1.2.1
+--   Found libbrotlicommon, version 1.2.1
+-- Found ZLIB: /dev/shm/testPF-gef-extra-20261104/deps/lib/libz.so (found version "1.3.2")  
+-- Found BZip2: /dev/shm/testPF-gef-extra-20261104/deps/lib/libbz2.so (found version "1.0.8") 
+-- Looking for BZ2_bzCompressInit
+-- Looking for BZ2_bzCompressInit - found
+-- Looking for lzma_auto_decoder in /dev/shm/testPF-gef-extra-20261104/deps/lib/liblzma.so
+-- Looking for lzma_auto_decoder in /dev/shm/testPF-gef-extra-20261104/deps/lib/liblzma.so - found
+-- Looking for lzma_easy_encoder in /dev/shm/testPF-gef-extra-20261104/deps/lib/liblzma.so
+-- Looking for lzma_easy_encoder in /dev/shm/testPF-gef-extra-20261104/deps/lib/liblzma.so - found
+-- Looking for lzma_lzma_preset in /dev/shm/testPF-gef-extra-20261104/deps/lib/liblzma.so
+-- Looking for lzma_lzma_preset in /dev/shm/testPF-gef-extra-20261104/deps/lib/liblzma.so - found
+-- Found LibLZMA: /dev/shm/testPF-gef-extra-20261104/deps/lib/liblzma.so (found version "5.8.3") 
+CMake Warning (dev) at /usr/local/share/cmake-3.28/Modules/FetchContent.cmake:1331 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  cmake/Fauna.cmake:3 (FetchContent_Declare)
+  cmake/RecentCompressors.cmake:17 (include)
+  CMakeLists.txt:448 (include)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /usr/local/share/cmake-3.28/Modules/FetchContent.cmake:1331 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  cmake/FLEA.cmake:4 (FetchContent_Declare)
+  cmake/RecentCompressors.cmake:27 (include)
+  CMakeLists.txt:448 (include)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /usr/local/share/cmake-3.28/Modules/FetchContent.cmake:1331 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  cmake/FLEA.cmake:33 (FetchContent_Declare)
+  cmake/RecentCompressors.cmake:27 (include)
+  CMakeLists.txt:448 (include)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Deprecation Warning at build/_deps/gef_fftw-src/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.5 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value or use a ...<max> suffix to tell
+  CMake that the project does not need compatibility with older versions.
+
+
+-- Performing Test HAVE_SSE2
+-- Performing Test HAVE_SSE2 - Success
+-- Performing Test HAVE_AVX2
+-- Performing Test HAVE_AVX2 - Success
+-- Performing Test HAVE_FMA
+-- Performing Test HAVE_FMA - Success
+-- Configuring done (5.4s)
+CMake Warning (dev) at build/_deps/gef_fftw-src/CMakeLists.txt:311 (add_library):
+  Policy CMP0069 is not set: INTERPROCEDURAL_OPTIMIZATION is enforced when
+  enabled.  Run "cmake --help-policy CMP0069" for policy details.  Use the
+  cmake_policy command to set the policy and suppress this warning.
+
+  INTERPROCEDURAL_OPTIMIZATION property will be ignored for target 'fftw3'.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Generating done (0.2s)
+-- Build files have been written to: /home/testPF/gef-experiments/build

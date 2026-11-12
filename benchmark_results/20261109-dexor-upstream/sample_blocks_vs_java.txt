@@ -1,0 +1,18 @@
+DeXOR: official Java fixtures and upstream-behaviour regression tests passed
+vectors=3009 java_ok=1771 bytes_eq=1771 decoded_eq=1771 cpp_over_1e-9_on_java_ok=4 java_encoder_threw=1238 (cpp lossless on those=468) java_decoder_threw=0 (bytes_eq=0) cpp_decode_fail=0
+AP,blocks=20,values=20000,eq_java_blocks=20,bytes=31975,payload=31815,decoded_eq_java_decoder=20000,inexact=6893,over_1e-9=0,max_rel_err=1.97322e-16
+BM,blocks=14,values=13964,eq_java_blocks=14,bytes=28819,payload=28707,decoded_eq_java_decoder=13964,inexact=4113,over_1e-9=0,max_rel_err=2.21597e-16
+BP,blocks=7,values=6782,eq_java_blocks=7,bytes=22401,payload=22345,decoded_eq_java_decoder=6782,inexact=83,over_1e-9=0,max_rel_err=2.20268e-16
+BT,blocks=19,values=19000,eq_java_blocks=19,bytes=70371,payload=70219,decoded_eq_java_decoder=19000,inexact=3197,over_1e-9=0,max_rel_err=2.21346e-16
+BW,blocks=19,values=19000,eq_java_blocks=19,bytes=72877,payload=72725,decoded_eq_java_decoder=19000,inexact=3747,over_1e-9=0,max_rel_err=2.21655e-16
+CT,blocks=20,values=20000,eq_java_blocks=20,bytes=31950,payload=31790,decoded_eq_java_decoder=20000,inexact=2138,over_1e-9=0,max_rel_err=2.21698e-16
+DP,blocks=20,values=20000,eq_java_blocks=20,bytes=32657,payload=32497,decoded_eq_java_decoder=20000,inexact=5027,over_1e-9=0,max_rel_err=2.21864e-16
+DU,blocks=20,values=20000,eq_java_blocks=20,bytes=18101,payload=17941,decoded_eq_java_decoder=20000,inexact=1799,over_1e-9=0,max_rel_err=1.965e-16
+ECG,blocks=20,values=20000,eq_java_blocks=20,bytes=28363,payload=28203,decoded_eq_java_decoder=20000,inexact=1761,over_1e-9=0,max_rel_err=1.11022e-16
+GE,blocks=20,values=20000,eq_java_blocks=20,bytes=32470,payload=32310,decoded_eq_java_decoder=20000,inexact=5686,over_1e-9=0,max_rel_err=2.12515e-16
+IT,blocks=20,values=20000,eq_java_blocks=20,bytes=24840,payload=24680,decoded_eq_java_decoder=20000,inexact=3614,over_1e-9=0,max_rel_err=2.21215e-16
+LAT,blocks=20,values=20000,eq_java_blocks=20,bytes=29925,payload=29765,decoded_eq_java_decoder=20000,inexact=4202,over_1e-9=0,max_rel_err=1.85911e-16
+LON,blocks=20,values=20000,eq_java_blocks=20,bytes=31240,payload=31080,decoded_eq_java_decoder=20000,inexact=6184,over_1e-9=0,max_rel_err=1.62982e-16
+UK,blocks=20,values=20000,eq_java_blocks=20,bytes=21763,payload=21603,decoded_eq_java_decoder=20000,inexact=746,over_1e-9=0,max_rel_err=2.11786e-16
+US,blocks=20,values=20000,eq_java_blocks=20,bytes=19039,payload=18879,decoded_eq_java_decoder=20000,inexact=5634,over_1e-9=0,max_rel_err=2.10937e-16
+WD,blocks=20,values=20000,eq_java_blocks=20,bytes=49254,payload=49094,decoded_eq_java_decoder=20000,inexact=2152,over_1e-9=0,max_rel_err=2.22019e-16

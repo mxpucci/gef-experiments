@@ -1,3 +1,4 @@
+#include <bit>
 /**
  * Comprehensive Lossless Compressor Benchmark
  * 
@@ -40,6 +41,9 @@
 #include "NeaTS/NeaTS.hpp"
 #include "NeaTS/algorithms.hpp"
 #include "benchmark_common.hpp"
+#include "range_queries.hpp"
+#include <cstring>
+#include "recent_compressors.hpp"
 
 // Streaming compressors
 #include "Chimp/CompressorChimp.hpp"
@@ -52,10 +56,6 @@
 #include "Gorilla/DecompressorGorilla.hpp"
 #include "Elf/CompressorElf.hpp"
 #include "Elf/DecompressorElf.hpp"
-#include "Camel/CompressorCamel.hpp"
-#include "Camel/DecompressorCamel.hpp"
-#include "Falcon/CompressorFalcon.hpp"
-#include "Falcon/DecompressorFalcon.hpp"
 
 // ALP and LeCo benchmarks are in separate translation units (alp_benchmark.cpp, leco_benchmark.cpp)
 // compiled with different compilers for compatibility. Declarations are in benchmark_common.hpp.
@@ -64,15 +64,6 @@
 #include "Buff/CompressorBuff.hpp"
 #endif
 
-// GEF includes
-// NOTE: When running multiple GEF compressors sequentially with SIMD and OpenMP enabled,
-// you may encounter a bug where subsequent compressors produce astronomically large 
-// compressed sizes (compression ratio > 100x). This manifests on Linux with AVX-512.
-//
-// WORKAROUND: Use LosslessBenchmarkFullNoSIMD which is compiled with:
-//   -DGEF_DISABLE_SIMD=1 -DGEF_DISABLE_OPENMP=1
-// These flags force sequential partition construction and scalar gap computation.
-#include "gef/gef.hpp"
 
 // ============================================================================
 // Utility functions
@@ -178,6 +169,8 @@ void BenchmarkResult::print_header(std::ostream &out) const {
     for (const auto &[range, _] : range_query_throughputs) {
         out << ",range_" << range << "_mbs";
     }
+    out << ",input_conversion,input_changed_values,roundtrip_mismatches,validation_status"
+        << ",access_layout,compression_unit_values,native_page_values,bitwise_mismatches,ram_bytes";
     out << std::endl;
 }
 
@@ -190,6 +183,10 @@ void BenchmarkResult::print(std::ostream &out) const {
     for (const auto &[_, throughput] : range_query_throughputs) {
         out << "," << throughput;
     }
+    out << "," << input_conversion << "," << input_changed_values
+        << "," << roundtrip_mismatches << "," << validation_status
+        << "," << access_layout << "," << compression_unit_values << "," << native_page_values
+        << "," << bitwise_mismatches << "," << ram_bytes;
     out << std::endl;
 }
 
@@ -207,6 +204,9 @@ std::vector<size_t> generate_random_indices(size_t n, size_t num_queries, uint64
     return indices;
 }
 
+// Starts are uniform over [0, n - range - 1], drawn from mt19937(seed)
+// reseeded per range size, exactly as the NeaTS paper's simd_scan_speed();
+// every codec gets the same starts.
 std::vector<size_t> generate_range_indices(size_t n, size_t range, size_t num_queries, uint64_t seed = 1234) {
     std::mt19937 mt(seed);
     if (range >= n) range = n - 1;
@@ -226,7 +226,7 @@ template<typename T, typename T1_coeff>
 BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
                                       const std::vector<size_t> &range_sizes,
                                       const std::vector<size_t> &random_indices,
-                                      const std::map<size_t, std::vector<size_t>> &range_query_indices,
+                                      const BenchmarkData &bench_data,
                                       uint8_t max_bpc,
                                       const std::string &dataset_name,
                                       size_t uncompressed_bits) {
@@ -241,6 +241,7 @@ BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
     // T1_coeff is either float (for small values) or double (for large values)
     pfa::neats::compressor<uint64_t, T, double, T1_coeff, double> compressor(max_bpc);
     
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto t1 = std::chrono::high_resolution_clock::now();
     compressor.partitioning(processed_data.begin(), processed_data.end());
     compiler_barrier();
@@ -249,6 +250,7 @@ BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
     
     result.compressed_bits = compressor.size_in_bits();
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs = (processed_data.size() * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression
@@ -266,12 +268,8 @@ BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
     
     result.decompression_throughput_mbs = (processed_data.size() * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
-    for (size_t i = 0; i < processed_data.size(); ++i) {
-        if (processed_data[i] != decompressed[i]) {
-            std::cerr << "NeaTS decompression error at " << i << std::endl;
-            break;
-        }
-    }
+    check_roundtrip(result, processed_data, decompressed);
+    finish_roundtrip_validation(result);
     
     // Random access
     const size_t num_ra_queries = random_indices.size();
@@ -288,29 +286,12 @@ BenchmarkResult benchmark_neats_impl(const std::vector<T> &processed_data,
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
-    // Range queries
-    const size_t num_range_queries = range_query_indices.begin()->second.size();
-    for (auto range : range_sizes) {
-        if (range >= processed_data.size()) continue;
-        
-        const auto& range_indices = range_query_indices.at(range);
-        std::vector<T> out_buffer(range);
-        volatile T range_checksum = 0;
-        
-        t1 = std::chrono::high_resolution_clock::now();
-        for (auto start_idx : range_indices) {
-            compressor.simd_scan(start_idx, start_idx + range, out_buffer.data());
-            range_checksum += out_buffer[0];
-            do_not_optimize(out_buffer);
-        }
-        compiler_barrier();
-        t2 = std::chrono::high_resolution_clock::now();
-        do_not_optimize(range_checksum);
-        
-        auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
-        result.range_query_throughputs.emplace_back(range, throughput);
-    }
+    // Range queries (range_queries.hpp). simd_scan adds model predictions to
+    // the destination, so it requires the zero-filled slot the runner provides.
+    run_range_queries(result, bench_data, range_sizes, processed_data.size(), decompressed.data(),
+        [&](size_t start, size_t length, std::vector<T> &out) {
+            compressor.simd_scan(start, start + length, out.data());
+        });
     
     return result;
 }
@@ -333,109 +314,15 @@ BenchmarkResult benchmark_neats(const BenchmarkData &bench_data,
     if (max_val > FLOAT_PRECISION_THRESHOLD) {
         // Use double precision for coefficients when values are large
         return benchmark_neats_impl<T, double>(processed_data, range_sizes, 
-                                                bench_data.random_indices, bench_data.range_query_indices,
+                                                bench_data.random_indices, bench_data,
                                                 max_bpc, bench_data.filename, bench_data.uncompressed_bits);
     } else {
         // Use float precision for coefficients when values are small (better compression)
         return benchmark_neats_impl<T, float>(processed_data, range_sizes,
-                                               bench_data.random_indices, bench_data.range_query_indices,
+                                               bench_data.random_indices, bench_data,
                                                max_bpc, bench_data.filename, bench_data.uncompressed_bits);
     }
 }
-// ============================================================================
-// GEF Wrapper and Benchmark
-// ============================================================================
-
-static constexpr size_t GEF_UNIFORM_PARTITION_SIZE = 32000;
-
-template<typename GEFType, typename T = int64_t>
-BenchmarkResult benchmark_gef(const std::string &compressor_name,
-                              const BenchmarkData &bench_data,
-                              const std::vector<size_t> &range_sizes) {
-    BenchmarkResult result;
-    result.compressor = compressor_name;
-    result.dataset = bench_data.filename;
-    
-    // Use shifted data
-    const auto& data = bench_data.shifted_data;
-                   
-    result.num_values = data.size();
-    result.uncompressed_bits = bench_data.uncompressed_bits;
-    
-    // Compression
-    auto t1 = std::chrono::high_resolution_clock::now();
-    GEFType compressor(data);
-    compiler_barrier();
-    auto t2 = std::chrono::high_resolution_clock::now();
-    auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-    
-    result.compressed_bits = compressor.size_in_bytes() * 8;
-    result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
-    result.compression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
-    
-    // Full decompression
-    std::vector<T> decompressed(data.size());
-    volatile T decomp_checksum = 0;
-    t1 = std::chrono::high_resolution_clock::now();
-    compressor.get_elements(0, data.size(), decompressed);
-    decomp_checksum += decompressed[0];
-    compiler_barrier();
-    t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(decompressed);
-    do_not_optimize(decomp_checksum);
-    
-    auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-    result.decompression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
-    
-    for (size_t i = 0; i < data.size(); ++i) {
-        if (data[i] != decompressed[i]) {
-            std::cerr << compressor_name << " decompression error at " << i << std::endl;
-            break;
-        }
-    }
-    
-    // Random access
-    const size_t num_ra_queries = bench_data.random_indices.size();
-    
-    t1 = std::chrono::high_resolution_clock::now();
-    volatile T ra_sum = 0;
-    for (auto idx : bench_data.random_indices) {
-        ra_sum += compressor[idx];
-    }
-    compiler_barrier();
-    t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(ra_sum);
-    auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-    result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
-    result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
-    
-    // Range queries
-    const size_t num_range_queries = bench_data.range_query_indices.begin()->second.size();
-    for (auto range : range_sizes) {
-        if (range >= data.size()) continue;
-        
-        const auto& range_indices = bench_data.range_query_indices.at(range);
-        std::vector<T> out_buffer(range);
-        volatile T range_checksum = 0;
-        
-        t1 = std::chrono::high_resolution_clock::now();
-        for (auto start_idx : range_indices) {
-            compressor.get_elements(start_idx, range, out_buffer);
-            range_checksum += out_buffer[0];
-            do_not_optimize(out_buffer);
-        }
-        compiler_barrier();
-        t2 = std::chrono::high_resolution_clock::now();
-        do_not_optimize(range_checksum);
-        
-        auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
-        result.range_query_throughputs.emplace_back(range, throughput);
-    }
-    
-    return result;
-}
-
 // ============================================================================
 // DAC (Direct Access Codes) Benchmark
 // ============================================================================
@@ -458,6 +345,7 @@ BenchmarkResult benchmark_dac(const BenchmarkData &bench_data,
                    [](int64_t x) { return static_cast<uint64_t>(x); });
     
     // Compression
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto t1 = std::chrono::high_resolution_clock::now();
     sdsl::dac_vector_dp<> dac_vector(u_data);
     compiler_barrier();
@@ -467,6 +355,7 @@ BenchmarkResult benchmark_dac(const BenchmarkData &bench_data,
     
     result.compressed_bits = sdsl::size_in_bytes(dac_vector) * 8;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression
@@ -485,12 +374,8 @@ BenchmarkResult benchmark_dac(const BenchmarkData &bench_data,
     
     result.decompression_throughput_mbs = (data.size() * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
-    for (size_t i = 0; i < data.size(); ++i) {
-        if (u_data[i] != decompressed[i]) {
-            std::cerr << "DAC decompression error at " << i << std::endl;
-            break;
-        }
-    }
+    check_roundtrip(result, u_data, decompressed);
+    finish_roundtrip_validation(result);
     
     // Random access
     const size_t num_ra_queries = bench_data.random_indices.size();
@@ -507,31 +392,11 @@ BenchmarkResult benchmark_dac(const BenchmarkData &bench_data,
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
-    // Range queries
-    const size_t num_range_queries = bench_data.range_query_indices.begin()->second.size();
-    for (auto range : range_sizes) {
-        if (range >= data.size()) continue;
-        
-        const auto& range_indices = bench_data.range_query_indices.at(range);
-        std::vector<uint64_t> out_buffer(range);
-        volatile uint64_t range_checksum = 0;
-        
-        t1 = std::chrono::high_resolution_clock::now();
-        for (auto start_idx : range_indices) {
-            std::copy(dac_vector.begin() + start_idx, 
-                      dac_vector.begin() + start_idx + range, 
-                      out_buffer.begin());
-            range_checksum += out_buffer[0];
-            do_not_optimize(out_buffer);
-        }
-        compiler_barrier();
-        t2 = std::chrono::high_resolution_clock::now();
-        do_not_optimize(range_checksum);
-        
-        auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
-        result.range_query_throughputs.emplace_back(range, throughput);
-    }
+    // Range queries (range_queries.hpp)
+    run_range_queries(result, bench_data, range_sizes, data.size(), decompressed.data(),
+        [&](size_t start, size_t length, std::vector<uint64_t> &out) {
+            std::copy(dac_vector.begin() + start, dac_vector.begin() + start + length, out.begin());
+        });
     
     return result;
 }
@@ -563,6 +428,7 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
     size_t total_compressed_bits = 0;
     std::vector<std::unique_ptr<Compressor>> compressed_blocks;
     
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto t1 = std::chrono::high_resolution_clock::now();
     for (size_t ib = 0; ib < num_blocks; ++ib) {
         const size_t bs = std::min(block_size, n - ib * block_size);
@@ -570,12 +436,7 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
         auto start_it = data.begin() + ib * block_size;
         auto end_it = start_it + bs;
         
-        std::unique_ptr<Compressor> cmpr;
-        if constexpr (std::is_same_v<Compressor, CompressorCamel<T>>) {
-            cmpr = std::make_unique<Compressor>(*start_it, static_cast<int64_t>(bench_data.decimals));
-        } else {
-            cmpr = std::make_unique<Compressor>(*start_it);
-        }
+        auto cmpr = std::make_unique<Compressor>(*start_it);
 
         for (auto it = start_it + 1; it < end_it; ++it) {
             cmpr->addValue(*it);
@@ -590,6 +451,7 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
     
     result.compressed_bits = total_compressed_bits;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression
@@ -618,17 +480,10 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
     
     result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
-    for (size_t i = 0; i < n; ++i) {
-        bool match = (std::abs(data[i] - decompressed[i]) < 1e-9);
-
-        if (!match) {
-            std::cerr << compressor_name << " decompression error at " << i 
-                      << " Expected: " << std::setprecision(20) << data[i] 
-                      << " Got: " << decompressed[i] 
-                      << " Diff: " << std::abs(data[i] - decompressed[i]) << std::endl;
-            break;
-        }
-    }
+    check_roundtrip(result, data, decompressed);
+    finish_roundtrip_validation(result);
+    result.access_layout = "independent_blocks";
+    result.compression_unit_values = block_size;
 
     // Random access (requires block decompression)
     const size_t num_ra_queries = 100000; // Fewer queries since it's slower
@@ -660,21 +515,9 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
-    // Range queries (requires block-wise decompression)
-    const size_t num_range_queries = 1000;
-    
-    for (auto range : range_sizes) {
-        if (range >= n) continue;
-        
-        const auto& range_indices = bench_data.range_query_indices.at(range);
-        std::vector<T> out_buffer(range);
-        volatile T range_checksum = 0;
-        
-        t1 = std::chrono::high_resolution_clock::now();
-        size_t q_count = 0;
-        for (auto start_idx : range_indices) {
-            if (q_count++ >= num_range_queries) break;
-            
+    // Range queries (range_queries.hpp; requires block-wise decompression)
+    run_range_queries(result, bench_data, range_sizes, n, decompressed.data(),
+        [&](size_t start_idx, size_t range, std::vector<T> &out_buffer) {
             size_t start_block = start_idx / block_size;
             size_t end_block = (start_idx + range - 1) / block_size;
             
@@ -704,17 +547,7 @@ BenchmarkResult benchmark_bitstream_compressor(const std::string &compressor_nam
                     ++i;
                 }
             }
-            range_checksum += out_buffer[0];
-            do_not_optimize(out_buffer);
-        }
-        compiler_barrier();
-        t2 = std::chrono::high_resolution_clock::now();
-        do_not_optimize(range_checksum);
-        
-        auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
-        result.range_query_throughputs.emplace_back(range, throughput);
-    }
+        });
     
     return result;
 }
@@ -744,6 +577,7 @@ BenchmarkResult benchmark_tsxor(const BenchmarkData &bench_data,
     size_t total_compressed_bits = 0;
     std::vector<std::vector<uint8_t>> compressed_blocks(num_blocks);
     
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto t1 = std::chrono::high_resolution_clock::now();
     for (size_t ib = 0; ib < num_blocks; ++ib) {
         const size_t bs = std::min(block_size, n - ib * block_size);
@@ -765,6 +599,7 @@ BenchmarkResult benchmark_tsxor(const BenchmarkData &bench_data,
 
     result.compressed_bits = total_compressed_bits;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression
@@ -793,12 +628,10 @@ BenchmarkResult benchmark_tsxor(const BenchmarkData &bench_data,
     
     result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
-    for (size_t i = 0; i < n; ++i) {
-        if (std::abs(data[i] - decompressed[i]) >= 1e-9) {
-            std::cerr << "TSXor decompression error at " << i << std::endl;
-            break;
-        }
-    }
+    check_roundtrip(result, data, decompressed);
+    finish_roundtrip_validation(result);
+    result.access_layout = "independent_blocks";
+    result.compression_unit_values = block_size;
     
     // Random access
     const size_t num_ra_queries = 100000;
@@ -827,20 +660,9 @@ BenchmarkResult benchmark_tsxor(const BenchmarkData &bench_data,
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
-    // Range queries
-    const size_t num_range_queries = 1000;
-    for (auto range : range_sizes) {
-        if (range >= n) continue;
-        
-        const auto& range_indices = bench_data.range_query_indices.at(range);
-        std::vector<T> out_buffer(range);
-        volatile T range_checksum = 0;
-        
-        t1 = std::chrono::high_resolution_clock::now();
-        size_t q_count_range = 0;
-        for (auto start_idx : range_indices) {
-            if (q_count_range++ >= num_range_queries) break;
-            
+    // Range queries (range_queries.hpp)
+    run_range_queries(result, bench_data, range_sizes, n, decompressed.data(),
+        [&](size_t start_idx, size_t range, std::vector<T> &out_buffer) {
             size_t start_block = start_idx / block_size;
             size_t end_block = (start_idx + range - 1) / block_size;
             
@@ -868,218 +690,7 @@ BenchmarkResult benchmark_tsxor(const BenchmarkData &bench_data,
                     ++i;
                 }
             }
-            range_checksum += out_buffer[0];
-            do_not_optimize(out_buffer);
-        }
-        compiler_barrier();
-        t2 = std::chrono::high_resolution_clock::now();
-        do_not_optimize(range_checksum);
-        
-        auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
-        result.range_query_throughputs.emplace_back(range, throughput);
-    }
-    
-    return result;
-}
-
-// ============================================================================
-// Falcon Benchmark (uses byte vector buffer)
-// ============================================================================
-template<typename T = double>
-BenchmarkResult benchmark_falcon(const BenchmarkData &bench_data,
-                                 const std::vector<size_t> &range_sizes,
-                                 size_t block_size = 1000) { // Default to 1000 to match your proposal
-    BenchmarkResult result;
-    result.compressor = "Falcon";
-    result.dataset = bench_data.filename;
-    
-    // Use double data
-    const auto& data = bench_data.double_data;
-    
-    result.num_values = data.size();
-    result.uncompressed_bits = bench_data.uncompressed_bits;
-    
-    const size_t n = data.size();
-    const size_t num_blocks = (n + block_size - 1) / block_size;
-    
-    // -------------------------------------------------------------------------
-    // 2. Compression (Independent Blocks)
-    // -------------------------------------------------------------------------
-    size_t total_compressed_bits = 0;
-    std::vector<std::vector<uint8_t>> compressed_blocks(num_blocks);
-    
-    auto t1 = std::chrono::high_resolution_clock::now();
-    
-    for (size_t ib = 0; ib < num_blocks; ++ib) {
-        // Identify range for this block
-        const size_t start_idx = ib * block_size;
-        const size_t end_idx = std::min(start_idx + block_size, n);
-        const size_t current_bs = end_idx - start_idx;
-        
-        // Initialize Compressor for JUST this block
-        // Note: We pass current_bs so Falcon writes the correct header count
-        // We also pass decimals to help Falcon avoid raw fallback on tricky values
-        CompressorFalcon<T> cmpr(data[start_idx], current_bs, static_cast<int>(bench_data.decimals));
-        
-        for (size_t k = 1; k < current_bs; ++k) {
-            cmpr.addValue(data[start_idx + k]);
-        }
-        cmpr.close();
-        
-        // Store results
-        total_compressed_bits += cmpr.getSize();
-        compressed_blocks[ib] = cmpr.getOut(); 
-    }
-    compiler_barrier();
-    auto t2 = std::chrono::high_resolution_clock::now();
-    auto compression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-    
-    result.compressed_bits = total_compressed_bits;
-    result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
-    result.compression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
-    
-    // -------------------------------------------------------------------------
-    // 3. Full Decompression (Sanity Check & Throughput)
-    // -------------------------------------------------------------------------
-    std::vector<T> decompressed(n);
-    volatile T decomp_checksum = 0;
-    t1 = std::chrono::high_resolution_clock::now();
-    
-    size_t output_offset = 0;
-    for (size_t ib = 0; ib < num_blocks; ++ib) {
-        size_t expected_count = std::min(block_size, n - ib * block_size);
-        
-        // Decompress independent block
-        DecompressorFalcon<T> dcmpr(compressed_blocks[ib], expected_count);
-        
-        // Falcon Decompressor initializes storedValue with the first item immediately
-        decompressed[output_offset++] = dcmpr.storedValue;
-        
-        for (size_t k = 1; k < expected_count; ++k) {
-            if (dcmpr.hasNext()) {
-                decompressed[output_offset++] = dcmpr.storedValue;
-            } else {
-                break;
-            }
-        }
-        decomp_checksum += decompressed[ib * block_size];
-    }
-    compiler_barrier();
-    t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(decompressed);
-    do_not_optimize(decomp_checksum);
-    auto decompression_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-    result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
-    
-
-    for (size_t i = 0; i < n; ++i) {
-        if (std::abs(data[i] - decompressed[i]) >= 1e-9) {
-            std::cerr << "Falcon (Chunked) decompression error at index " << i << std::endl;
-            break;
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // 4. Random Access (Decompress ONLY the target block)
-    // -------------------------------------------------------------------------
-    const size_t num_ra_queries = 10000;
-    
-    t1 = std::chrono::high_resolution_clock::now();
-    volatile T ra_sum = 0;
-    size_t q_count = 0;
-    
-    for (auto idx : bench_data.random_indices) {
-        if (q_count++ >= num_ra_queries) break;
-
-        size_t ib = idx / block_size;
-        size_t offset_in_block = idx % block_size;
-        size_t expected_count = std::min(block_size, n - ib * block_size);
-        
-        // Instantiate decompressor only for the required block
-        DecompressorFalcon<T> dcmpr(compressed_blocks[ib], expected_count);
-        
-        // Scan to the specific offset
-        size_t current_pos = 0;
-        if (offset_in_block == 0) {
-            ra_sum += dcmpr.storedValue;
-        } else {
-            // hasNext() advances to the next value and updates storedValue
-            while (current_pos < offset_in_block && dcmpr.hasNext()) {
-                current_pos++;
-            }
-            ra_sum += dcmpr.storedValue;
-        }
-    }
-    compiler_barrier();
-    t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(ra_sum);
-    
-    auto ra_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-    result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
-    result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
-
-    // -------------------------------------------------------------------------
-    // 5. Range Queries
-    // -------------------------------------------------------------------------
-    const size_t num_range_queries = 1000;
-    for (auto range : range_sizes) {
-        if (range >= n) continue;
-        
-        const auto& range_indices = bench_data.range_query_indices.at(range);
-        std::vector<T> out_buffer(range);
-        volatile T range_checksum = 0;
-        
-        t1 = std::chrono::high_resolution_clock::now();
-        size_t q_count_range = 0;
-        for (auto start_idx : range_indices) {
-            if (q_count_range++ >= num_range_queries) break;
-            
-            size_t start_block = start_idx / block_size;
-            size_t end_block = (start_idx + range - 1) / block_size;
-            
-            size_t out_pos = 0;
-            
-            // We only decompress the blocks overlapping the range
-            for (size_t ib = start_block; ib <= end_block; ++ib) {
-                size_t expected_count = std::min(block_size, n - ib * block_size);
-                DecompressorFalcon<T> dcmpr(compressed_blocks[ib], expected_count);
-                
-                size_t block_start_global = ib * block_size;
-                
-                // Determine how many items to skip in this block (only for the first block)
-                size_t skip = (ib == start_block) ? (start_idx - block_start_global) : 0;
-                
-                size_t current_in_block = 0;
-                
-                // Fast skip
-                // Note: storedValue is the 0-th element. 
-                // We need to call hasNext 'skip' times to put 'storedValue' at index 'skip'
-                while(current_in_block < skip && dcmpr.hasNext()) {
-                    current_in_block++;
-                }
-                
-                // Copy
-                while (out_pos < range) {
-                    out_buffer[out_pos++] = dcmpr.storedValue;
-                    current_in_block++;
-                    
-                    // Boundary check: if we hit end of block or end of range, break
-                    if (current_in_block >= expected_count) break;
-                    if (!dcmpr.hasNext()) break; 
-                }
-            }
-            range_checksum += out_buffer[0];
-            do_not_optimize(out_buffer);
-        }
-        compiler_barrier();
-        t2 = std::chrono::high_resolution_clock::now();
-        do_not_optimize(range_checksum);
-        
-        auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
-        result.range_query_throughputs.emplace_back(range, throughput);
-    }
+        });
     
     return result;
 }
@@ -1091,144 +702,67 @@ BenchmarkResult benchmark_falcon(const BenchmarkData &bench_data,
 #ifdef NEATS_ENABLE_BUFF
 template<typename T = double>
 BenchmarkResult benchmark_buff(const BenchmarkData &bench_data,
-                               const std::vector<size_t> &range_sizes,
-                               size_t block_size = 1000) {
+                               const std::vector<size_t> &range_sizes) {
     BenchmarkResult result;
-    result.compressor = "BUFF";
-    result.dataset    = bench_data.filename;
-
-    const auto &data  = bench_data.double_data;
-    result.num_values = data.size();
-    result.uncompressed_bits = bench_data.uncompressed_bits;
-
-    const size_t n         = data.size();
-    const size_t num_blocks = (n + block_size - 1) / block_size;
-
-    // BUFF is a bounded-loss compressor: configured with `prec = log10(scale)`,
-    // it guarantees reconstruction within ~0.5 × 10^-prec of the input.  We
-    // run it as published — pass `double_data` (= raw_int / 10^decimals) and
-    // set scale = 10^decimals so BUFF's bound matches the dataset's native
-    // precision.  Datasets with decimals = 0 fall outside BUFF's PRECISION_MAP
-    // (prec ≥ 1 only) and are reported as compression failures by design.
-    int64_t scale = 1;
-    for (int64_t d = 0; d < bench_data.decimals; ++d) scale *= 10;
-    if (scale <= 0) scale = 1;
-
-    // ── Compression ──────────────────────────────────────────────────────────
-    size_t total_compressed_bits = 0;
-    std::vector<buff::CompressedBlock> compressed_blocks(num_blocks);
-
-    auto t1 = std::chrono::high_resolution_clock::now();
-    for (size_t ib = 0; ib < num_blocks; ++ib) {
-        const size_t start = ib * block_size;
-        const size_t bs    = std::min(block_size, n - start);
-        compressed_blocks[ib] = buff::compress_block(data.data() + start, bs, scale);
-        total_compressed_bits += compressed_blocks[ib].data.size() * 8;
-    }
+    result.compressor="BUFF"; result.dataset=bench_data.filename;
+    const auto &data=bench_data.double_data;
+    const size_t n=data.size();
+    result.num_values=n; result.uncompressed_bits=bench_data.uncompressed_bits;
+    result.access_layout="native_columns"; result.compression_unit_values=n;
+    int64_t scale=1;
+    for(int64_t d=0;d<bench_data.decimals;++d) scale*=10;
+    using Clock=std::chrono::high_resolution_clock;
+    auto elapsed=[](auto start){return std::chrono::duration<double>(Clock::now()-start).count();};
+    const double mib=n*sizeof(T)/1024.0/1024.0;
+    const size_t gef_ram0 = gef_live_heap_bytes();
+    auto start=Clock::now();
+    // One original BUFF column for the complete input. No external 1k wrapper.
+    auto column=buff::compress_block(data.data(),n,scale);
     compiler_barrier();
-    auto t2 = std::chrono::high_resolution_clock::now();
-    auto compression_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-
-    result.compressed_bits = total_compressed_bits;
-    result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
-    result.compression_throughput_mbs =
-        (n * sizeof(T) / 1024.0 / 1024.0) / (compression_ns / 1e9);
-
-    // ── Full decompression ───────────────────────────────────────────────────
-    std::vector<T> decompressed(n);
-    volatile T decomp_checksum = 0;
-    t1 = std::chrono::high_resolution_clock::now();
-    for (size_t ib = 0; ib < num_blocks; ++ib) {
-        const size_t start = ib * block_size;
-        buff::decompress_block(compressed_blocks[ib], decompressed.data() + start);
-        decomp_checksum += decompressed[start];
+    result.ram_bytes = gef_heap_delta(gef_ram0);
+    result.compression_throughput_mbs=mib/elapsed(start);
+    result.compressed_bits=column.data.size()*8;
+    result.compression_ratio=double(result.compressed_bits)/result.uncompressed_bits;
+    std::vector<T> decoded(n);
+    start=Clock::now();
+    buff::decompress_block(column,decoded.data());
+    do_not_optimize(decoded); compiler_barrier();
+    result.decompression_throughput_mbs=mib/elapsed(start);
+    // Shared 1e-9 policy. BUFF truncates to 2^-dec_len fractional bits, so most
+    // values differ by up to 0.5/10^decimals and the row reports failed (warning only).
+    check_roundtrip(result,data,decoded);
+    finish_roundtrip_validation(result);
+    size_t bound_failures=0;
+    const double tolerance=0.5/static_cast<double>(scale);
+    for(size_t i=0;i<n;++i) bound_failures+=std::abs(data[i]-decoded[i])>tolerance;
+    if(bound_failures)
+        std::cerr << "Warning: BUFF: " << bound_failures << "/" << n
+                  << " values exceed BUFF's precision bound 0.5/10^decimals.\n";
+    const size_t nq=std::min<size_t>(10000,bench_data.random_indices.size());
+    volatile T sum=0;
+    start=Clock::now();
+    for(size_t q=0;q<nq;++q) sum+=buff::get_value_at(column,bench_data.random_indices[q]);
+    do_not_optimize(sum); compiler_barrier();
+    const double point_seconds=elapsed(start);
+    result.random_access_ns=point_seconds*1e9/nq;
+    result.random_access_mbs=nq*sizeof(T)/1024.0/1024.0/point_seconds;
+    size_t query_mismatches=0;
+    for(size_t q=0;q<std::min<size_t>(nq,200);++q){
+        const auto i=bench_data.random_indices[q];T value=buff::get_value_at(column,i);
+        query_mismatches+=roundtrip_value_mismatch(decoded[i],value);
     }
-    compiler_barrier();
-    t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(decompressed);
-    do_not_optimize(decomp_checksum);
-    auto decomp_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-    result.decompression_throughput_mbs =
-        (n * sizeof(T) / 1024.0 / 1024.0) / (decomp_ns / 1e9);
-
-    // BUFF is bounded-loss at the configured precision.  The reconstruction
-    // is bounded by 1/2^dec_len_for_prec(prec) ≤ 1/scale, so 0.5/scale is a
-    // tight upper bound that flags real defects but accepts the published
-    // bounded loss.  See BUFF (Liu et al., VLDB '21) §4.
-    const double buff_tolerance = 0.5 / static_cast<double>(scale);
-    for (size_t i = 0; i < n; ++i) {
-        if (std::abs(data[i] - decompressed[i]) > buff_tolerance) {
-            std::cerr << "BUFF decompression error at " << i
-                      << ": expected " << std::setprecision(20) << data[i]
-                      << " got " << decompressed[i] << std::endl;
-            break;
-        }
-    }
-
-    // ── Random access ────────────────────────────────────────────────────────
-    // BUFF's byte-major layout supports O(ceil(fixed_len/8))-byte single-value
-    // extraction without decoding the whole block — this is exactly the
-    // primitive BUFF was designed for.  Implemented in lib/buff-ffi as
-    // `buff_extract_f64`; see CompressorBuff.hpp::get_value_at.
-    const size_t num_ra_queries = 10000;
-    t1 = std::chrono::high_resolution_clock::now();
-    volatile T ra_sum = 0;
-    size_t q_count = 0;
-    for (auto idx : bench_data.random_indices) {
-        if (q_count++ >= num_ra_queries) break;
-        const size_t ib  = idx / block_size;
-        const size_t off = idx % block_size;
-        ra_sum += buff::get_value_at(compressed_blocks[ib], off);
-    }
-    compiler_barrier();
-    t2 = std::chrono::high_resolution_clock::now();
-    do_not_optimize(ra_sum);
-    auto ra_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-    result.random_access_ns   = static_cast<double>(ra_ns) / num_ra_queries;
-    result.random_access_mbs  = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_ns / 1e9);
-
-    // ── Range queries ────────────────────────────────────────────────────────
-    const size_t num_range_queries = 1000;
-    for (auto range : range_sizes) {
-        if (range >= n) continue;
-
-        const auto &range_indices = bench_data.range_query_indices.at(range);
-        std::vector<T> out_buffer(range);
-        volatile T range_checksum = 0;
-
-        t1 = std::chrono::high_resolution_clock::now();
-        size_t qr = 0;
-        for (auto start_idx : range_indices) {
-            if (qr++ >= num_range_queries) break;
-
-            const size_t start_block = start_idx / block_size;
-            const size_t end_block   = (start_idx + range - 1) / block_size;
-            size_t out_pos = 0;
-
-            for (size_t ib = start_block; ib <= end_block; ++ib) {
-                const size_t bs = std::min(block_size, n - ib * block_size);
-                std::vector<T> blk(bs);
-                buff::decompress_block(compressed_blocks[ib], blk.data());
-
-                const size_t block_start = ib * block_size;
-                const size_t skip = (ib == start_block) ? (start_idx - block_start) : 0;
-                const size_t copy_end = std::min(bs, start_idx + range - block_start);
-                for (size_t k = skip; k < copy_end && out_pos < range; ++k)
-                    out_buffer[out_pos++] = blk[k];
-            }
-            range_checksum += out_buffer[0];
-            do_not_optimize(out_buffer);
-        }
-        compiler_barrier();
-        t2 = std::chrono::high_resolution_clock::now();
-        do_not_optimize(range_checksum);
-
-        auto range_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput =
-            ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_ns / 1e9);
-        result.range_query_throughputs.emplace_back(range, throughput);
-    }
-
+    // Point reads use the same 1e-9 rule against the full decode (which is
+    // itself checked against the input above), so this isolates the unpatched
+    // upstream selective-decoder bug (docs/buff-leco-native.txt). Warning only.
+    if(query_mismatches){result.validation_status="failed";
+        std::cerr << "Warning: BUFF selective decode: " << query_mismatches
+                  << " point values differ from full decode by > 1e-9; metrics retained.\n";}
+    // Range queries (range_queries.hpp): every query is checked against `decoded`
+    // with the same rule.
+    run_range_queries(result, bench_data, range_sizes, n, decoded.data(),
+        [&](size_t first, size_t length, std::vector<T> &output) {
+            buff::get_range(column, first, length, output.data());
+        });
     return result;
 }
 #endif // NEATS_ENABLE_BUFF
@@ -1282,6 +816,7 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     size_t total_compressed_bits = 0;
     std::vector<std::pair<uint8_t*, size_t>> compressed_blocks(num_blocks);
     
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto t1 = std::chrono::high_resolution_clock::now();
     for (size_t ib = 0; ib < num_blocks; ++ib) {
         const size_t bs = std::min(block_size, n - ib * block_size);
@@ -1298,8 +833,12 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
         size_t compressed_size = squash_codec_get_max_compressed_size(codec, uncompressed_size);
         auto *compressed_data = (uint8_t*)malloc(compressed_size);
         
-        squash_codec_compress_with_options(codec, &compressed_size, compressed_data,
+        const SquashStatus status = squash_codec_compress_with_options(codec, &compressed_size, compressed_data,
                                      uncompressed_size, data_bytes.data(), opts);
+        if (status != SQUASH_OK) {
+            free(compressed_data);
+            throw std::runtime_error(compressor_name + " compression failed: " + squash_status_to_string(status));
+        }
         
         compressed_blocks[ib] = {compressed_data, compressed_size};
         total_compressed_bits += compressed_size * CHAR_BIT;
@@ -1310,6 +849,9 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     
     result.compressed_bits = total_compressed_bits;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
+    for (auto& block : compressed_blocks) // untimed: release the max-size slack of each output buffer
+        if (void* p = realloc(block.first, block.second ? block.second : 1)) block.first = static_cast<uint8_t*>(p);
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression
@@ -1321,8 +863,12 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
         size_t decompressed_size = bs * sizeof(T) + 1;
         auto *decompressed_bytes = (uint8_t*)malloc(decompressed_size);
         
-        squash_codec_decompress_with_options(codec, &decompressed_size, decompressed_bytes,
+        const SquashStatus status = squash_codec_decompress_with_options(codec, &decompressed_size, decompressed_bytes,
                           compressed_blocks[ib].second, compressed_blocks[ib].first, opts);
+        if (status != SQUASH_OK || decompressed_size != bs * sizeof(T)) {
+            free(decompressed_bytes);
+            throw std::runtime_error(compressor_name + " decompression failed: " + squash_status_to_string(status));
+        }
         
         for (size_t i = 0; i < bs; ++i) {
             T value = 0;
@@ -1342,12 +888,10 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     
     result.decompression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (decompression_time_ns / 1e9);
     
-    for (size_t i = 0; i < n; ++i) {
-        if (data[i] != decompressed[i]) {
-            std::cerr << compressor_name << " decompression error at " << i << std::endl;
-            break;
-        }
-    }
+    check_roundtrip(result, data, decompressed);
+    finish_roundtrip_validation(result);
+    result.access_layout = "independent_blocks";
+    result.compression_unit_values = block_size;
     
     // Random access
     const size_t num_ra_queries = 100000;
@@ -1382,25 +926,15 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
-    // Range queries
-    const size_t num_range_queries = 1000;
-    for (auto range : range_sizes) {
-        if (range >= n) continue;
-        
-        const auto& range_indices = bench_data.range_query_indices.at(range);
-        std::vector<T> out_buffer(range);
-        volatile T range_checksum = 0;
-        
-        t1 = std::chrono::high_resolution_clock::now();
-        size_t q_count_range = 0;
-        for (auto start_idx : range_indices) {
-            if (q_count_range++ >= num_range_queries) break;
-            
+    // Range queries (range_queries.hpp). The block decode workspace is sized
+    // for the largest range and allocated once, outside the timed region.
+    size_t max_range = 0;
+    for (auto range : range_sizes) if (range < n) max_range = std::max(max_range, range);
+    std::vector<uint8_t> decompressed_bytes(max_range ? ((max_range - 1) / block_size + 2) * block_size * sizeof(T) + 1 : 0);
+    run_range_queries(result, bench_data, range_sizes, n, decompressed.data(),
+        [&](size_t start_idx, size_t range, std::vector<T> &out_buffer) {
             size_t start_block = start_idx / block_size;
             size_t end_block = (start_idx + range - 1) / block_size;
-            size_t buffer_blocks = end_block - start_block + 1;
-            
-            std::vector<uint8_t> decompressed_bytes(buffer_blocks * block_size * sizeof(T) + 1);
             size_t byte_offset = 0;
             
             for (size_t ib = start_block; ib <= end_block; ++ib) {
@@ -1421,17 +955,7 @@ BenchmarkResult benchmark_squash(const std::string &compressor_name,
                 }
                 out_buffer[i] = value;
             }
-            range_checksum += out_buffer[0];
-            do_not_optimize(out_buffer);
-        }
-        compiler_barrier();
-        t2 = std::chrono::high_resolution_clock::now();
-        do_not_optimize(range_checksum);
-        
-        auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
-        result.range_query_throughputs.emplace_back(range, throughput);
-    }
+        });
     
     // Cleanup
     for (auto &block : compressed_blocks) {
@@ -1456,7 +980,13 @@ void print_usage(const char *prog_name) {
     std::cerr << "  -o <file>      Output CSV file (default: stdout)" << std::endl;
     std::cerr << "  -c <list>      Comma-separated list of compressors (default: all)" << std::endl;
 #if HAS_SQUASH
-    std::cerr << "                 Available: neats,dac,rle_gef,u_gef_approximate,u_gef_optimal,b_gef_approximate,b_gef_optimal,b_star_gef_approximate,b_star_gef_optimal,gorilla,chimp,chimp128,tsxor,elf,camel,falcon,alp";
+    std::cerr << "                 Available: neats,dac,rle_gef,u_gef_approximate,u_gef_optimal,b_gef_approximate,b_gef_optimal,b_star_gef_approximate,b_star_gef_optimal,gorilla,chimp,chimp128,tsxor,elf,camel,alp";
+#if defined(GEF_ENABLE_PEF)
+    std::cerr << ",pef";
+#endif
+#if defined(GEF_ENABLE_FASTLANES)
+    std::cerr << ",fastlanes,fastlanes_delta";
+#endif
 #if defined(NEATS_ENABLE_LECO)
     std::cerr << ",leco";
 #endif
@@ -1465,7 +995,13 @@ void print_usage(const char *prog_name) {
 #endif
     std::cerr << ",lz4,zstd,brotli,xz,snappy" << std::endl;
 #else
-    std::cerr << "                 Available: neats,dac,rle_gef,u_gef_approximate,u_gef_optimal,b_gef_approximate,b_gef_optimal,b_star_gef_approximate,b_star_gef_optimal,gorilla,chimp,chimp128,tsxor,elf,camel,falcon,alp";
+    std::cerr << "                 Available: neats,dac,rle_gef,u_gef_approximate,u_gef_optimal,b_gef_approximate,b_gef_optimal,b_star_gef_approximate,b_star_gef_optimal,gorilla,chimp,chimp128,tsxor,elf,camel,alp";
+#if defined(GEF_ENABLE_PEF)
+    std::cerr << ",pef";
+#endif
+#if defined(GEF_ENABLE_FASTLANES)
+    std::cerr << ",fastlanes,fastlanes_delta";
+#endif
 #if defined(NEATS_ENABLE_BUFF)
     std::cerr << ",buff";
 #endif
@@ -1476,7 +1012,17 @@ void print_usage(const char *prog_name) {
 #endif
     std::cerr << ")" << std::endl;
 #endif
+    std::cerr << "                 Additional: ";
+    for (const auto& name : recent_compressor_names()) std::cerr << name << " ";
+    std::cerr << std::endl;
     std::cerr << "  -r <list>      Comma-separated list of range sizes (default: 10,100,1000,10000,100000)" << std::endl;
+    std::cerr << "  --range-queries <N>      Random range queries per size, same for every codec (default: 10000)" << std::endl;
+    std::cerr << "  --range-seed <S>         mt19937 seed of the shared range starts (default: 1234)" << std::endl;
+    std::cerr << "  --range-trials <T>       Timed repetitions; range_*_mbs reports the median (default: 1)" << std::endl;
+    std::cerr << "  --range-batch-bytes <B>  Output arena per timed batch, zeroed untimed (default: 262144)" << std::endl;
+    std::cerr << "  --no-range-verify        Skip the untimed check of every range query" << std::endl;
+    std::cerr << "  --range-trials-csv <f>   Write one row per (codec, dataset, size, trial) with decimal MB/s" << std::endl;
+    std::cerr << "                 (range_*_mbs columns of the main CSV are MiB/s, like the other *_mbs columns)" << std::endl;
     std::cerr << "  -b <size>      Block size for block-based compressors (default: 1000)" << std::endl;
     std::cerr << "                 (Note: *_gef compressors use fixed UniformedPartitioner block size = " << GEF_UNIFORM_PARTITION_SIZE << ")" << std::endl;
     std::cerr << "  -m <bpc>       Max bits per correction for NeaTS (default: 32)" << std::endl;
@@ -1500,7 +1046,13 @@ int main(int argc, char *argv[]) {
     std::vector<std::string> compressors = {"neats", "dac", "rle_gef", "u_gef_approximate", "u_gef_optimal",
                                             "b_gef_approximate", "b_gef_optimal", "b_star_gef_approximate", "b_star_gef_optimal",
                                             "gorilla", "chimp", "chimp128", "tsxor",
-                                            "elf", "camel", "falcon", "alp",
+                                            "elf", "camel", "alp",
+#if defined(GEF_ENABLE_PEF)
+                                            "pef",
+#endif
+#if defined(GEF_ENABLE_FASTLANES)
+                                            "fastlanes", "fastlanes_delta",
+#endif
 #if defined(NEATS_ENABLE_LECO)
                                             "leco",
 #endif
@@ -1512,16 +1064,28 @@ int main(int argc, char *argv[]) {
     std::vector<std::string> compressors = {"neats", "dac", "rle_gef", "u_gef_approximate", "u_gef_optimal",
                                             "b_gef_approximate", "b_gef_optimal", "b_star_gef_approximate", "b_star_gef_optimal",
                                             "gorilla", "chimp", "chimp128", "tsxor",
-                                            "elf", "camel", "falcon", "alp",
+                                            "elf", "camel", "alp",
+#if defined(GEF_ENABLE_PEF)
+                                            "pef",
+#endif
+#if defined(GEF_ENABLE_FASTLANES)
+                                            "fastlanes", "fastlanes_delta",
+#endif
 #if defined(NEATS_ENABLE_BUFF)
                                             "buff",
 #endif
                                             };
 #endif
+    const auto recent = recent_compressor_names();
+    compressors.insert(compressors.end(), recent.begin(), recent.end());
     std::vector<size_t> range_sizes = {10, 100, 1000, 10000, 100000};
     size_t block_size = 1000;
+    NativeAccessOptions native_options;
     uint8_t max_bpc = 32;
+    RangeQueryOptions range_options;
+    std::string range_trials_csv;
     std::string input_path;
+    size_t failures = 0;
     
     // Parse command line arguments
     for (int64_t i = 1; i < argc; ++i) {
@@ -1538,6 +1102,18 @@ int main(int argc, char *argv[]) {
             }
         } else if (arg == "-b" && i + 1 < argc) {
             block_size = std::stoull(argv[++i]);
+        } else if (arg == "--range-queries" && i + 1 < argc) {
+            range_options.queries = std::stoull(argv[++i]);
+        } else if (arg == "--range-seed" && i + 1 < argc) {
+            range_options.seed = std::stoull(argv[++i]);
+        } else if (arg == "--range-trials" && i + 1 < argc) {
+            range_options.trials = std::max<size_t>(1, std::stoull(argv[++i]));
+        } else if (arg == "--range-batch-bytes" && i + 1 < argc) {
+            range_options.batch_bytes = std::max<size_t>(1, std::stoull(argv[++i]));
+        } else if (arg == "--no-range-verify") {
+            range_options.verify = false;
+        } else if (arg == "--range-trials-csv" && i + 1 < argc) {
+            range_trials_csv = argv[++i];
         } else if (arg == "-m" && i + 1 < argc) {
             max_bpc = std::stoi(argv[++i]);
         } else if (arg == "-h") {
@@ -1576,6 +1152,40 @@ int main(int argc, char *argv[]) {
     
     // Print header
     bool header_printed = false;
+
+    // Optional per-trial range-query output (decimal MB/s, explicit units).
+    std::ofstream trials_out;
+    if (!range_trials_csv.empty()) {
+        trials_out.open(range_trials_csv);
+        if (!trials_out) {
+            std::cerr << "Cannot open " << range_trials_csv << std::endl;
+            return 1;
+        }
+        trials_out << "compressor,dataset,num_values,range_size,trial,queries,seed,value_bytes,"
+                   << "bytes_returned,elapsed_ns,throughput_MB_per_s,throughput_MiB_per_s,queries_per_s,"
+                   << "verified_queries,mismatched_queries,validation_status\n";
+    }
+    auto emit = [&](const BenchmarkResult &result) {
+        if (!header_printed) {
+            result.print_header(*out);
+            header_printed = true;
+        }
+        result.print(*out);
+        out->flush();
+        if (!trials_out.is_open()) return;
+        for (const auto &t : result.range_trials) {
+            const double bytes = double(t.queries) * t.range * t.value_bytes;
+            const double seconds = t.elapsed_ns / 1e9;
+            trials_out << result.compressor << "," << extract_filename(result.dataset) << ","
+                       << result.num_values << "," << t.range << "," << t.trial << "," << t.queries << ","
+                       << range_options.seed << "," << t.value_bytes << "," << std::setprecision(0) << std::fixed
+                       << bytes << "," << t.elapsed_ns << "," << std::setprecision(6)
+                       << bytes / 1e6 / seconds << "," << bytes / 1048576.0 / seconds << ","
+                       << t.queries / seconds << "," << t.verified_queries << "," << t.mismatched_queries << ","
+                       << result.validation_status << "\n";
+        }
+        trials_out.flush();
+    };
     
     // Run benchmarks
     for (const auto &filename : files) {
@@ -1584,6 +1194,7 @@ int main(int argc, char *argv[]) {
         // Prepare data ONCE to avoid reloading and reprocessing for every compressor
         BenchmarkData bench_data;
         bench_data.filename = filename;
+        bench_data.range_options = range_options;
         
         try {
             auto loaded = load_custom_dataset(filename);
@@ -1603,7 +1214,8 @@ int main(int argc, char *argv[]) {
             // Generate range queries
             for(auto range : range_sizes) {
                  if (range < n) {
-                     bench_data.range_query_indices[range] = generate_range_indices(n, range, 10000);
+                     bench_data.range_query_indices[range] =
+                         generate_range_indices(n, range, range_options.queries, range_options.seed);
                  } else {
                      bench_data.range_query_indices[range] = {};
                  }
@@ -1619,6 +1231,11 @@ int main(int argc, char *argv[]) {
         std::vector<std::string> double_data_compressors;  // gorilla, chimp, etc.
         
         for (const auto &comp : compressors) {
+            if (is_gef_f64_compressor(comp)) { double_data_compressors.push_back(comp); continue; }
+            if (recent_compressor_uses_integers(comp)) {
+                raw_data_compressors.push_back(comp);
+                continue;
+            }
 #if HAS_SQUASH
             if (comp == "lz4" || comp == "zstd" || comp == "brotli" || 
                 comp == "xz" || comp == "snappy") {
@@ -1626,6 +1243,12 @@ int main(int argc, char *argv[]) {
             } else
 #endif
             if (comp == "neats" || comp == "dac" || comp == "rle_gef"
+#if defined(GEF_ENABLE_PEF)
+                || comp == "pef"
+#endif
+#if defined(GEF_ENABLE_FASTLANES)
+                || comp == "fastlanes" || comp == "fastlanes_delta"
+#endif
 #if defined(NEATS_ENABLE_LECO)
                 || comp == "leco"
 #endif
@@ -1639,29 +1262,29 @@ int main(int argc, char *argv[]) {
             }
         }
         
-        // Phase 0: Run compressors that need raw_data (SQUASH compressors)
-#if HAS_SQUASH
+        // Phase 0: Run compressors that need exact unshifted integers.
         for (const auto &comp : raw_data_compressors) {
             std::cerr << "  Running " << comp << "..." << std::flush;
             
             BenchmarkResult result;
             
             try {
-                result = benchmark_squash<int64_t>(comp, bench_data, range_sizes, block_size);
-                
-                if (!header_printed) {
-                    result.print_header(*out);
-                    header_printed = true;
+                if (recent_compressor_uses_integers(comp)) {
+                    result = benchmark_recent_compressor(comp, bench_data, range_sizes, block_size, native_options);
                 }
-                result.print(*out);
+#if HAS_SQUASH
+                else result = benchmark_squash<int64_t>(comp, bench_data, range_sizes, block_size);
+#endif
+                
+                emit(result);
                 std::cerr << " done" << std::endl;
                 
             } catch (const std::exception &e) {
+                ++failures;
                 std::cerr << " error: " << e.what() << std::endl;
             }
         }
-#endif
-        
+
         // Convert raw_data to shifted_data and free raw_data
         if (!shifted_data_compressors.empty() || !double_data_compressors.empty()) {
             if (!bench_data.raw_data.empty()) {
@@ -1689,46 +1312,35 @@ int main(int argc, char *argv[]) {
                 } else if (comp == "dac") {
                     result = benchmark_dac<int64_t>(bench_data, range_sizes);
                 }
+#if defined(GEF_ENABLE_PEF)
+                else if (comp == "pef") {
+                    result = benchmark_pef(bench_data, range_sizes);
+                }
+#endif
+#if defined(GEF_ENABLE_FASTLANES)
+                else if (comp == "fastlanes" || comp == "fastlanes_delta") {
+                    result = benchmark_fastlanes(bench_data, range_sizes, comp == "fastlanes_delta");
+                }
+#endif
+                else if (is_gef_compressor(comp)) {
+                    result = benchmark_gef_compressor(comp, bench_data, range_sizes);
+                }
 #if defined(NEATS_ENABLE_LECO)
                 else if (comp == "leco") {
-                    result = benchmark_leco(bench_data, range_sizes, block_size);
-                } else if (comp == "rle_gef") {
-#else
-                else if (comp == "rle_gef") {
+                    result = benchmark_leco(bench_data, range_sizes);
+                }
 #endif
-                    using UP_RLE = gef::RLE_GEF<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
-                    result = benchmark_gef<UP_RLE, int64_t>("rle_gef", bench_data, range_sizes);
-                } else if (comp == "u_gef_approximate") {
-                    using UP_U = gef::U_GEF_APPROXIMATE<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
-                    result = benchmark_gef<UP_U, int64_t>("u_gef_approximate", bench_data, range_sizes);
-                } else if (comp == "u_gef_optimal") {
-                    using UP_U = gef::U_GEF<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
-                    result = benchmark_gef<UP_U, int64_t>("u_gef_optimal", bench_data, range_sizes);
-                } else if (comp == "b_gef_approximate") {
-                    using UP_B = gef::B_GEF_APPROXIMATE<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
-                    result = benchmark_gef<UP_B, int64_t>("b_gef_approximate", bench_data, range_sizes);
-                } else if (comp == "b_gef_optimal") {
-                    using UP_B = gef::B_GEF<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
-                    result = benchmark_gef<UP_B, int64_t>("b_gef_optimal", bench_data, range_sizes);
-                } else if (comp == "b_star_gef_approximate") {
-                    using UP_B_STAR = gef::B_STAR_GEF_APPROXIMATE<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
-                    result = benchmark_gef<UP_B_STAR, int64_t>("b_star_gef_approximate", bench_data, range_sizes);
-                } else if (comp == "b_star_gef_optimal") {
-                    using UP_B_STAR = gef::B_STAR_GEF<int64_t, GEF_UNIFORM_PARTITION_SIZE>;
-                    result = benchmark_gef<UP_B_STAR, int64_t>("b_star_gef_optimal", bench_data, range_sizes);
-                } else {
+                else {
+                    ++failures;
                     std::cerr << " unknown compressor, skipping" << std::endl;
                     continue;
                 }
                 
-                if (!header_printed) {
-                    result.print_header(*out);
-                    header_printed = true;
-                }
-                result.print(*out);
+                emit(result);
                 std::cerr << " done" << std::endl;
                 
             } catch (const std::exception &e) {
+                ++failures;
                 std::cerr << " error: " << e.what() << std::endl;
             }
         }
@@ -1747,7 +1359,11 @@ int main(int argc, char *argv[]) {
             BenchmarkResult result;
             
             try {
-                if (comp == "gorilla") {
+                if (is_gef_f64_compressor(comp)) {
+                    result = benchmark_gef_f64_compressor(comp, bench_data, range_sizes);
+                } else if (is_recent_compressor(comp)) {
+                    result = benchmark_recent_compressor(comp, bench_data, range_sizes, block_size, native_options);
+                } else if (comp == "gorilla") {
                     result = benchmark_bitstream_compressor<CompressorGorilla<double>, DecompressorGorilla<double>, double>(
                         "Gorilla", bench_data, range_sizes, block_size);
                 } else if (comp == "chimp") {
@@ -1762,29 +1378,24 @@ int main(int argc, char *argv[]) {
                     result = benchmark_bitstream_compressor<CompressorElf<double>, DecompressorElf<double>, double>(
                         "Elf", bench_data, range_sizes, block_size);
                 } else if (comp == "camel") {
-                    result = benchmark_bitstream_compressor<CompressorCamel<double>, DecompressorCamel<double>, double>(
-                        "Camel", bench_data, range_sizes, block_size);
-                } else if (comp == "falcon") {
-                    result = benchmark_falcon<double>(bench_data, range_sizes);
+                    result = benchmark_camel(bench_data, range_sizes, block_size);
                 } else if (comp == "alp") {
                     result = benchmark_alp(bench_data, range_sizes);
 #ifdef NEATS_ENABLE_BUFF
                 } else if (comp == "buff") {
-                    result = benchmark_buff<double>(bench_data, range_sizes, block_size);
+                    result = benchmark_buff<double>(bench_data, range_sizes);
 #endif
                 } else {
+                    ++failures;
                     std::cerr << " unknown compressor, skipping" << std::endl;
                     continue;
                 }
 
-                if (!header_printed) {
-                    result.print_header(*out);
-                    header_printed = true;
-                }
-                result.print(*out);
+                emit(result);
                 std::cerr << " done" << std::endl;
                 
             } catch (const std::exception &e) {
+                ++failures;
                 std::cerr << " error: " << e.what() << std::endl;
             }
         }
@@ -1794,5 +1405,5 @@ int main(int argc, char *argv[]) {
         file_out.close();
     }
     
-    return 0;
+    return failures ? 1 : 0;
 }

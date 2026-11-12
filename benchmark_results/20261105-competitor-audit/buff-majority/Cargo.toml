@@ -1,0 +1,10 @@
+[package]
+name="buff-majority-audit"
+version="0.1.0"
+edition="2021"
+[dependencies]
+serde="1"
+itertools="0.9"
+lazy_static="1.4"
+my-bit-vec={path="../../../lib/buff/bit-vec"}
+parity-snappy="0.1.0"

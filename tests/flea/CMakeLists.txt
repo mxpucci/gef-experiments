@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.22)
+project(GefFleaTests LANGUAGES C CXX)
+set(CMAKE_CXX_STANDARD 20)
+enable_testing()
+include(../../cmake/FLEA.cmake)
+add_executable(flea_roundtrip roundtrip.cpp)
+target_link_libraries(flea_roundtrip PRIVATE gef_flea)
+target_include_directories(flea_roundtrip PRIVATE
+    "${gef_flea_upstream_SOURCE_DIR}/algorithms/flea/include" "${gef_fftw_SOURCE_DIR}/api")
+target_compile_options(flea_roundtrip PRIVATE -fno-fast-math -ffp-contract=off)
+add_test(NAME flea_roundtrip COMMAND flea_roundtrip)

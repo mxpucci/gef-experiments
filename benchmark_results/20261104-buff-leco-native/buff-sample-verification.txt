@@ -1,0 +1,16 @@
+AP n=10000 bytes=25036 native_query_mismatches=0 precision_failures=0
+BM n=10000 bytes=30036 native_query_mismatches=0 precision_failures=0
+BP n=6782 bytes=23773 native_query_mismatches=0 precision_failures=0
+BT n=10000 bytes=46286 native_query_mismatches=0 precision_failures=0
+BW n=10000 bytes=50036 native_query_mismatches=0 precision_failures=0
+CT n=10000 bytes=13786 native_query_mismatches=0 precision_failures=0
+DP n=10000 bytes=18786 native_query_mismatches=0 precision_failures=0
+DU n=10000 bytes=13786 native_query_mismatches=0 precision_failures=0
+ECG n=10000 bytes=15036 native_query_mismatches=0 precision_failures=0
+GE n=10000 bytes=17536 native_query_mismatches=0 precision_failures=0
+IT n=10000 bytes=15036 native_query_mismatches=0 precision_failures=0
+LAT n=10000 bytes=36286 native_query_mismatches=0 precision_failures=0
+LON n=10000 bytes=30036 native_query_mismatches=0 precision_failures=0
+UK n=10000 bytes=13786 native_query_mismatches=0 precision_failures=0
+US n=10000 bytes=11286 native_query_mismatches=0 precision_failures=0
+WD n=10000 bytes=21286 native_query_mismatches=0 precision_failures=0

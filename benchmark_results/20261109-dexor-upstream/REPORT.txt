@@ -1,0 +1,43 @@
+DeXOR: C++ port aligned with upstream (tolerance-based acceptance) — 2026-11-09
+
+Reference: SuDIS-ZJU/DeXOR 06128b3df57cc1e8c53681231e235e22eb508c8d, unmodified,
+OpenJDK 21. C++: Apple clang (arm64) and GCC 13.4 -O3 -march=native (x86-64),
+-fno-fast-math -ffp-contract=off; identical results on both.
+
+Sampled blocks (299 x 1,000 values = 298,746 values, all 16 datasets; first 10
+blocks + 10 evenly spaced blocks per file; values raw/10^d, IEEE division):
+- Payload (after the 8-byte count header) byte-identical to stock Java on
+  299/299 blocks; decoded values identical to the stock Java decoder.
+- 56,976 values (19%) decode inexactly, max relative error 2.2e-16.
+  (sample_blocks_vs_java.txt)
+
+Synthetic vectors (harness/DeXOREdge.java, 3,009 vectors incl. high-precision
+values exercising getEnd_HP/Double.toString, large integers, random bits,
+specials): byte- and decoder-identical on all 1,771 vectors where Java does not
+throw. Java throws ArrayIndexOutOfBounds on 1,238; the port encodes those
+values with DeXOR's exception encoding instead. ASan/UBSan clean.
+
+Full datasets (harness/dexor_full.cpp, server; no timing): full_upstream.csv.
+Bits/value include the 8-byte count per 1,000-value block.
+13/16 datasets decode within 2.3e-16. Values above 1e-9 relative error:
+  LAT 135,738 / 24.9M (max 0.32)   AP 5,648 / 137.7M (max 0.0101)
+  LON 3,130 / 24.9M (max 0.01)
+Causes are upstream behaviours, kept by policy (they do not prevent meaningful
+aggregate metrics) and reported as validation warnings:
+  1. decoder applies the prefix's sign to |beta| (DoubleDeXORDecoder.java:109,
+     DoubleDeXOREncoder.java:120): values just below a carry of the shared
+     prefix are reconstructed on the wrong side (39999.997 -> 40000.003);
+  2. the tail search's 1e-6 integer test (39999.997 -> 40000), and
+  3. encoder/decoder previous-value drift after an inexact value.
+A one-condition sign guard was evaluated: LON 0, LAT 3,037 (max 0.025) values
+above 1e-9, +0.02% size, no change on sampled blocks. Not shipped (policy).
+The previous exact port had 0 mismatches but 11.6-36.2 bits/value
+(new: 6.6-30.7). Per-dataset sizes: table.csv.
+
+Deviations from upstream (only where upstream crashes or emits undecodable
+output): power-of-ten index out of range -> exception encoding; q outside the
+5-bit field [-20,11] -> exception encoding; decoder always resets the
+contraction counter on overflow (encoder does; bitstream unchanged); 8-byte
+count framing and malformed-stream checks.
+
+Harness paths reflect the audit workspace; datasets and jars are not included.

@@ -40,6 +40,9 @@ LATEX_MAPPING = {
 
 # Fallback mappings
 NAME_MAPPING = {
+    "fauna": "Fauna", "macaque": "MacaqueV", "dexor": "DeXOR",
+    "pcodec": "Pcodec", "pcodec_i64": "Pcodec (int64)",
+    "elfstar": "Elf*", "selfstar": "SElf*", "flea": "FLEA",
     "neats": "NeaTS", "dac": "DAC", "gorilla": "Gorilla",
     "chimp": "Chimp", "chimp128": "Chimp128", "tsxor": "TSXor",
     "elf": "ELF", "camel": "Camel", "falcon": "Falcon",

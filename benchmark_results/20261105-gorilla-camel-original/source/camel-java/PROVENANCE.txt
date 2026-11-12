@@ -1,0 +1,3 @@
+https://github.com/yoyo185644/camel
+c4b55c2226163b0bfb6c330aa78b7c0a97d872b3
+Only source change: DECIMAL_MAX_COUNT 3 -> 4 (README configuration).

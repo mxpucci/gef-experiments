@@ -65,6 +65,14 @@ GEF_ORDER = [
 ]
 
 STYLES = {
+    "Fauna": {"m": "P", "c": "#006d2c", "label": "Fauna"},
+    "MacaqueV": {"m": "v", "c": "#31a354", "label": "MacaqueV"},
+    "DeXOR": {"m": "D", "c": "#756bb1", "label": "DeXOR"},
+    "Pcodec": {"m": "s", "c": "#3182bd", "label": "Pcodec"},
+    "Pcodec (int64)": {"m": "^", "c": "#08519c", "label": "Pcodec (int64)"},
+    "Elf*": {"m": "P", "c": "#a63603", "label": "Elf*"},
+    "SElf*": {"m": "X", "c": "#e6550d", "label": "SElf*"},
+    "FLEA": {"m": "h", "c": "#dd3497", "label": "FLEA"},
     # --- COLUMN 1 & 2 Candidates (Standard) ---
     "ALP":      {"m": "D", "c": "#F8BBD0", "label": "ALP"},
     "Brotli":   {"m": "h", "c": "#3B7C26", "label": "Brotli"},
@@ -101,6 +109,9 @@ STYLES = {
 
 # Mapping raw CSV names to our Style Keys
 NAME_MAPPING = {
+    "fauna": "Fauna", "macaque": "MacaqueV", "dexor": "DeXOR",
+    "pcodec": "Pcodec", "pcodec_i64": "Pcodec (int64)",
+    "elfstar": "Elf*", "selfstar": "SElf*", "flea": "FLEA",
     "neats": "NeaTS",
     "dac": "DAC",
     "rle_gef": r"RLE-GEF",

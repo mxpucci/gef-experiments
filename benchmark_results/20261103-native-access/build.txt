@@ -1,0 +1,26 @@
+[  0%] Built target buff_ffi_build
+[  0%] Built target neats_alp
+[  0%] Built target gef_pcodec_build
+[  0%] Building official Fauna/Macaque Rust implementation
+[  5%] Built target tlx
+[  5%] Built target recent_warning_policy
+[  5%] Built target dexor_roundtrip
+[  5%] Built target elfstar_roundtrip
+[  5%] Built target selfstar_roundtrip
+[  6%] Built target pcodec_roundtrip
+[  6%] Built target pasta_memory_monitor
+   Compiling gef-fauna-ffi v0.1.0 (/home/testPF/gef-experiments/build/fauna-ffi)
+[ 99%] Built target fftw3
+[ 99%] Built target gef_flea
+[ 99%] Built target flea_roundtrip
+    Finished `release` profile [optimized] target(s) in 0.84s
+[ 99%] Built target gef_fauna_build
+[ 99%] Linking CXX executable fauna_roundtrip
+[ 99%] Linking CXX executable native_access_test
+[100%] Built target gef_recent_compressors
+[100%] Linking CXX executable recent_harness_test
+[100%] Linking CXX executable LosslessBenchmark
+[100%] Built target fauna_roundtrip
+[100%] Built target native_access_test
+[100%] Built target recent_harness_test
+[100%] Built target LosslessBenchmark

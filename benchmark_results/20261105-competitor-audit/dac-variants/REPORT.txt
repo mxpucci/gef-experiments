@@ -1,0 +1,31 @@
+DAC follow-up: upstream configuration distinction
+
+Production uses sdsl::dac_vector_dp<> = dac_vector_dp<bit_vector>, whole column,
+max_levels=64. SDSL's upstream documentation recommends bit_vector for speed
+and rrr_vector<> for maximum compression:
+https://github.com/simongog/sdsl-lite/blob/master/include/sdsl/dac_vector.hpp
+
+The prior 32-sample audit verified exact integer reconstruction, exact serialized
+size accounting, reopening, and identical sizes with strict/fast FP flags.
+There is no floating-point value conversion in the DAC adapter.
+
+New diagnostic, same 32 head/tail sample vectors, GCC 14 -O3 -fno-fast-math:
+Compare original plain bitmap and original RRR bitmap specializations.
+Every reconstructed integer from both specializations equals the input.
+RRR reduces serialized size by 7.2817% on average across samples, range
+2.7824%--22.4390%. These are relative size reductions, not percentage-point
+changes to compression ratios. No throughput measurements in this diagnostic.
+Some short datasets have identical head/tail samples; not a full-corpus estimate.
+Production benchmark and plot have NOT been changed.
+
+Additional diagnostic subtracts sample minimum before plain DAC, counting an
+8-byte restoration base; average reduction 5.3884%, with substantial variation.
+This is an additional transformation, not the current upstream-default baseline.
+The existing benchmark already shifts negative columns but retains positive
+magnitudes (+1). Head/tail samples use sample-local shifts, so do not extrapolate
+these rebasing numbers to full datasets.
+
+Conclusion: no demonstrated byte-count inflation or correctness defect, but the
+current point is a speed-oriented DAC configuration, not the most space-oriented
+upstream option. Full-dataset size and access timings would be needed to add a
+separately labelled DAC-RRR point to the comparison.

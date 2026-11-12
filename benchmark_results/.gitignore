@@ -1,0 +1,11 @@
+# Local raw logs and build snapshots; aggregate results and audit evidence are versioned.
+**/cases/
+**/dependency-manifest/
+**/CMakeCache.txt
+*.tar.gz
+*.zip
+*.pid
+**/watch.py
+**/monitor.py
+**/watcher.log
+**/watch-status.json

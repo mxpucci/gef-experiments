@@ -1,0 +1,5 @@
+include_guard(GLOBAL)
+add_library(gef_elfstar INTERFACE)
+target_include_directories(gef_elfstar INTERFACE "${CMAKE_CURRENT_LIST_DIR}/../benchmark")
+target_compile_features(gef_elfstar INTERFACE cxx_std_17)
+target_compile_options(gef_elfstar INTERFACE -fno-fast-math -ffp-contract=off)

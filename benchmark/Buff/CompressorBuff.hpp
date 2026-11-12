@@ -35,14 +35,18 @@ inline void decompress_block(const CompressedBlock &blk, double *output) {
 }
 
 // O(1) single-value extraction: reads ~ceil(fixed_len/8) bytes from the
-// block instead of decoding it whole.  Use for random access; for sequential
-// scans / range queries decompress_block is faster.
+// block instead of decoding it whole, through the original selective decoder.
 inline double get_value_at(const CompressedBlock &blk, size_t idx) {
     double out;
     int32_t ret = buff_extract_f64(blk.data.data(), blk.data.size(), idx, &out);
     if (ret != 0)
         throw std::runtime_error("BUFF: extract failed");
     return out;
+}
+
+inline void get_range(const CompressedBlock &blk, size_t first, size_t count, double *output) {
+    if (buff_extract_range_f64(blk.data.data(), blk.data.size(), first, count, output) != 0)
+        throw std::runtime_error("BUFF: selective range decode failed");
 }
 
 } // namespace buff

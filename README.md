@@ -9,7 +9,8 @@ The core implementation of Generalized Elias Fano is available here:
 
 *   **CMake** (3.22 or higher)
 *   **C++ Compiler** with C++20/23 support (GCC 11+, Clang 14+)
-*   **Python 3** (for generating plots and tables)
+*   **Rust/Cargo 1.87+** (Pcodec, Fauna/Macaque; dependencies are locked)
+*   **Python 3** (for smoke tests, plots and tables)
 *   **Squash** (optional, for comparing against a wide range of compressors)
 
 ## 📥 Cloning the Repository
@@ -41,6 +42,110 @@ make -j
 This will produce the benchmark executables, primarily:
 *   `LosslessBenchmark`: Minimal benchmark binary.
 *   `LosslessBenchmarkFull`: Full benchmark suite including comparisons with other compressors (requires Squash).
+
+## Competitors
+
+We use each compressor's official implementation whenever one exists in C, C++, Rust or Go, imported at a pinned revision. Only when the authors published Java alone do we port their code to C++. The only differences from upstream are those needed to run the code here: build and binding glue, 64-bit inputs, and fixes for upstream bugs that would crash, produce undecodable output, or distort compressed size or throughput. Upstream bugs whose only effect is that some decoded values are wrong are left unpatched. The harness reports them as validation warnings (see *Validation* below).
+
+| CLI name | Implementation | Access layout |
+| --- | --- | --- |
+| `alp` | Official C++ (cwida/ALP) | Native 1,024-value vectors |
+| `buff` | Official Rust (Tranway1/buff), plain variant | Native, whole column |
+| `camel` | C++ translation of the official Java (yoyo185644/camel) | 1,000-value blocks |
+| `chimp`, `chimp128` | C++ implementations from the NeaTS authors' benchmark (and-gue/NeaTS) | 1,000-value blocks |
+| `dac` | sdsl-lite `dac_vector_dp` | Native |
+| `dexor` | C++ port of the official Java | 1,000-value blocks |
+| `elf` | C++ port of the official Java (Spatio-Temporal-Lab/elf) | 1,000-value blocks |
+| `elfstar`, `selfstar` | C++ ports of the official Java | 1,000-value blocks |
+| `fauna`, `macaque` | Official Rust (PlatypusMacaque) | 1,000-value blocks |
+| `flea` | Official C++ | 1,000-value blocks |
+| `gorilla` | Facebook Beringei codec, extracted verbatim | 1,000-value blocks |
+| `leco` | Official C++ LeCo-fix (Learn-to-Compress) | Native partitions |
+| `neats` | Official C++ (and-gue/NeaTS) | Native |
+| `pcodec`, `pcodec_i64` | Official `pco_c` C bindings, v1.0.2 | 1,000-value blocks |
+| `tsxor` | C++ implementation from the NeaTS authors' benchmark (and-gue/NeaTS) | 1,000-value blocks |
+| `lz4`, `zstd`, `snappy`, `xz`, `brotli` | Squash 0.7 | 1,000-value blocks |
+
+Codecs without native random access are measured on independent 1,000-value blocks (`-b`). A point query decodes the block that holds the value; a range query decodes the blocks it covers. All block directories, headers and metadata count toward compressed size.
+
+### Deviations from upstream
+
+- **ALP:** upstream kernels handle only complete 1,024-value vectors. As in the ALP authors' DuckDB integration, the last partial vector is padded with its last value, and only the real values are encoded and stored. The codec is compiled without fast-math, because fast-math folds away ALP's rounding step.
+- **BUFF:** the authors' plain scalar code (Tranway1/buff @ d6550b2), extracted verbatim, one column per dataset; the BUFF-major variant is not used, because its selective decoder is unimplemented upstream. Known upstream encoder bugs do not trigger on our datasets. A bug in the selective decoder's trailing bits makes some point/range results wrong on 14 of 16 datasets without affecting size or throughput, so it is left unpatched and reported as a warning. BUFF stores values to the dataset's declared decimal precision.
+- **Camel:** the authors published only Java, so we use a statement-by-statement C++ translation. With the authors' 4-decimal setting its output is byte-identical to theirs on all 16 datasets. Upstream's format stores at most 4 decimals; for datasets with more, the decimal-count field is widened and the remainder is encoded with the paper's own rule (Algorithm 2). Upstream's 16-bit integer-difference field is kept, so one LAT value decodes incorrectly, exactly as in upstream, and is reported as a warning.
+- **DeXOR:** upstream is Java-only, so we use a C++ port that is byte-identical to the official code (SuDIS-ZJU/DeXOR@06128b3) on sampled blocks from all 16 datasets. That includes upstream's tolerance-based acceptance, so some values decode inexactly. On LAT, LON and AP, upstream's own decoding errors exceed 1e-9 and are reported as validation warnings. The only deviations cover inputs on which upstream crashes or writes a stream it cannot decode.
+- **Elf\* / SElf\*:** C++ ports of the official Java (SElfStar@457ceb0); the Elf* output is byte-identical to Java on sampled blocks. The authors' only C++ Elf* (Serf/Crush) implements the paper's no-Huffman variant, so we do not use it. Our SElf* adds per-block restart checkpoints so that blocks decode independently. These are counted in compressed size.
+- **Fauna / Macaque:** upstream supports float32 only. We build the authors' code with its `Value` type widened to f64 by a small patch applied at build time: 64-bit bit casts, Beringei's 64-bit Gorilla field layout, and value-size constants. The algorithms are unchanged. Both run on independent 1,000-value blocks; for Fauna, each block is one fitting batch. MacaqueV is bit-exact. Fauna's Swing models are evaluated in f64, so some values decode with rounding error: at most 1e-12 on 15 datasets, while on IT 589 of 477M values exceed 1e-9 and are reported as validation warnings.
+- **Falcon:** excluded, because its upstream repository is no longer available.
+- **Gorilla:** the value codec is taken verbatim from Facebook's Beringei, the production implementation from the Gorilla authors' team. Only the containers and bit casts are adapted to compile without folly.
+- **LeCo:** the authors' unmodified LeCo-fix codec (`Leco_int<uint64_t>`, @28bf8bf). Partition size is chosen by their released 1% sampling search (`search_hyper.h`, candidates 200 to 10,000), run once per dataset. The changes are the 64-bit adaptation needed to run it, and reseeding `rand()` before each search to reproduce upstream's one-dataset-per-process runs. Point reads use LeCo's per-element access, and the search time counts toward compression time.
+- **Pcodec:** the official `pco_c` bindings from pcodec v1.0.2, built unmodified as a static library at the default level (8). Each block is a complete standalone `.pco` file.
+- **Kangaroo, EAS:** not included; no implementation is available (see [docs/kangaroo.md](docs/kangaroo.md), [docs/eas.md](docs/eas.md)).
+
+### Validation and floating-point input
+
+Datasets store scaled integers. Codecs that take doubles receive `value / 10^decimals`, computed in a translation unit compiled with strict IEEE arithmetic, so that every double is the correctly rounded decimal. Competitor code is compiled without fast-math. After each run, decoded values are compared with the input: a value counts as a mismatch only if it differs by more than 1e-9. A mismatch logs a warning, and the metrics are still reported. `validation_status` and `roundtrip_mismatches` hold the result, and `bitwise_mismatches` gives the bit-level count for information.
+
+### Building the full suite on Linux
+
+`LosslessBenchmarkFull` adds the Squash codecs (LZ4, Zstd, Snappy, XZ, Brotli); LeCo needs GMP, Eigen and Boost. If these dependencies live outside `/usr/local`, pass their locations explicitly:
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH=$DEPS -DNEATS_WITH_SQUASH=ON -DNEATS_WITH_LECO=ON \
+  -DSQUASH_INCLUDE_DIR=$SQUASH/include/squash-0.7 \
+  -DSQUASH_SHARED_LIB=$SQUASH/lib64/libsquash0.7.so \
+  "-DNEATS_LECO_EXTRA_INCLUDES=$DEPS/include;$DEPS/include/eigen3"
+cmake --build build --target LosslessBenchmark LosslessBenchmarkFull -j
+```
+
+At run time, set `SQUASH_PLUGINS` to Squash's plugin directory. `scripts/build_remote.sh` builds the minimal configuration (no Squash, no LeCo) with a user-owned GCC 13.4 and Rust 1.87 toolchain.
+
+## Integer-sequence competitors, GEF on doubles and memory
+
+| CLI name | Implementation | Access |
+| --- | --- | --- |
+| `pef` | Partitioned Elias-Fano, authors' ds2i (`lib/ds2i` @ 2cf8237), default parameters, over prefix sums of the shifted values | Native point access |
+| `fastpfor`, `fastpfor_delta` | lemire/FastPFor @ ae4e62d, 64-bit `CompositeCodec<FastPFor<4>, VariableByte>`, unmodified (FetchContent) | Independent 1,000-value blocks |
+| `fastlanes`, `fastlanes_delta` | cwida/FastLanes @ f0edc10 generated kernels (FFOR; transposed delta), `-DGEF_FASTLANES_ROOT` | 1,024-value vectors |
+| `btrblocks` | maxi-k/btrblocks @ c950c3c, default configuration, one DOUBLE column chunk per block, `-DGEF_BTRBLOCKS_ROOT` | Independent 1,000-value blocks |
+| `rle_gef_f64`, `b_star_gef_approximate_f64` | GEF floating-point forks (`gef/gef_fp.hpp`) | Native point access |
+
+Deviations from upstream and adaptations:
+
+- **PEF.** EF needs a monotone sequence, so values (shifted to be non-negative)
+  are encoded as prefix sums and a value is the difference of two consecutive
+  ones. ds2i truncates to 32 bits in two places (`auto ub = 0` in the
+  single-partition path, `typedef uint32_t posting_t` in `optimal_partition.hpp`),
+  which corrupts universes above 2^32. CMake writes patched copies of the two
+  headers into the build tree and fails if a pattern is missing; the submodule is
+  untouched. Disable with `-DGEF_WITH_PEF=OFF`.
+- **FastPFor.** The library has no single-value access, so it runs on independent
+  1,000-value blocks. `fastpfor` encodes values minus the block minimum;
+  `fastpfor_delta` encodes zigzagged consecutive differences after the block's
+  first value. TurboPFor was not integrated: its direct access is 32-bit only.
+- **FastLanes.** The public FastLanes API is a file format with no single-value
+  access; these entries call the library's generated kernels on its native
+  1,024-value vectors (FFOR with per-vector base and bit width; transposed delta
+  decoded with `unffor`, `rsum`, `untranspose_i`). Point access decodes the
+  vector holding the value. This is an adapter around kernels, not an
+  out-of-the-box API, and the paper does not report it.
+- **BtrBlocks.** INTEGER columns are 32-bit only, so values go in as a DOUBLE
+  column, one chunk per 1,000-value block.
+- **GEF on doubles.** `rle_gef_f64` and `b_star_gef_approximate_f64` take the
+  double input and return doubles from decompression, point access and range
+  queries, so every metric includes the double/integer conversions. Each decoded
+  double is checked bit for bit against the input.
+
+**Memory (`ram_bytes`).** `tools/heapcount` is an `LD_PRELOAD` counter of live
+malloc-family bytes. `ram_bytes` is the heap a codec holds after compression,
+with harness-owned buffers released outside the timed region first. Without the
+preload the column is 0 and other metrics are unaffected:
+
+```sh
+gcc -O2 -shared -fPIC -o build/libheapcount.so tools/heapcount/heapcount.c
+LD_PRELOAD=$PWD/build/libheapcount.so ./build/LosslessBenchmark -c pef,fastpfor_delta data.bin
+```
 
 ## 🚀 Running Benchmarks
 
@@ -122,7 +227,7 @@ The benchmark expects binary files (`.bin`) containing 64-bit integers. Two form
 **1. Standard Format (with Decimals parameter):**
 *   **Header (16 bytes):**
     *   `uint64_t` : Number of values ($N$)
-    *   `uint64_t` : Decimals parameter (used by some float compressors like Camel/Falcon)
+    *   `uint64_t` : Decimals parameter (used to reconstruct the decimal values passed to floating-point compressors)
 *   **Body:**
     *   $N \times$ `int64_t` : The data values
 

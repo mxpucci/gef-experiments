@@ -1,0 +1,98 @@
+{
+  "AP.bin": {
+    "total_n": 137721453,
+    "decimals": 5,
+    "sample_n": 10000,
+    "div_vs_mul_differences": 5630
+  },
+  "BM.bin": {
+    "total_n": 17964,
+    "decimals": 5,
+    "sample_n": 10000,
+    "div_vs_mul_differences": 5587
+  },
+  "BP.bin": {
+    "total_n": 6782,
+    "decimals": 4,
+    "sample_n": 6782,
+    "div_vs_mul_differences": 1854
+  },
+  "BT.bin": {
+    "total_n": 129669,
+    "decimals": 9,
+    "sample_n": 10000,
+    "div_vs_mul_differences": 3893
+  },
+  "BW.bin": {
+    "total_n": 129669,
+    "decimals": 7,
+    "sample_n": 10000,
+    "div_vs_mul_differences": 3068
+  },
+  "CT.bin": {
+    "total_n": 2826654,
+    "decimals": 1,
+    "sample_n": 10000,
+    "div_vs_mul_differences": 3427
+  },
+  "DP.bin": {
+    "total_n": 5413914,
+    "decimals": 3,
+    "sample_n": 10000,
+    "div_vs_mul_differences": 1509
+  },
+  "DU.bin": {
+    "total_n": 334880,
+    "decimals": 3,
+    "sample_n": 10000,
+    "div_vs_mul_differences": 953
+  },
+  "ECG.bin": {
+    "total_n": 225750000,
+    "decimals": 3,
+    "sample_n": 10000,
+    "div_vs_mul_differences": 631
+  },
+  "GE.bin": {
+    "total_n": 43565657,
+    "decimals": 3,
+    "sample_n": 10000,
+    "div_vs_mul_differences": 1976
+  },
+  "IT.bin": {
+    "total_n": 477050760,
+    "decimals": 2,
+    "sample_n": 10000,
+    "div_vs_mul_differences": 1293
+  },
+  "LAT.bin": {
+    "total_n": 24876978,
+    "decimals": 4,
+    "sample_n": 10000,
+    "div_vs_mul_differences": 2730
+  },
+  "LON.bin": {
+    "total_n": 24876978,
+    "decimals": 4,
+    "sample_n": 10000,
+    "div_vs_mul_differences": 3125
+  },
+  "UK.bin": {
+    "total_n": 59305325,
+    "decimals": 1,
+    "sample_n": 10000,
+    "div_vs_mul_differences": 4062
+  },
+  "US.bin": {
+    "total_n": 282076178,
+    "decimals": 2,
+    "sample_n": 10000,
+    "div_vs_mul_differences": 1812
+  },
+  "WD.bin": {
+    "total_n": 198898762,
+    "decimals": 2,
+    "sample_n": 10000,
+    "div_vs_mul_differences": 1338
+  }
+}

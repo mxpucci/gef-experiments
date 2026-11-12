@@ -99,13 +99,32 @@ add_library(neats_alp STATIC
     lib/ALP/src/fastlanes_unffor.cpp
 )
 target_include_directories(neats_alp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/ALP/include)
-target_compile_options(neats_alp PUBLIC -fPIC)
+target_compile_options(neats_alp PUBLIC -fPIC PRIVATE -fno-fast-math -ffp-contract=off -fno-lto -fwrapv)
+set_property(TARGET neats_alp PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+# Upstream candidate evaluation multiplies signed integers beyond their range.
+# Define wrapping arithmetic without modifying the pinned codec source.
+set_source_files_properties(benchmark/alp_benchmark.cpp PROPERTIES
+    COMPILE_OPTIONS "-fno-fast-math;-ffp-contract=off;-fno-lto;-fwrapv")
+
+# Correct two vector-type typos in the pinned ALP header in the build tree.
+# The load/store intrinsics copy index bits unchanged; matching their vector
+# types makes the native AVX-512 path compile with GCC as well as Clang.
+set(NEATS_ALP_COMPAT_INCLUDE "${CMAKE_CURRENT_BINARY_DIR}/alp-compat")
+file(MAKE_DIRECTORY "${NEATS_ALP_COMPAT_INCLUDE}/alp")
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/lib/ALP/include/" DESTINATION "${NEATS_ALP_COMPAT_INCLUDE}")
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/lib/ALP/include/alp/encoder.hpp" NEATS_ALP_ENCODER)
+string(REPLACE "__m512i index        = _mm512_loadu_pd" "__m512d index        = _mm512_loadu_pd"
+    NEATS_ALP_ENCODER "${NEATS_ALP_ENCODER}")
+string(REPLACE "__m512i  index        = _mm512_loadu_si512" "__m512  index        = _mm512_loadu_ps"
+    NEATS_ALP_ENCODER "${NEATS_ALP_ENCODER}")
+file(WRITE "${NEATS_ALP_COMPAT_INCLUDE}/alp/encoder.hpp" "${NEATS_ALP_ENCODER}")
+target_include_directories(neats_alp BEFORE PUBLIC "${NEATS_ALP_COMPAT_INCLUDE}")
 
 # --- ALP benchmark TU (optional clang++ hybrid build) ---
 set(NEATS_ALP_BENCH_OBJ "${CMAKE_CURRENT_BINARY_DIR}/alp_benchmark_clang.o")
 set(NEATS_ALP_BENCH_SRC "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/alp_benchmark.cpp")
 
-# --- BUFF compressor (Rust FFI, no external Rust dependencies) ---
+# --- BUFF compressor (authors' Rust method bodies through a thin FFI) ---
 # The Rust crate in lib/buff-ffi is compiled with `cargo build --release` and linked
 # as a static library.  If cargo is not found the compressor is silently omitted.
 option(NEATS_WITH_BUFF "Build with BUFF compressor (requires Rust/cargo)" ON)
@@ -126,7 +145,9 @@ if(NEATS_WITH_BUFF)
                     "${CARGO_EXECUTABLE}" build --release
                         --manifest-path "${BUFF_FFI_SRC_DIR}/Cargo.toml"
             DEPENDS "${BUFF_FFI_SRC_DIR}/Cargo.toml"
+                    "${BUFF_FFI_SRC_DIR}/Cargo.lock"
                     "${BUFF_FFI_SRC_DIR}/src/lib.rs"
+                    "${BUFF_FFI_SRC_DIR}/src/upstream.rs"
             COMMENT "Building BUFF FFI Rust library"
             VERBATIM
         )
@@ -191,14 +212,17 @@ if(NEATS_ALP_HYBRID_CLANG)
                     -c "${NEATS_ALP_BENCH_SRC}"
                     -o "${NEATS_ALP_BENCH_OBJ}"
                     "-I${CMAKE_CURRENT_SOURCE_DIR}/benchmark"
+                    "-I${NEATS_ALP_COMPAT_INCLUDE}"
                     "-I${CMAKE_CURRENT_SOURCE_DIR}/lib/ALP/include"
                     ${NEATS_ALP_ARCH_FLAGS_LIST}
                     ${NEATS_ALP_COMMON_OPT_FLAGS_LIST}
                     -fno-openmp
+                    -fno-fast-math -ffp-contract=off -fno-lto -fwrapv
                     -std=gnu++20
                     -fPIC
                     ${NEATS_ALP_STDLIB_FLAG}
                 DEPENDS "${NEATS_ALP_BENCH_SRC}" "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/benchmark_common.hpp"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/range_queries.hpp"
                 VERBATIM
             )
             add_custom_target(neats_alp_bench_obj DEPENDS "${NEATS_ALP_BENCH_OBJ}")
@@ -251,6 +275,8 @@ if(NEATS_WITH_LECO)
                 -std=gnu++17
                 -fPIC
             DEPENDS "${NEATS_LECO_BENCH_SRC}" "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/benchmark_common.hpp"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/range_queries.hpp"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/LeCo/NativeTuning.hpp"
             VERBATIM
         )
         add_custom_target(neats_leco_bench_obj DEPENDS "${NEATS_LECO_BENCH_OBJ}")
@@ -427,4 +453,125 @@ if(NEATS_WITH_SQUASH)
         endif()
 
     endif()
+endif()
+
+# Camel: native C++ translation of the authors' Java codec; like the Java it
+# relies on exact IEEE double arithmetic, so it must not inherit fast-math.
+set_source_files_properties(benchmark/camel_benchmark.cpp PROPERTIES
+    COMPILE_OPTIONS "-fno-fast-math;-ffp-contract=off;-fno-lto")
+foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
+    if(TARGET ${bench_target})
+        target_sources(${bench_target} PRIVATE benchmark/camel_benchmark.cpp)
+    endif()
+endforeach()
+
+# Partitioned Elias-Fano: the authors' ds2i (lib/ds2i, header-only use of
+# partitioned_sequence) with its succinct submodule. Needs Boost headers only.
+option(GEF_WITH_PEF "Benchmark Partitioned Elias-Fano (ot/ds2i)" ON)
+if(GEF_WITH_PEF AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/ds2i/partitioned_sequence.hpp")
+    find_package(Boost QUIET)
+    if(Boost_FOUND)
+        # ds2i's CMake generates this from succinct_config.hpp.in; same defaults,
+        # with the popcount instruction enabled (available on every target CPU).
+        set(GEF_PEF_GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/ds2i-gen")
+        file(WRITE "${GEF_PEF_GEN_DIR}/succinct_config.hpp"
+            "#pragma once\n#define SUCCINCT_USE_LIBCXX 0\n#define SUCCINCT_USE_INTRINSICS 1\n#define SUCCINCT_USE_POPCNT 1\n")
+        # Two upstream 32-bit truncations break large-universe sequences (our prefix
+        # sums exceed 2^32): the single-partition path declares its upper bound as
+        # `auto ub = 0` (int), and the partitioner's cost model uses uint32_t
+        # values. Patched copies are generated here; the submodule is untouched.
+        foreach(pef_patch
+                "partitioned_sequence.hpp|auto ub = 0|uint64_t ub = 0"
+                "optimal_partition.hpp|typedef uint32_t posting_t|typedef uint64_t posting_t")
+            string(REPLACE "|" ";" pef_patch "${pef_patch}")
+            list(GET pef_patch 0 pef_file)
+            list(GET pef_patch 1 pef_from)
+            list(GET pef_patch 2 pef_to)
+            file(READ "${CMAKE_CURRENT_SOURCE_DIR}/lib/ds2i/${pef_file}" pef_text)
+            string(FIND "${pef_text}" "${pef_from}" pef_pos)
+            if(pef_pos EQUAL -1)
+                message(FATAL_ERROR "PEF patch target not found in ${pef_file}: ${pef_from}")
+            endif()
+            string(REPLACE "${pef_from}" "${pef_to}" pef_text "${pef_text}")
+            file(WRITE "${GEF_PEF_GEN_DIR}/${pef_file}" "${pef_text}")
+        endforeach()
+        set_source_files_properties(benchmark/pef_benchmark.cpp PROPERTIES
+            INCLUDE_DIRECTORIES "${GEF_PEF_GEN_DIR};${CMAKE_CURRENT_SOURCE_DIR}/lib/ds2i;${Boost_INCLUDE_DIRS}")
+        foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
+            if(TARGET ${bench_target})
+                target_sources(${bench_target} PRIVATE benchmark/pef_benchmark.cpp)
+                target_compile_definitions(${bench_target} PRIVATE GEF_ENABLE_PEF=1)
+            endif()
+        endforeach()
+        message(STATUS "PEF (ds2i) enabled; Boost headers: ${Boost_INCLUDE_DIRS}")
+    else()
+        message(STATUS "PEF (ds2i) disabled: Boost headers not found")
+    endif()
+endif()
+
+# GEF keeps the `gef` target's flags (including -ffast-math) in its own
+# translation unit. Competitor codecs compiled in lossless_benchmark.cpp
+# (Elf, Chimp, Chimp128, TSXor, Gorilla, NeaTS, DAC, BUFF/Squash adapters) use
+# strict IEEE arithmetic: e.g. Elf's decimal reconstruction must not become
+# reciprocal multiplication or be contracted into FMAs.
+set_source_files_properties(benchmark/lossless_benchmark.cpp PROPERTIES
+    COMPILE_OPTIONS "-fno-fast-math;-ffp-contract=off;-fno-lto")
+foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
+    if(TARGET ${bench_target})
+        target_sources(${bench_target} PRIVATE benchmark/gef_benchmark.cpp)
+    endif()
+endforeach()
+
+# New compressors use strict IEEE arithmetic independently of GEF's fast-math flags.
+include(cmake/RecentCompressors.cmake)
+foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
+    if(TARGET ${bench_target})
+        target_link_libraries(${bench_target} PRIVATE gef_recent_compressors)
+    endif()
+endforeach()
+
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(gorilla_adapter_test tests/gorilla_adapter.cpp)
+    target_compile_features(gorilla_adapter_test PRIVATE cxx_std_20)
+    target_compile_options(gorilla_adapter_test PRIVATE -UNDEBUG)
+    add_test(NAME gorilla_adapter COMMAND gorilla_adapter_test)
+    add_executable(roundtrip_policy_test tests/roundtrip_policy.cpp)
+    target_compile_options(roundtrip_policy_test PRIVATE -UNDEBUG -fno-fast-math -ffp-contract=off)
+    add_test(NAME roundtrip_policy COMMAND roundtrip_policy_test)
+    add_executable(range_queries_test tests/range_queries.cpp)
+    target_compile_options(range_queries_test PRIVATE -UNDEBUG)
+    add_test(NAME range_queries COMMAND range_queries_test)
+    add_executable(streaming_codecs_test tests/streaming_codecs.cpp)
+    target_compile_features(streaming_codecs_test PRIVATE cxx_std_20)
+    target_compile_options(streaming_codecs_test PRIVATE -fno-fast-math -ffp-contract=off)
+    add_test(NAME streaming_codecs COMMAND streaming_codecs_test)
+    add_executable(alp_adapter_test tests/alp_adapter.cpp)
+    target_link_libraries(alp_adapter_test PRIVATE neats_alp)
+    target_compile_options(alp_adapter_test PRIVATE -fno-fast-math -ffp-contract=off -fno-lto -fwrapv)
+    set_property(TARGET alp_adapter_test PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+    add_test(NAME alp_adapter COMMAND alp_adapter_test)
+    foreach(camel_tool camel_roundtrip camel_dump)
+        add_executable(${camel_tool} tests/${camel_tool}.cpp)
+        target_compile_features(${camel_tool} PRIVATE cxx_std_20)
+        target_compile_options(${camel_tool} PRIVATE -UNDEBUG -fno-fast-math -ffp-contract=off -fno-lto)
+    endforeach()
+    add_test(NAME camel_roundtrip COMMAND camel_roundtrip)
+    add_subdirectory(tests/recent)
+endif()
+
+# FastLanes (cwida/FastLanes): generated FFOR / transpose / rsum kernels from a
+# FastLanes build tree (libFastLanes). Point GEF_FASTLANES_ROOT at the source dir.
+set(GEF_FASTLANES_ROOT "" CACHE PATH "cwida/FastLanes source tree with build/src/libFastLanes.a")
+if(GEF_FASTLANES_ROOT AND EXISTS "${GEF_FASTLANES_ROOT}/build/src/libFastLanes.a")
+    set_source_files_properties(benchmark/fastlanes_benchmark.cpp PROPERTIES
+        INCLUDE_DIRECTORIES "${GEF_FASTLANES_ROOT}/src/include" COMPILE_OPTIONS "-std=c++20")
+    foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
+        if(TARGET ${bench_target})
+            target_sources(${bench_target} PRIVATE benchmark/fastlanes_benchmark.cpp)
+            target_compile_definitions(${bench_target} PRIVATE GEF_ENABLE_FASTLANES=1)
+            target_link_libraries(${bench_target} PRIVATE "${GEF_FASTLANES_ROOT}/build/src/libFastLanes.a")
+        endif()
+    endforeach()
+    message(STATUS "FastLanes enabled: ${GEF_FASTLANES_ROOT}")
 endif()

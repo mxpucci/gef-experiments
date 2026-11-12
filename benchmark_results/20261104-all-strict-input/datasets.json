@@ -1,0 +1,130 @@
+[
+  {
+    "dataset": "AP",
+    "path": "/dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin",
+    "num_values": 137721453,
+    "decimals": 5,
+    "bytes": 1101771640,
+    "sha256": "d860865d1bd2356aea09f7a4026b570029423fd49ed634b7e704b34a5c8e7909"
+  },
+  {
+    "dataset": "BM",
+    "path": "/dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin",
+    "num_values": 17964,
+    "decimals": 5,
+    "bytes": 143728,
+    "sha256": "181bfc94fe2cf4c59ef4eed5d9d033cb91e585399a6aaf0b518d479ebb5fc8f3"
+  },
+  {
+    "dataset": "BP",
+    "path": "/dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin",
+    "num_values": 6782,
+    "decimals": 4,
+    "bytes": 54272,
+    "sha256": "ed28b6e0f78d1b58ff92bf89143e3a8d8531a57f1e9bedaf720fcd72e1036a59"
+  },
+  {
+    "dataset": "BT",
+    "path": "/dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin",
+    "num_values": 129669,
+    "decimals": 9,
+    "bytes": 1037368,
+    "sha256": "c2d49898a5be729921c24ca1f862bf0545d0508dd84784e7b3067a398c9dcd27"
+  },
+  {
+    "dataset": "BW",
+    "path": "/dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin",
+    "num_values": 129669,
+    "decimals": 7,
+    "bytes": 1037368,
+    "sha256": "330bc54a4d2f4ea6d823a9e6cc061b191c431295e5238bb88f7e62b6877d1e31"
+  },
+  {
+    "dataset": "CT",
+    "path": "/dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin",
+    "num_values": 2826654,
+    "decimals": 1,
+    "bytes": 22613248,
+    "sha256": "d296ec7be6fb7ba3e1c0358a4a650053ebb9870b28a4f71707accc1bb04dcc36"
+  },
+  {
+    "dataset": "DP",
+    "path": "/dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin",
+    "num_values": 5413914,
+    "decimals": 3,
+    "bytes": 43311328,
+    "sha256": "caf2156d0a14027e8011bd95967b4b90b7dd12e5c60e8f6cb553c92b21884940"
+  },
+  {
+    "dataset": "DU",
+    "path": "/dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin",
+    "num_values": 334880,
+    "decimals": 3,
+    "bytes": 2679056,
+    "sha256": "f472abe8d16e4e258717aca347375becbefd3ccb1668b7dd3a8b0daf8eaa55c2"
+  },
+  {
+    "dataset": "ECG",
+    "path": "/dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin",
+    "num_values": 225750000,
+    "decimals": 3,
+    "bytes": 1806000016,
+    "sha256": "f985ba001a18fbf4db0aeb5a1f2fc599fb2dd27aead5e8f4f33a276882e7c125"
+  },
+  {
+    "dataset": "GE",
+    "path": "/dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin",
+    "num_values": 43565657,
+    "decimals": 3,
+    "bytes": 348525272,
+    "sha256": "acab0acfe856f050790fd23d12e42c4b66b8a43bdf392b01c2f8062d5f86cf65"
+  },
+  {
+    "dataset": "IT",
+    "path": "/dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin",
+    "num_values": 477050760,
+    "decimals": 2,
+    "bytes": 3816406096,
+    "sha256": "e7ef8aa5f4086cc371bad343f5db81dd422ac4ab635c3248957dca729954e152"
+  },
+  {
+    "dataset": "LAT",
+    "path": "/dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin",
+    "num_values": 24876978,
+    "decimals": 4,
+    "bytes": 199015840,
+    "sha256": "1186fd89fde08288bd7a4dfade2d0b06bc1719be0a5d2980b7dc67b85c1ded8e"
+  },
+  {
+    "dataset": "LON",
+    "path": "/dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin",
+    "num_values": 24876978,
+    "decimals": 4,
+    "bytes": 199015840,
+    "sha256": "b7d04d9153602807ab40ea56e4cd914dd591d56e0daf0bc63a1fef3be7facfc4"
+  },
+  {
+    "dataset": "UK",
+    "path": "/dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin",
+    "num_values": 59305325,
+    "decimals": 1,
+    "bytes": 474442616,
+    "sha256": "b4df287378748a623bd8259478fe5c27b1b077183ac83b2f95b64ae877d01a75"
+  },
+  {
+    "dataset": "US",
+    "path": "/dev/shm/testPF-gef-20261103/extracted/datasets/US.bin",
+    "num_values": 282076178,
+    "decimals": 2,
+    "bytes": 2256609440,
+    "sha256": "392043677746e4a466b2f3b987fd46c513abd821b724583f393248a6d55ce5c5"
+  },
+  {
+    "dataset": "WD",
+    "path": "/dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin",
+    "num_values": 198898762,
+    "decimals": 2,
+    "bytes": 1591190112,
+    "sha256": "41c41ead821372cba0777fd3d8b224ccb29b140cf53acb4c0a8cb82b5d2bb5fd"
+  }
+]

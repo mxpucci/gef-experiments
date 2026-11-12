@@ -1,0 +1,32 @@
+In file included from ../build/alp-compat/alp.hpp:6,
+                 from tests/../benchmark/alp_benchmark.cpp:4,
+                 from tests/alp_adapter.cpp:1:
+../build/alp-compat/alp/decoder.hpp:10:32: warning: unknown option after '#pragma GCC diagnostic' kind [-Wpragmas]
+   10 | #pragma GCC diagnostic ignored "-Wimplicit-int-float-conversion"
+      |                                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+../build/alp-compat/alp/decoder.hpp:10:32: note: did you mean '-Wdeprecated-enum-float-conversion'?
+In file included from ../build/alp-compat/alp.hpp:7:
+../build/alp-compat/alp/encoder.hpp:28:32: warning: unknown option after '#pragma GCC diagnostic' kind [-Wpragmas]
+   28 | #pragma GCC diagnostic ignored "-Wimplicit-int-conversion"
+      |                                ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+../build/alp-compat/alp/encoder.hpp:28:32: note: did you mean '-Wno-int-conversion'?
+In file included from ../build/alp-compat/alp.hpp:9:
+../build/alp-compat/alp/rd.hpp:13:32: warning: unknown option after '#pragma GCC diagnostic' kind [-Wpragmas]
+   13 | #pragma GCC diagnostic ignored "-Wimplicit-int-conversion"
+      |                                ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+../build/alp-compat/alp/rd.hpp:13:32: note: did you mean '-Wno-int-conversion'?
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)

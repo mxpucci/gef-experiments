@@ -1,0 +1,138 @@
+Start testing: Nov 03 16:00 CET
+----------------------------------------------------------
+1/8 Testing: recent_harness
+1/8 Test: recent_harness
+Command: "/home/testPF/gef-experiments/build/tests/recent/recent_harness_test"
+Directory: /home/testPF/gef-experiments/build/tests/recent
+"recent_harness" start time: Nov 03 16:00 CET
+Output:
+----------------------------------------------------------
+selfstar validated with short final block and crossing queries
+fauna validated with short final block and crossing queries
+macaque validated with short final block and crossing queries
+elfstar validated with short final block and crossing queries
+dexor validated with short final block and crossing queries
+pcodec validated with short final block and crossing queries
+flea validated with short final block and crossing queries
+pcodec_i64 validated with short final block and crossing queries
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"recent_harness" end time: Nov 03 16:00 CET
+"recent_harness" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/8 Testing: dexor_roundtrip
+2/8 Test: dexor_roundtrip
+Command: "/home/testPF/gef-experiments/build/tests/recent/dexor_roundtrip"
+Directory: /home/testPF/gef-experiments/build/tests/recent
+"dexor_roundtrip" start time: Nov 03 16:00 CET
+Output:
+----------------------------------------------------------
+DeXOR: official Java fixture and bit-exact regression tests passed
+<end of output>
+Test time =   0.05 sec
+----------------------------------------------------------
+Test Passed.
+"dexor_roundtrip" end time: Nov 03 16:00 CET
+"dexor_roundtrip" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/8 Testing: fauna_roundtrip
+3/8 Test: fauna_roundtrip
+Command: "/home/testPF/gef-experiments/build/tests/recent/fauna_roundtrip"
+Directory: /home/testPF/gef-experiments/build/tests/recent
+"fauna_roundtrip" start time: Nov 03 16:00 CET
+Output:
+----------------------------------------------------------
+Fauna/Macaque roundtrip and eligibility tests passed
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"fauna_roundtrip" end time: Nov 03 16:00 CET
+"fauna_roundtrip" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/8 Testing: elfstar_roundtrip
+4/8 Test: elfstar_roundtrip
+Command: "/home/testPF/gef-experiments/build/tests/recent/elfstar_roundtrip"
+Directory: /home/testPF/gef-experiments/build/tests/recent
+"elfstar_roundtrip" start time: Nov 03 16:00 CET
+Output:
+----------------------------------------------------------
+ElfStar round trips and malformed inputs passed
+<end of output>
+Test time =   0.05 sec
+----------------------------------------------------------
+Test Passed.
+"elfstar_roundtrip" end time: Nov 03 16:00 CET
+"elfstar_roundtrip" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/8 Testing: selfstar_roundtrip
+5/8 Test: selfstar_roundtrip
+Command: "/home/testPF/gef-experiments/build/tests/recent/selfstar_roundtrip"
+Directory: /home/testPF/gef-experiments/build/tests/recent
+"selfstar_roundtrip" start time: Nov 03 16:00 CET
+Output:
+----------------------------------------------------------
+SElfStar stateful/checkpoint round trips passed
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"selfstar_roundtrip" end time: Nov 03 16:00 CET
+"selfstar_roundtrip" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/8 Testing: pcodec_roundtrip
+6/8 Test: pcodec_roundtrip
+Command: "/home/testPF/gef-experiments/build/tests/recent/pcodec_roundtrip"
+Directory: /home/testPF/gef-experiments/build/tests/recent
+"pcodec_roundtrip" start time: Nov 03 16:00 CET
+Output:
+----------------------------------------------------------
+Pcodec f64/i64 bit-exact round trips and malformed-input checks passed
+<end of output>
+Test time =   0.04 sec
+----------------------------------------------------------
+Test Passed.
+"pcodec_roundtrip" end time: Nov 03 16:00 CET
+"pcodec_roundtrip" time elapsed: 00:00:00
+----------------------------------------------------------
+
+7/8 Testing: flea_roundtrip
+7/8 Test: flea_roundtrip
+Command: "/home/testPF/gef-experiments/build/tests/recent/flea_roundtrip"
+Directory: /home/testPF/gef-experiments/build/tests/recent
+"flea_roundtrip" start time: Nov 03 16:00 CET
+Output:
+----------------------------------------------------------
+Official FLEA integer roundtrips and upstream parity passed
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"flea_roundtrip" end time: Nov 03 16:00 CET
+"flea_roundtrip" time elapsed: 00:00:00
+----------------------------------------------------------
+
+8/8 Testing: recent_cli_smoke
+8/8 Test: recent_cli_smoke
+Command: "/usr/local/bin/python3.7" "/home/testPF/gef-experiments/tests/recent/cli_smoke.py" "/home/testPF/gef-experiments/build/LosslessBenchmark"
+Directory: /home/testPF/gef-experiments/build/tests/recent
+"recent_cli_smoke" start time: Nov 03 16:00 CET
+Output:
+----------------------------------------------------------
+CLI smoke: all eight entries, exact int64 route, eligibility errors and CSV passed
+<end of output>
+Test time =   1.64 sec
+----------------------------------------------------------
+Test Passed.
+"recent_cli_smoke" end time: Nov 03 16:00 CET
+"recent_cli_smoke" time elapsed: 00:00:01
+----------------------------------------------------------
+
+End testing: Nov 03 16:00 CET

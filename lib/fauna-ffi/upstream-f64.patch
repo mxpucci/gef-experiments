@@ -1,0 +1,276 @@
+diff --git a/ModelarDB-versions/ModelarDB-Macaque/crates/modelardb_compression/src/models/gorilla.rs b/ModelarDB-versions/ModelarDB-Macaque/crates/modelardb_compression/src/models/gorilla.rs
+--- a/ModelarDB-versions/ModelarDB-Macaque/crates/modelardb_compression/src/models/gorilla.rs
++++ b/ModelarDB-versions/ModelarDB-Macaque/crates/modelardb_compression/src/models/gorilla.rs
+@@ -106,7 +106,7 @@ impl Gorilla {
+                 rewrite_value_bits_logarithm_method_with_check(value.to_bits(), self.error_bound)
+             }
+         };
+-        let value = f32::from_bits(value_as_integer);
++        let value = f64::from_bits(value_as_integer);
+         let last_value_as_integer = self.last_value.to_bits();
+         let value_xor_last_value = value_as_integer ^ last_value_as_integer;
+ 
+@@ -117,7 +117,7 @@ impl Gorilla {
+         } else {
+             // Store each new value as its leading zero bits (if necessary) and
+             // meaningful bits (all bits from the first to the last one bit).
+-            let leading_zero_bits = value_xor_last_value.leading_zeros() as u8;
++            let leading_zero_bits = value_xor_last_value.leading_zeros().min(31) as u8;
+             let trailing_zero_bits = value_xor_last_value.trailing_zeros() as u8;
+             
+             if leading_zero_bits >= self.last_leading_zero_bits
+@@ -143,7 +143,7 @@ impl Gorilla {
+                 let meaningful_bits =
+                     models::VALUE_SIZE_IN_BITS - leading_zero_bits - trailing_zero_bits;
+                 self.compressed_values
+-                    .append_bits(meaningful_bits as u64, 6);
++                    .append_bits(meaningful_bits as u64 - 1, 6);
+                 self.compressed_values.append_bits(
+                     (value_xor_last_value >> trailing_zero_bits) as u64,
+                     meaningful_bits,
+@@ -193,7 +193,7 @@ pub fn sum(length: usize, values: &[u8], maybe_model_last_value: Option<Value>)
+         (model_last_value.to_bits(), 0.0)
+     } else {
+         // The first value is stored uncompressed using size_of::<Value> bits.
+-        let first_value = bits.read_bits(models::VALUE_SIZE_IN_BITS) as u32;
++        let first_value = bits.read_bits(models::VALUE_SIZE_IN_BITS) as u64;
+         (first_value, Value::from_bits(first_value))
+     };
+ 
+@@ -203,12 +203,12 @@ pub fn sum(length: usize, values: &[u8], maybe_model_last_value: Option<Value>)
+             if bits.read_bit() {
+                 // New leading and trailing zeros.
+                 leading_zeros = bits.read_bits(5) as u8;
+-                let meaningful_bits = bits.read_bits(6) as u8;
++                let meaningful_bits = bits.read_bits(6) as u8 + 1;
+                 trailing_zeros = models::VALUE_SIZE_IN_BITS - meaningful_bits - leading_zeros;
+                 // Decompress the value by reading its meaningful bits, restoring
+                 // its trailing zeroes through shifting, and reversing the XOR.
+                 let meaningful_bits = models::VALUE_SIZE_IN_BITS - leading_zeros - trailing_zeros;
+-                let mut value = bits.read_bits(meaningful_bits) as u32;
++                let mut value = bits.read_bits(meaningful_bits) as u64;
+                 value <<= trailing_zeros;
+                 value ^= last_value;
+                 last_value = value;
+@@ -217,7 +217,7 @@ pub fn sum(length: usize, values: &[u8], maybe_model_last_value: Option<Value>)
+             // Decompress the value by reading its meaningful bits, restoring
+             // its trailing zeroes through shifting, and reversing the XOR.
+             let meaningful_bits = models::VALUE_SIZE_IN_BITS - leading_zeros - trailing_zeros;
+-            let mut value = bits.read_bits(meaningful_bits) as u32;
++            let mut value = bits.read_bits(meaningful_bits) as u64;
+             value <<= trailing_zeros;
+             value ^= last_value;
+             last_value = value;
+@@ -251,7 +251,7 @@ pub fn grid(
+         model_last_value.to_bits()
+     } else {
+         // The first value is stored uncompressed using size_of::<Value> bits.
+-        let first_value = bits.read_bits(models::VALUE_SIZE_IN_BITS) as u32;
++        let first_value = bits.read_bits(models::VALUE_SIZE_IN_BITS) as u64;
+         univariate_id_builder.append_value(univariate_id);
+         value_builder.append_value(Value::from_bits(first_value));
+         first_value
+@@ -264,12 +264,12 @@ pub fn grid(
+             if bits.read_bit() {
+                 // New leading and trailing zeros.
+                 leading_zeros = bits.read_bits(5) as u8;
+-                let meaningful_bits = bits.read_bits(6) as u8;
++                let meaningful_bits = bits.read_bits(6) as u8 + 1;
+                 trailing_zeros = models::VALUE_SIZE_IN_BITS - meaningful_bits - leading_zeros;
+                 // Decompress the value by reading its meaningful bits, restoring
+                 // its trailing zeroes through shifting, and reversing the XOR.
+                 let meaningful_bits = models::VALUE_SIZE_IN_BITS - leading_zeros - trailing_zeros;
+-                let mut value = bits.read_bits(meaningful_bits) as u32;
++                let mut value = bits.read_bits(meaningful_bits) as u64;
+                 value <<= trailing_zeros;
+                 value ^= last_value;
+                 last_value = value;
+@@ -278,7 +278,7 @@ pub fn grid(
+             // Decompress the value by reading its meaningful bits, restoring
+             // its trailing zeroes through shifting, and reversing the XOR.
+             let meaningful_bits = models::VALUE_SIZE_IN_BITS - leading_zeros - trailing_zeros;
+-            let mut value = bits.read_bits(meaningful_bits) as u32;
++            let mut value = bits.read_bits(meaningful_bits) as u64;
+             value <<= trailing_zeros;
+             value ^= last_value;
+             last_value = value;
+@@ -288,17 +288,17 @@ pub fn grid(
+     }
+ }
+ 
+-fn rewrite_value_bits_logarithm_method_with_check(value: u32, error_bound: ErrorBound) -> u32 {
+-    if f32::from_bits(value) == 0.0 || f32::from_bits(value).is_infinite() || f32::from_bits(value).is_nan() {
++fn rewrite_value_bits_logarithm_method_with_check(value: u64, error_bound: ErrorBound) -> u64 {
++    if f64::from_bits(value) == 0.0 || f64::from_bits(value).is_infinite() || f64::from_bits(value).is_nan() {
+         return value;
+     }
+     let bit_position = compute_rewrite_position_logarithm_with_check(value, error_bound);
+     rewrite_bits_by_n(value , bit_position)
+ }
+ 
+-fn rewrite_value_bits_logarithm_method(value: u32, error_bound: ErrorBound) -> u32 {
++fn rewrite_value_bits_logarithm_method(value: u64, error_bound: ErrorBound) -> u64 {
+     // Check for edge cases when bit rewriting is not required
+-    if f32::from_bits(value) == 0.0 || f32::from_bits(value).is_infinite() || f32::from_bits(value).is_nan() {
++    if f64::from_bits(value) == 0.0 || f64::from_bits(value).is_infinite() || f64::from_bits(value).is_nan() {
+         return value;
+     }
+     let bit_position = compute_rewrite_position_logarithm(value, error_bound);
+@@ -306,29 +306,29 @@ fn rewrite_value_bits_logarithm_method(value: u32, error_bound: ErrorBound) -> u
+ }
+ 
+ // A log-based method to rewrite bits, but results in 1 less rewritten bit sometimes 
+-fn compute_rewrite_position_logarithm(bits: u32, error_bound: ErrorBound) -> i32 {
+-    let value = f32::from_bits(bits);
+-    let abs_error_bound = models::maximum_allowed_deviation(error_bound, value as f64) as f32;
++fn compute_rewrite_position_logarithm(bits: u64, error_bound: ErrorBound) -> i32 {
++    let value = f64::from_bits(bits);
++    let abs_error_bound = models::maximum_allowed_deviation(error_bound, value as f64) as f64;
+     let exponent = get_exponent(value);
+-    let factorized_epsilon = abs_error_bound / 2f32.powi(exponent);
++    let factorized_epsilon = abs_error_bound / 2f64.powi(exponent);
+     let bit_position = factorized_epsilon.log2().abs().ceil();
+-    let bit_to_rewrite = 23 - bit_position as i32;
++    let bit_to_rewrite = 52 - bit_position as i32;
+     bit_to_rewrite
+ }
+ 
+ // A log-based method to rewrite bits with check that results in 1 more rewritten bit
+ //  i.e., better for compression and worse for decompression 
+-fn compute_rewrite_position_logarithm_with_check(bits: u32, error_bound: ErrorBound) -> i32 {
+-    let value = f32::from_bits(bits);
+-    let abs_error_bound = models::maximum_allowed_deviation(error_bound, value as f64) as f32;
++fn compute_rewrite_position_logarithm_with_check(bits: u64, error_bound: ErrorBound) -> i32 {
++    let value = f64::from_bits(bits);
++    let abs_error_bound = models::maximum_allowed_deviation(error_bound, value as f64) as f64;
+     let exponent = get_exponent(value);
+-    let factorized_epsilon = abs_error_bound / 2f32.powi(exponent);
++    let factorized_epsilon = abs_error_bound / 2f64.powi(exponent);
+     let bit_position = factorized_epsilon.log2().abs().floor();
+-    let mut bit_to_rewrite = 23 - bit_position as i32;
++    let mut bit_to_rewrite = 52 - bit_position as i32;
+ 
+     // Extra check to ensure if the error is within the error_bound
+     let rewritten_bits = rewrite_bits_by_n(bits, bit_to_rewrite);
+-    let rewritten_value = f32::from_bits(rewritten_bits);
++    let rewritten_value = f64::from_bits(rewritten_bits);
+     if (value - rewritten_value).abs() > abs_error_bound {
+         bit_to_rewrite -= 1;
+     }
+@@ -336,30 +336,30 @@ fn compute_rewrite_position_logarithm_with_check(bits: u32, error_bound: ErrorBo
+     bit_to_rewrite
+ }
+ 
+-fn get_exponent(value: f32) -> i32 {
+-    let n_bits: u32 = value.to_bits();
+-    let exponent_ = ((n_bits >> 23) & 0xff) as i32;
+-    let exponent = exponent_ - 127;
++fn get_exponent(value: f64) -> i32 {
++    let n_bits: u64 = value.to_bits();
++    let exponent_ = ((n_bits >> 52) & 0x7ff) as i32;
++    let exponent = exponent_ - 1023;
+     exponent
+ }
+ 
+-fn rewrite_value_bits_binary_search(value: u32, error_bound: ErrorBound) -> u32 {
++fn rewrite_value_bits_binary_search(value: u64, error_bound: ErrorBound) -> u64 {
+     // Check for edge cases when bit rewriting is not required
+-    if f32::from_bits(value) == 0.0 || f32::from_bits(value).is_infinite() || f32::from_bits(value).is_nan() {
++    if f64::from_bits(value) == 0.0 || f64::from_bits(value).is_infinite() || f64::from_bits(value).is_nan() {
+         return value;
+     }
+     rewrite_bits_by_n(value, find_erase_position_binary_search(value, error_bound))
+ }
+ 
+-fn find_erase_position_binary_search(bits: u32, error_bound: ErrorBound) -> i32 {
+-    let value = f32::from_bits(bits);
++fn find_erase_position_binary_search(bits: u64, error_bound: ErrorBound) -> i32 {
++    let value = f64::from_bits(bits);
+     let mut index = i32::MAX;
+     let abs_error_bound = models::maximum_allowed_deviation(error_bound, value.into()); // compute_absolute_error_bound(error_bound, );
+     let mut low = 0;
+-    let mut high = 23;
++    let mut high = 52;
+     while low <= high {
+         let mid = low + ((high - low) / 2);
+-        let error: f64 = (value - f32::from_bits(rewrite_bits_by_n(bits, mid)))
++        let error: f64 = (value - f64::from_bits(rewrite_bits_by_n(bits, mid)))
+             .abs()
+             .into();
+         if error < abs_error_bound {
+@@ -384,8 +384,8 @@ fn find_erase_position_binary_search(bits: u32, error_bound: ErrorBound) -> i32
+ 
+ 
+ 
+-fn rewrite_bits_by_n(bits_to_rewrite: u32, erase_by_n: i32) -> u32 {
+-    let mask = u32::MAX << erase_by_n;
++fn rewrite_bits_by_n(bits_to_rewrite: u64, erase_by_n: i32) -> u64 {
++    let mask = u64::MAX << erase_by_n;
+     bits_to_rewrite & mask
+ }
+ 
+diff --git a/ModelarDB-versions/ModelarDB-Macaque/crates/modelardb_compression/src/models/mod.rs b/ModelarDB-versions/ModelarDB-Macaque/crates/modelardb_compression/src/models/mod.rs
+--- a/ModelarDB-versions/ModelarDB-Macaque/crates/modelardb_compression/src/models/mod.rs
++++ b/ModelarDB-versions/ModelarDB-Macaque/crates/modelardb_compression/src/models/mod.rs
+@@ -74,7 +74,7 @@ pub fn is_value_within_error_bound(
+             } else {
+                 let difference = real_value - approximate_value;
+                 let result = Value::abs(difference / real_value);
+-                (result * 100.0) <= error_bound
++                (result * 100.0) <= error_bound as Value
+             }
+         }
+     }
+@@ -170,7 +170,7 @@ pub fn sum(
+             )
+         }
+         GORILLA_ID => (
+-            f32::NAN, // A segment with values compressed by Gorilla never has residuals.
++            Value::NAN, // A segment with values compressed by Gorilla never has residuals.
+             gorilla::sum(model_length, values, None),
+         ),
+         _ => panic!("Unknown model type."),
+diff --git a/ModelarDB-versions/ModelarDB-Macaque/crates/modelardb_compression/src/types.rs b/ModelarDB-versions/ModelarDB-Macaque/crates/modelardb_compression/src/types.rs
+--- a/ModelarDB-versions/ModelarDB-Macaque/crates/modelardb_compression/src/types.rs
++++ b/ModelarDB-versions/ModelarDB-Macaque/crates/modelardb_compression/src/types.rs
+@@ -377,7 +377,7 @@ impl CompressedSegmentBuilder {
+         match values.len() {
+             0 => (min_value, max_value),
+             1 => (max_value, min_value),
+-            5 => {
++            9 => {
+                 let value = Value::from_le_bytes(values[1..].try_into().unwrap());
+                 match values[0] {
+                     0 => (value, max_value),
+@@ -387,7 +387,7 @@ impl CompressedSegmentBuilder {
+                     _ => panic!("Unknown encoding of swing."),
+                 }
+             }
+-            8 => {
++            16 => {
+                 let value_size = VALUE_SIZE_IN_BYTES as usize;
+                 (
+                     Value::from_le_bytes(values[0..value_size].try_into().unwrap()),
+diff --git a/ModelarDB-versions/ModelarDB-Macaque/crates/modelardb_types/src/types.rs b/ModelarDB-versions/ModelarDB-Macaque/crates/modelardb_types/src/types.rs
+--- a/ModelarDB-versions/ModelarDB-Macaque/crates/modelardb_types/src/types.rs
++++ b/ModelarDB-versions/ModelarDB-Macaque/crates/modelardb_types/src/types.rs
+@@ -40,8 +40,8 @@ pub type TimestampBuilder = arrow::array::PrimitiveBuilder<ArrowTimestamp>;
+ pub type TimestampArray = arrow::array::PrimitiveArray<ArrowTimestamp>;
+ 
+ // Types used for a single value.
+-pub type Value = std::primitive::f32;
+-pub type ArrowValue = arrow::datatypes::Float32Type;
++pub type Value = std::primitive::f64;
++pub type ArrowValue = arrow::datatypes::Float64Type;
+ 
+ // Types used for a collection of values.
+ pub type ValueBuilder = arrow::array::PrimitiveBuilder<ArrowValue>;
+@@ -84,7 +84,7 @@ impl ErrorBound {
+                 "An absolute error bound must be a positive finite value.".to_owned(),
+             ))
+         } else {
+-            Ok(Self::Absolute(value))
++            Ok(Self::Absolute(value as Value))
+         }
+     }
+ 

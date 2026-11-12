@@ -1,0 +1,402 @@
+2026-11-03T18:47:40.605625+00:00 Validating all datasets; full input, no sampling
+2026-11-03T18:47:43.201995+00:00 Verified AP: 137721453 values, decimals=5
+2026-11-03T18:47:43.202693+00:00 Verified BM: 17964 values, decimals=5
+2026-11-03T18:47:43.202901+00:00 Verified BP: 6782 values, decimals=4
+2026-11-03T18:47:43.205702+00:00 Verified BT: 129669 values, decimals=9
+2026-11-03T18:47:43.208217+00:00 Verified BW: 129669 values, decimals=7
+2026-11-03T18:47:43.265990+00:00 Verified CT: 2826654 values, decimals=1
+2026-11-03T18:47:43.370749+00:00 Verified DP: 5413914 values, decimals=3
+2026-11-03T18:47:43.377860+00:00 Verified DU: 334880 values, decimals=3
+2026-11-03T18:47:47.602691+00:00 Verified ECG: 225750000 values, decimals=3
+2026-11-03T18:47:48.428261+00:00 Verified GE: 43565657 values, decimals=3
+2026-11-03T18:47:57.368759+00:00 Verified IT: 477050760 values, decimals=2
+2026-11-03T18:47:57.838057+00:00 Verified LAT: 24876978 values, decimals=4
+2026-11-03T18:47:58.307480+00:00 Verified LON: 24876978 values, decimals=4
+2026-11-03T18:47:59.418213+00:00 Verified UK: 59305325 values, decimals=1
+2026-11-03T18:48:04.704878+00:00 Verified US: 282076178 values, decimals=2
+2026-11-03T18:48:08.427007+00:00 Verified WD: 198898762 values, decimals=2
+2026-11-03T18:48:08.626585+00:00 START 1/48 BP__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c fauna -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/BP__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 6771/6782 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:48:19.645208+00:00 END BP__fauna status=WARNING seconds=11.0 
+2026-11-03T18:48:19.645296+00:00 START 2/48 BP__pcodec
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/BP__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T18:48:22.654202+00:00 END BP__pcodec status=OK seconds=3.0 
+2026-11-03T18:48:22.654279+00:00 START 3/48 BP__pcodec_i64
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec_i64 -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/BP__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin
+  Running pcodec_i64... done
+2026-11-03T18:48:25.663396+00:00 END BP__pcodec_i64 status=OK seconds=3.0 
+2026-11-03T18:48:25.663516+00:00 START 4/48 BM__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c fauna -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/BM__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 17927/17964 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:48:30.677918+00:00 END BM__fauna status=WARNING seconds=5.0 
+2026-11-03T18:48:30.678002+00:00 START 5/48 BM__pcodec
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/BM__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T18:48:39.694868+00:00 END BM__pcodec status=OK seconds=9.0 
+2026-11-03T18:48:39.694994+00:00 START 6/48 BM__pcodec_i64
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec_i64 -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/BM__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin
+  Running pcodec_i64... done
+2026-11-03T18:48:47.711575+00:00 END BM__pcodec_i64 status=OK seconds=8.0 
+2026-11-03T18:48:47.711655+00:00 START 7/48 BT__fauna
+2026-11-03T18:49:47.818713+00:00 RUNNING BT__fauna pid=136530 elapsed=60s
+2026-11-03T18:50:47.956742+00:00 RUNNING BT__fauna pid=136530 elapsed=120s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c fauna -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/BT__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 129669/129669 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:51:24.044190+00:00 END BT__fauna status=WARNING seconds=156.3 
+2026-11-03T18:51:24.044275+00:00 START 8/48 BT__pcodec
+2026-11-03T18:52:24.121956+00:00 RUNNING BT__pcodec pid=139023 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/BT__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T18:52:46.152109+00:00 END BT__pcodec status=OK seconds=82.1 
+2026-11-03T18:52:46.152191+00:00 START 9/48 BT__pcodec_i64
+2026-11-03T18:53:46.240360+00:00 RUNNING BT__pcodec_i64 pid=140265 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec_i64 -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/BT__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin
+  Running pcodec_i64... done
+2026-11-03T18:53:56.260505+00:00 END BT__pcodec_i64 status=OK seconds=70.1 
+2026-11-03T18:53:56.260624+00:00 START 10/48 BW__fauna
+2026-11-03T18:54:56.342110+00:00 RUNNING BW__fauna pid=141312 elapsed=60s
+2026-11-03T18:55:56.415746+00:00 RUNNING BW__fauna pid=141312 elapsed=120s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c fauna -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/BW__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 128924/129669 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:56:07.436081+00:00 END BW__fauna status=WARNING seconds=131.2 
+2026-11-03T18:56:07.436165+00:00 START 11/48 BW__pcodec
+2026-11-03T18:57:07.530914+00:00 RUNNING BW__pcodec pid=143270 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/BW__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T18:57:20.550493+00:00 END BW__pcodec status=OK seconds=73.1 
+2026-11-03T18:57:20.550576+00:00 START 12/48 BW__pcodec_i64
+2026-11-03T18:58:20.644377+00:00 RUNNING BW__pcodec_i64 pid=144329 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec_i64 -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/BW__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin
+  Running pcodec_i64... done
+2026-11-03T18:58:48.687014+00:00 END BW__pcodec_i64 status=OK seconds=88.1 
+2026-11-03T18:58:48.687085+00:00 START 13/48 DU__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c fauna -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/DU__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 330995/334880 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T18:58:54.697353+00:00 END DU__fauna status=WARNING seconds=6.0 
+2026-11-03T18:58:54.697423+00:00 START 14/48 DU__pcodec
+2026-11-03T18:59:54.785436+00:00 RUNNING DU__pcodec pid=145715 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/DU__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T18:59:58.793704+00:00 END DU__pcodec status=OK seconds=64.1 
+2026-11-03T18:59:58.793775+00:00 START 15/48 DU__pcodec_i64
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec_i64 -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/DU__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin
+  Running pcodec_i64... done
+2026-11-03T19:00:43.925166+00:00 END DU__pcodec_i64 status=OK seconds=45.1 
+2026-11-03T19:00:43.925253+00:00 START 16/48 CT__fauna
+2026-11-03T19:01:44.016050+00:00 RUNNING CT__fauna pid=147358 elapsed=60s
+2026-11-03T19:02:44.149877+00:00 RUNNING CT__fauna pid=147358 elapsed=120s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c fauna -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/CT__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 2252772/2826654 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T19:03:02.188924+00:00 END CT__fauna status=WARNING seconds=138.3 
+2026-11-03T19:03:02.188999+00:00 START 17/48 CT__pcodec
+2026-11-03T19:04:02.277619+00:00 RUNNING CT__pcodec pid=2768 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/CT__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T19:04:41.335902+00:00 END CT__pcodec status=OK seconds=99.2 
+2026-11-03T19:04:41.336026+00:00 START 18/48 CT__pcodec_i64
+2026-11-03T19:05:41.462297+00:00 RUNNING CT__pcodec_i64 pid=4617 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec_i64 -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/CT__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin
+  Running pcodec_i64... done
+2026-11-03T19:05:50.489102+00:00 END CT__pcodec_i64 status=OK seconds=69.2 
+2026-11-03T19:05:50.489187+00:00 START 19/48 DP__fauna
+2026-11-03T19:06:50.645133+00:00 RUNNING DP__fauna pid=5678 elapsed=60s
+2026-11-03T19:07:50.798952+00:00 RUNNING DP__fauna pid=5678 elapsed=120s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c fauna -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/DP__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 5361330/5413914 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T19:07:51.803171+00:00 END DP__fauna status=WARNING seconds=121.3 
+2026-11-03T19:07:51.804052+00:00 START 20/48 DP__pcodec
+2026-11-03T19:08:51.885419+00:00 RUNNING DP__pcodec pid=7476 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/DP__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T19:09:30.933872+00:00 END DP__pcodec status=OK seconds=99.1 
+2026-11-03T19:09:30.933958+00:00 START 21/48 DP__pcodec_i64
+2026-11-03T19:10:31.018784+00:00 RUNNING DP__pcodec_i64 pid=8940 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec_i64 -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/DP__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin
+  Running pcodec_i64... done
+2026-11-03T19:10:44.040708+00:00 END DP__pcodec_i64 status=OK seconds=73.1 
+2026-11-03T19:10:44.040781+00:00 START 22/48 LAT__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c fauna -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/LAT__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 24621957/24876978 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T19:11:03.068938+00:00 END LAT__fauna status=WARNING seconds=19.0 
+2026-11-03T19:11:03.069025+00:00 START 23/48 LAT__pcodec
+2026-11-03T19:12:03.154073+00:00 RUNNING LAT__pcodec pid=10293 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/LAT__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T19:12:57.236335+00:00 END LAT__pcodec status=OK seconds=114.2 
+2026-11-03T19:12:57.236422+00:00 START 24/48 LAT__pcodec_i64
+2026-11-03T19:13:57.327728+00:00 RUNNING LAT__pcodec_i64 pid=12043 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec_i64 -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/LAT__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin
+  Running pcodec_i64... done
+2026-11-03T19:14:25.365990+00:00 END LAT__pcodec_i64 status=OK seconds=88.1 
+2026-11-03T19:14:25.366081+00:00 START 25/48 LON__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c fauna -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/LON__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 24825272/24876978 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T19:14:36.389267+00:00 END LON__fauna status=WARNING seconds=11.0 
+2026-11-03T19:14:36.389403+00:00 START 26/48 LON__pcodec
+2026-11-03T19:15:36.531799+00:00 RUNNING LON__pcodec pid=13513 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/LON__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T19:16:00.586679+00:00 END LON__pcodec status=OK seconds=84.2 
+2026-11-03T19:16:00.586766+00:00 START 27/48 LON__pcodec_i64
+2026-11-03T19:17:00.677874+00:00 RUNNING LON__pcodec_i64 pid=14767 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec_i64 -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/LON__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin
+  Running pcodec_i64... done
+2026-11-03T19:17:18.706008+00:00 END LON__pcodec_i64 status=OK seconds=78.1 
+2026-11-03T19:17:18.706095+00:00 START 28/48 GE__fauna
+2026-11-03T19:18:18.803692+00:00 RUNNING GE__fauna pid=15951 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c fauna -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/GE__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 41504664/43565657 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T19:18:54.862592+00:00 END GE__fauna status=WARNING seconds=96.2 
+2026-11-03T19:18:54.862717+00:00 START 29/48 GE__pcodec
+2026-11-03T19:19:54.979795+00:00 RUNNING GE__pcodec pid=17371 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/GE__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T19:20:47.112184+00:00 END GE__pcodec status=OK seconds=112.2 
+2026-11-03T19:20:47.112267+00:00 START 30/48 GE__pcodec_i64
+2026-11-03T19:21:47.201704+00:00 RUNNING GE__pcodec_i64 pid=19045 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec_i64 -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/GE__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin
+  Running pcodec_i64... done
+2026-11-03T19:22:18.245427+00:00 END GE__pcodec_i64 status=OK seconds=91.1 
+2026-11-03T19:22:18.245536+00:00 START 31/48 UK__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c fauna -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/UK__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 35849231/59305325 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T19:23:11.333632+00:00 END UK__fauna status=WARNING seconds=53.1 
+2026-11-03T19:23:11.333719+00:00 START 32/48 UK__pcodec
+2026-11-03T19:24:11.435152+00:00 RUNNING UK__pcodec pid=21166 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/UK__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T19:25:01.522559+00:00 END UK__pcodec status=OK seconds=110.2 
+2026-11-03T19:25:01.522649+00:00 START 33/48 UK__pcodec_i64
+2026-11-03T19:26:01.620429+00:00 RUNNING UK__pcodec_i64 pid=22819 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec_i64 -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/UK__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin
+  Running pcodec_i64... done
+2026-11-03T19:26:24.661576+00:00 END UK__pcodec_i64 status=OK seconds=83.1 
+2026-11-03T19:26:24.661668+00:00 START 34/48 AP__fauna
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c fauna -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/AP__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 136716747/137721453 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T19:27:13.738558+00:00 END AP__fauna status=WARNING seconds=49.1 
+2026-11-03T19:27:13.738646+00:00 START 35/48 AP__pcodec
+2026-11-03T19:28:13.866548+00:00 RUNNING AP__pcodec pid=24777 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/AP__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T19:29:09.988264+00:00 END AP__pcodec status=OK seconds=116.2 
+2026-11-03T19:29:09.988387+00:00 START 36/48 AP__pcodec_i64
+2026-11-03T19:30:10.102796+00:00 RUNNING AP__pcodec_i64 pid=26489 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec_i64 -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/AP__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin
+  Running pcodec_i64... done
+2026-11-03T19:30:39.167566+00:00 END AP__pcodec_i64 status=OK seconds=89.2 
+2026-11-03T19:30:39.167659+00:00 START 37/48 WD__fauna
+2026-11-03T19:31:39.248812+00:00 RUNNING WD__fauna pid=27971 elapsed=60s
+2026-11-03T19:32:39.332052+00:00 RUNNING WD__fauna pid=27971 elapsed=120s
+2026-11-03T19:33:39.434451+00:00 RUNNING WD__fauna pid=27971 elapsed=180s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c fauna -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/WD__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 190933188/198898762 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T19:33:53.471831+00:00 END WD__fauna status=WARNING seconds=194.3 
+2026-11-03T19:33:53.471922+00:00 START 38/48 WD__pcodec
+2026-11-03T19:34:53.590363+00:00 RUNNING WD__pcodec pid=30846 elapsed=60s
+2026-11-03T19:35:53.721379+00:00 RUNNING WD__pcodec pid=30846 elapsed=120s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/WD__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T19:36:00.738435+00:00 END WD__pcodec status=OK seconds=127.3 
+2026-11-03T19:36:00.738535+00:00 START 39/48 WD__pcodec_i64
+2026-11-03T19:37:00.825651+00:00 RUNNING WD__pcodec_i64 pid=32743 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec_i64 -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/WD__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin
+  Running pcodec_i64... done
+2026-11-03T19:37:29.865821+00:00 END WD__pcodec_i64 status=OK seconds=89.1 
+2026-11-03T19:37:29.865906+00:00 START 40/48 ECG__fauna
+2026-11-03T19:38:29.971287+00:00 RUNNING ECG__fauna pid=34040 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c fauna -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/ECG__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 218678216/225750000 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T19:39:20.051518+00:00 END ECG__fauna status=WARNING seconds=110.2 
+2026-11-03T19:39:20.051590+00:00 START 41/48 ECG__pcodec
+2026-11-03T19:40:20.172656+00:00 RUNNING ECG__pcodec pid=35701 elapsed=60s
+2026-11-03T19:41:20.281080+00:00 RUNNING ECG__pcodec pid=35701 elapsed=120s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/ECG__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T19:41:41.320019+00:00 END ECG__pcodec status=OK seconds=141.3 
+2026-11-03T19:41:41.320104+00:00 START 42/48 ECG__pcodec_i64
+2026-11-03T19:42:41.411287+00:00 RUNNING ECG__pcodec_i64 pid=37771 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec_i64 -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/ECG__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin
+  Running pcodec_i64... done
+2026-11-03T19:43:12.468206+00:00 END ECG__pcodec_i64 status=OK seconds=91.2 
+2026-11-03T19:43:12.468289+00:00 START 43/48 US__fauna
+2026-11-03T19:44:12.557256+00:00 RUNNING US__fauna pid=39132 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c fauna -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/US__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 269855379/282076178 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T19:44:37.587596+00:00 END US__fauna status=WARNING seconds=85.1 
+2026-11-03T19:44:37.587680+00:00 START 44/48 US__pcodec
+2026-11-03T19:45:37.696652+00:00 RUNNING US__pcodec pid=40389 elapsed=60s
+2026-11-03T19:46:37.844477+00:00 RUNNING US__pcodec pid=40389 elapsed=120s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/US__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T19:46:51.879007+00:00 END US__pcodec status=OK seconds=134.3 
+2026-11-03T19:46:51.879083+00:00 START 45/48 US__pcodec_i64
+2026-11-03T19:47:52.003484+00:00 RUNNING US__pcodec_i64 pid=42353 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec_i64 -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/US__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/US.bin
+  Running pcodec_i64... done
+2026-11-03T19:48:25.064822+00:00 END US__pcodec_i64 status=OK seconds=93.2 
+2026-11-03T19:48:25.064902+00:00 START 46/48 IT__fauna
+2026-11-03T19:49:25.236320+00:00 RUNNING IT__fauna pid=43732 elapsed=60s
+2026-11-03T19:50:25.375265+00:00 RUNNING IT__fauna pid=43732 elapsed=120s
+2026-11-03T19:51:25.501361+00:00 RUNNING IT__fauna pid=43732 elapsed=180s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c fauna -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/IT__fauna.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running fauna...
+Warning: fauna converted 457933312/477050760 input values to float32; emitting metrics for the converted input. Original float64 bits are not preserved; see input_conversion and input_changed_values.
+ done
+2026-11-03T19:51:32.514137+00:00 END IT__fauna status=WARNING seconds=187.4 
+2026-11-03T19:51:32.514222+00:00 START 47/48 IT__pcodec
+2026-11-03T19:52:32.610939+00:00 RUNNING IT__pcodec pid=46496 elapsed=60s
+2026-11-03T19:53:32.707496+00:00 RUNNING IT__pcodec pid=46496 elapsed=120s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/IT__pcodec.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+  Converting raw_data to shifted_data... done
+  Converting shifted_data to double_data... done
+  Running pcodec... done
+2026-11-03T19:54:14.774901+00:00 END IT__pcodec status=OK seconds=162.3 
+2026-11-03T19:54:14.775012+00:00 START 48/48 IT__pcodec_i64
+2026-11-03T19:55:14.869985+00:00 RUNNING IT__pcodec_i64 pid=48900 elapsed=60s
+$ taskset -c 2 /home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark -c pcodec_i64 -b 1000 --fauna-batch-size 65536 --pcodec-chunk-size 262144 --pcodec-page-size 262144 -r 10,100,1000,10000,100000 -o /home/testPF/gef-benchmark-runs/20261103-native-access/cases/IT__pcodec_i64.metrics.txt /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+Processing: /dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin
+  Running pcodec_i64... done
+2026-11-03T19:56:07.945980+00:00 END IT__pcodec_i64 status=OK seconds=113.2 
+2026-11-03T19:56:07.946279+00:00 FINISHED {"finished": "2026-11-03T19:56:07.946009+00:00", "total": 48, "counts": {"OK": 32, "WARNING": 16, "UNSUPPORTED": 0, "FAILED": 0}}

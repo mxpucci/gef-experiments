@@ -1,0 +1,19 @@
+Full benchmark audit passed.
+All 16 complete datasets and all 9 requested entries were attempted (144 cases).
+Successful metrics: 112; unsupported inputs: 32; failures: 0.
+Binary hash and all dataset hashes verified after completion.
+
+Per-codec outcomes:
+b_star_gef_approximate: 16 OK, 0 UNSUPPORTED
+dexor: 16 OK, 0 UNSUPPORTED
+elfstar: 16 OK, 0 UNSUPPORTED
+fauna: 0 OK, 16 UNSUPPORTED
+flea: 16 OK, 0 UNSUPPORTED
+macaque: 0 OK, 16 UNSUPPORTED
+pcodec: 16 OK, 0 UNSUPPORTED
+pcodec_i64: 16 OK, 0 UNSUPPORTED
+selfstar: 16 OK, 0 UNSUPPORTED
+
+No unrequested compressors were run. GEF uses its native access methods.
+Pcodec results use independent 1000-value standalone chunks; native shared-metadata paging was not used.
+See README.txt and repository docs/recent-compressors.md for representation and timing details.

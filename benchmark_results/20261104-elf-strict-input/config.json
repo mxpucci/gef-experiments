@@ -1,0 +1,33 @@
+{
+  "started": "2026-11-04T10:30:46.848847+00:00",
+  "runner_pid": 104843,
+  "cpu": 2,
+  "block_size": 1000,
+  "gef_uniform_partition_size": 32000,
+  "codecs": [
+    "elfstar",
+    "selfstar"
+  ],
+  "ranges": [
+    10,
+    100,
+    1000,
+    10000,
+    100000
+  ],
+  "fauna_batch_size": 65536,
+  "pcodec_chunk_size": 262144,
+  "pcodec_page_size": 262144,
+  "binary_sha256": "3ffb4a664026979db491c0f6049b940f0464145f01bfe83f336b0df95c587f2c",
+  "binary": "/home/testPF/gef-benchmark-runs/20261104-elf-strict-input/LosslessBenchmark",
+  "source_commit": "0888e798ff2a691d1281c2d4b591a216c2a78eac",
+  "total_cases": 32,
+  "point_queries": {
+    "new_codecs": 100000
+  },
+  "queries_per_range": {
+    "new_codecs": 1000
+  },
+  "input_preprocessing": "scaled int64 / 10^decimals, strict IEEE division in non-LTO translation unit",
+  "qualification": "Existing C++ Elf*/SElf* ports and block framing unchanged; only shared input conversion corrected."
+}
