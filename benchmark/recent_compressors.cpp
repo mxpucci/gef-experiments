@@ -13,6 +13,12 @@
 #ifdef GEF_WITH_FLEA
 #include "FLEA/FLEA.hpp"
 #endif
+#ifdef GEF_WITH_FASTPFOR
+#include "FastPFor/FastPFor.hpp"
+#endif
+#ifdef GEF_WITH_BTRBLOCKS
+#include "BtrBlocks/BtrBlocks.hpp"
+#endif
 #include <chrono>
 #include <cstring>
 #include <functional>
@@ -44,6 +50,9 @@ std::vector<Codec<double>> codecs() {
 #ifdef GEF_WITH_PCODEC
         {"pcodec", gef_compressors::pcodec::compress, gef_compressors::pcodec::decompress},
 #endif
+#ifdef GEF_WITH_BTRBLOCKS
+        {"btrblocks", gef_compressors::btrblocks::compress, gef_compressors::btrblocks::decompress},
+#endif
     };
 }
 std::vector<Codec<int64_t>> integer_codecs() {
@@ -53,6 +62,10 @@ std::vector<Codec<int64_t>> integer_codecs() {
 #endif
 #ifdef GEF_WITH_PCODEC
         {"pcodec_i64", gef_compressors::pcodec::compress_i64, gef_compressors::pcodec::decompress_i64},
+#endif
+#ifdef GEF_WITH_FASTPFOR
+        {"fastpfor", gef_compressors::fastpfor::compress_for_i64, gef_compressors::fastpfor::decompress_for_i64},
+        {"fastpfor_delta", gef_compressors::fastpfor::compress_delta_i64, gef_compressors::fastpfor::decompress_delta_i64},
 #endif
     };
 }
@@ -117,6 +130,7 @@ BenchmarkResult benchmark_blocks(const Codec<T>& codec, const Values<T>& values,
     result.input_conversion = codec.float32_input ? "float32" : "none";
     result.access_layout = "external_blocks";
     result.compression_unit_values = block_size;
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto start = Clock::now();
     for (size_t b = 0; b < nb; ++b) {
         const size_t first = b * block_size;
@@ -134,6 +148,8 @@ BenchmarkResult benchmark_blocks(const Codec<T>& codec, const Values<T>& values,
     result.compressed_bits = (16 + offsets.size()*sizeof(uint64_t) + offsets.back())*8;
     result.compression_ratio = double(result.compressed_bits)/result.uncompressed_bits;
     const double mib = double(n)*sizeof(T)/(1024.0*1024.0);
+    for (auto& block : blocks) block.shrink_to_fit(); // untimed: harness container capacity
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs = mib/encode_time;
     // Validate outside timing. Value mismatches warn and remain visible in CSV;
     // malformed output/counts still fail the case instead of timing invalid queries.
@@ -204,6 +220,7 @@ BenchmarkResult benchmark_indexed(const std::string& name,const Values<T>& value
     result.uncompressed_bits=data.uncompressed_bits;
     result.input_conversion=float32_input?"float32":"none";
     result.access_layout=layout;result.compression_unit_values=unit_size;result.native_page_values=page_size;
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto start=Clock::now();
     auto index=make();
     const double encode_time=seconds(start);
@@ -217,6 +234,7 @@ BenchmarkResult benchmark_indexed(const std::string& name,const Values<T>& value
     result.compressed_bits=index.size_in_bytes()*8;
     result.compression_ratio=double(result.compressed_bits)/result.uncompressed_bits;
     const double mib=double(n)*sizeof(T)/(1024.0*1024.0);
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs=mib/encode_time;
     // Whole-input validation is untimed. Temporary validation windows do NOT
     // define compressed storage or point-access granularity.

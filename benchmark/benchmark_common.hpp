@@ -37,6 +37,12 @@ struct RangeTrial {
     size_t mismatched_queries{};
 };
 
+
+// Live heap bytes from tools/heapcount (LD_PRELOAD); 0 when the counter is not loaded.
+extern "C" size_t gef_heap_live_bytes() __attribute__((weak));
+inline size_t gef_live_heap_bytes() { return gef_heap_live_bytes ? gef_heap_live_bytes() : 0; }
+inline size_t gef_heap_delta(size_t before) { const size_t now = gef_live_heap_bytes(); return now > before ? now - before : 0; }
+
 struct BenchmarkResult {
     std::string compressor;
     std::string dataset;
@@ -57,6 +63,7 @@ struct BenchmarkResult {
     size_t compression_unit_values{};
     size_t native_page_values{};
     size_t bitwise_mismatches{}; // informational: values whose bits differ
+    size_t ram_bytes{}; // heap bytes held by the compressed representation once built (needs LD_PRELOAD heapcount)
     std::vector<RangeTrial> range_trials;  // not part of the main CSV
     size_t range_mismatched_queries{};     // not part of the main CSV
 
@@ -181,7 +188,19 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
 // fast-math flags; competitor code in lossless_benchmark.cpp is strict IEEE.
 inline constexpr size_t GEF_UNIFORM_PARTITION_SIZE = 32000;
 bool is_gef_compressor(const std::string &name);
+// GEF floating-point forks (gef/gef_fp.hpp, double in / double out): rle_gef_f64, b_star_gef_approximate_f64.
+bool is_gef_f64_compressor(const std::string &name);
+BenchmarkResult benchmark_gef_f64_compressor(const std::string &name, const BenchmarkData &bench_data,
+                                             const std::vector<size_t> &range_sizes);
 BenchmarkResult benchmark_gef_compressor(const std::string &name, const BenchmarkData &bench_data,
                                          const std::vector<size_t> &range_sizes);
 
 BenchmarkResult benchmark_camel(const BenchmarkData &, const std::vector<size_t> &, size_t block_size = 1000);
+#if defined(GEF_ENABLE_PEF)
+// Partitioned Elias-Fano (ds2i) on the prefix sums of shifted_data; benchmark/pef_benchmark.cpp.
+BenchmarkResult benchmark_pef(const BenchmarkData &, const std::vector<size_t> &);
+#endif
+#if defined(GEF_ENABLE_FASTLANES)
+// FastLanes FFOR / transposed delta on 1,024-value vectors; benchmark/fastlanes_benchmark.cpp.
+BenchmarkResult benchmark_fastlanes(const BenchmarkData &, const std::vector<size_t> &, bool delta);
+#endif

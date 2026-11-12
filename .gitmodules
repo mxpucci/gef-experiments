@@ -13,3 +13,6 @@
 [submodule "lib/camel-upstream"]
 	path = lib/camel-upstream
 	url = https://github.com/yoyo185644/camel.git
+[submodule "lib/ds2i"]
+	path = lib/ds2i
+	url = https://github.com/ot/ds2i

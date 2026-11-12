@@ -465,6 +465,50 @@ foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFu
     endif()
 endforeach()
 
+# Partitioned Elias-Fano: the authors' ds2i (lib/ds2i, header-only use of
+# partitioned_sequence) with its succinct submodule. Needs Boost headers only.
+option(GEF_WITH_PEF "Benchmark Partitioned Elias-Fano (ot/ds2i)" ON)
+if(GEF_WITH_PEF AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/ds2i/partitioned_sequence.hpp")
+    find_package(Boost QUIET)
+    if(Boost_FOUND)
+        # ds2i's CMake generates this from succinct_config.hpp.in; same defaults,
+        # with the popcount instruction enabled (available on every target CPU).
+        set(GEF_PEF_GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/ds2i-gen")
+        file(WRITE "${GEF_PEF_GEN_DIR}/succinct_config.hpp"
+            "#pragma once\n#define SUCCINCT_USE_LIBCXX 0\n#define SUCCINCT_USE_INTRINSICS 1\n#define SUCCINCT_USE_POPCNT 1\n")
+        # Two upstream 32-bit truncations break large-universe sequences (our prefix
+        # sums exceed 2^32): the single-partition path declares its upper bound as
+        # `auto ub = 0` (int), and the partitioner's cost model uses uint32_t
+        # values. Patched copies are generated here; the submodule is untouched.
+        foreach(pef_patch
+                "partitioned_sequence.hpp|auto ub = 0|uint64_t ub = 0"
+                "optimal_partition.hpp|typedef uint32_t posting_t|typedef uint64_t posting_t")
+            string(REPLACE "|" ";" pef_patch "${pef_patch}")
+            list(GET pef_patch 0 pef_file)
+            list(GET pef_patch 1 pef_from)
+            list(GET pef_patch 2 pef_to)
+            file(READ "${CMAKE_CURRENT_SOURCE_DIR}/lib/ds2i/${pef_file}" pef_text)
+            string(FIND "${pef_text}" "${pef_from}" pef_pos)
+            if(pef_pos EQUAL -1)
+                message(FATAL_ERROR "PEF patch target not found in ${pef_file}: ${pef_from}")
+            endif()
+            string(REPLACE "${pef_from}" "${pef_to}" pef_text "${pef_text}")
+            file(WRITE "${GEF_PEF_GEN_DIR}/${pef_file}" "${pef_text}")
+        endforeach()
+        set_source_files_properties(benchmark/pef_benchmark.cpp PROPERTIES
+            INCLUDE_DIRECTORIES "${GEF_PEF_GEN_DIR};${CMAKE_CURRENT_SOURCE_DIR}/lib/ds2i;${Boost_INCLUDE_DIRS}")
+        foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
+            if(TARGET ${bench_target})
+                target_sources(${bench_target} PRIVATE benchmark/pef_benchmark.cpp)
+                target_compile_definitions(${bench_target} PRIVATE GEF_ENABLE_PEF=1)
+            endif()
+        endforeach()
+        message(STATUS "PEF (ds2i) enabled; Boost headers: ${Boost_INCLUDE_DIRS}")
+    else()
+        message(STATUS "PEF (ds2i) disabled: Boost headers not found")
+    endif()
+endif()
+
 # GEF keeps the `gef` target's flags (including -ffast-math) in its own
 # translation unit. Competitor codecs compiled in lossless_benchmark.cpp
 # (Elf, Chimp, Chimp128, TSXor, Gorilla, NeaTS, DAC, BUFF/Squash adapters) use
@@ -514,4 +558,20 @@ if(BUILD_TESTING)
     endforeach()
     add_test(NAME camel_roundtrip COMMAND camel_roundtrip)
     add_subdirectory(tests/recent)
+endif()
+
+# FastLanes (cwida/FastLanes): generated FFOR / transpose / rsum kernels from a
+# FastLanes build tree (libFastLanes). Point GEF_FASTLANES_ROOT at the source dir.
+set(GEF_FASTLANES_ROOT "" CACHE PATH "cwida/FastLanes source tree with build/src/libFastLanes.a")
+if(GEF_FASTLANES_ROOT AND EXISTS "${GEF_FASTLANES_ROOT}/build/src/libFastLanes.a")
+    set_source_files_properties(benchmark/fastlanes_benchmark.cpp PROPERTIES
+        INCLUDE_DIRECTORIES "${GEF_FASTLANES_ROOT}/src/include" COMPILE_OPTIONS "-std=c++20")
+    foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
+        if(TARGET ${bench_target})
+            target_sources(${bench_target} PRIVATE benchmark/fastlanes_benchmark.cpp)
+            target_compile_definitions(${bench_target} PRIVATE GEF_ENABLE_FASTLANES=1)
+            target_link_libraries(${bench_target} PRIVATE "${GEF_FASTLANES_ROOT}/build/src/libFastLanes.a")
+        endif()
+    endforeach()
+    message(STATUS "FastLanes enabled: ${GEF_FASTLANES_ROOT}")
 endif()

@@ -25,6 +25,7 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
     result.uncompressed_bits = bench_data.uncompressed_bits;
     
     const size_t n = data.size();
+    const size_t gef_ram0 = gef_live_heap_bytes();
     auto t1 = std::chrono::high_resolution_clock::now();
     const size_t block_size = leco_native_tuning::choose(reinterpret_cast<const T*>(data.data()), n);
     result.access_layout = "native_fixed_partitions_tuned";
@@ -63,6 +64,7 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
     total_compressed_bits += (16 + 8*(num_blocks+1) + 8*codec.mul_add_diff_set.size())*8;
     result.compressed_bits = total_compressed_bits;
     result.compression_ratio = static_cast<double>(result.compressed_bits) / result.uncompressed_bits;
+    result.ram_bytes = gef_heap_delta(gef_ram0);
     result.compression_throughput_mbs = (n * sizeof(T) / 1024.0 / 1024.0) / (compression_time_ns / 1e9);
     
     // Full decompression - with checksum to prevent optimization
