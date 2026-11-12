@@ -222,6 +222,7 @@ if(NEATS_ALP_HYBRID_CLANG)
                     -fPIC
                     ${NEATS_ALP_STDLIB_FLAG}
                 DEPENDS "${NEATS_ALP_BENCH_SRC}" "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/benchmark_common.hpp"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/range_queries.hpp"
                 VERBATIM
             )
             add_custom_target(neats_alp_bench_obj DEPENDS "${NEATS_ALP_BENCH_OBJ}")
@@ -274,6 +275,7 @@ if(NEATS_WITH_LECO)
                 -std=gnu++17
                 -fPIC
             DEPENDS "${NEATS_LECO_BENCH_SRC}" "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/benchmark_common.hpp"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/range_queries.hpp"
                     "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/LeCo/NativeTuning.hpp"
             VERBATIM
         )
@@ -453,20 +455,26 @@ if(NEATS_WITH_SQUASH)
     endif()
 endif()
 
-foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
-    if(TARGET ${bench_target})
-        target_sources(${bench_target} PRIVATE benchmark/camel_benchmark.cpp)
-        target_compile_definitions(${bench_target} PRIVATE
-            NEATS_CAMEL_CLASSPATH_FILE="${CMAKE_CURRENT_BINARY_DIR}/camel-java/classpath.txt")
-    endif()
-endforeach()
-
-# Falcon decimal reconstruction must not become reciprocal multiplication.
-set_source_files_properties(benchmark/falcon_benchmark.cpp PROPERTIES
+# Camel: native C++ translation of the authors' Java codec; like the Java it
+# relies on exact IEEE double arithmetic, so it must not inherit fast-math.
+set_source_files_properties(benchmark/camel_benchmark.cpp PROPERTIES
     COMPILE_OPTIONS "-fno-fast-math;-ffp-contract=off;-fno-lto")
 foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
     if(TARGET ${bench_target})
-        target_sources(${bench_target} PRIVATE benchmark/falcon_benchmark.cpp)
+        target_sources(${bench_target} PRIVATE benchmark/camel_benchmark.cpp)
+    endif()
+endforeach()
+
+# GEF keeps the `gef` target's flags (including -ffast-math) in its own
+# translation unit. Competitor codecs compiled in lossless_benchmark.cpp
+# (Elf, Chimp, Chimp128, TSXor, Gorilla, NeaTS, DAC, BUFF/Squash adapters) use
+# strict IEEE arithmetic: e.g. Elf's decimal reconstruction must not become
+# reciprocal multiplication or be contracted into FMAs.
+set_source_files_properties(benchmark/lossless_benchmark.cpp PROPERTIES
+    COMPILE_OPTIONS "-fno-fast-math;-ffp-contract=off;-fno-lto")
+foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
+    if(TARGET ${bench_target})
+        target_sources(${bench_target} PRIVATE benchmark/gef_benchmark.cpp)
     endif()
 endforeach()
 
@@ -484,10 +492,26 @@ if(BUILD_TESTING)
     target_compile_features(gorilla_adapter_test PRIVATE cxx_std_20)
     target_compile_options(gorilla_adapter_test PRIVATE -UNDEBUG)
     add_test(NAME gorilla_adapter COMMAND gorilla_adapter_test)
+    add_executable(roundtrip_policy_test tests/roundtrip_policy.cpp)
+    target_compile_options(roundtrip_policy_test PRIVATE -UNDEBUG -fno-fast-math -ffp-contract=off)
+    add_test(NAME roundtrip_policy COMMAND roundtrip_policy_test)
+    add_executable(range_queries_test tests/range_queries.cpp)
+    target_compile_options(range_queries_test PRIVATE -UNDEBUG)
+    add_test(NAME range_queries COMMAND range_queries_test)
+    add_executable(streaming_codecs_test tests/streaming_codecs.cpp)
+    target_compile_features(streaming_codecs_test PRIVATE cxx_std_20)
+    target_compile_options(streaming_codecs_test PRIVATE -fno-fast-math -ffp-contract=off)
+    add_test(NAME streaming_codecs COMMAND streaming_codecs_test)
     add_executable(alp_adapter_test tests/alp_adapter.cpp)
     target_link_libraries(alp_adapter_test PRIVATE neats_alp)
     target_compile_options(alp_adapter_test PRIVATE -fno-fast-math -ffp-contract=off -fno-lto -fwrapv)
     set_property(TARGET alp_adapter_test PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
     add_test(NAME alp_adapter COMMAND alp_adapter_test)
+    foreach(camel_tool camel_roundtrip camel_dump)
+        add_executable(${camel_tool} tests/${camel_tool}.cpp)
+        target_compile_features(${camel_tool} PRIVATE cxx_std_20)
+        target_compile_options(${camel_tool} PRIVATE -UNDEBUG -fno-fast-math -ffp-contract=off -fno-lto)
+    endforeach()
+    add_test(NAME camel_roundtrip COMMAND camel_roundtrip)
     add_subdirectory(tests/recent)
 endif()

@@ -1,13 +1,16 @@
 // FFI and serialization only. Compression/decompression algorithms are compiled
-// directly from the pinned, unmodified Apache-2.0 upstream source modules.
+// directly from the pinned Apache-2.0 upstream source modules. cmake/Fauna.cmake
+// applies upstream-f64.patch, which widens the upstream `Value = f32` alias to f64.
 #![allow(dead_code)]
-mod indexed;
 include!(concat!(env!("OUT_DIR"), "/upstream.rs"));
 
-use arrow::array::{Array, BinaryArray, Float32Array, UInt8Array};
+use arrow::array::{Array, BinaryArray, UInt8Array};
 use modelardb_types::types::{ErrorBound, TimestampArray, TimestampBuilder,
-    UnivariateIdBuilder, ValueArray, ValueBuilder};
+    UnivariateIdBuilder, Value, ValueArray, ValueBuilder};
 use std::{cell::RefCell, ffi::CString, os::raw::c_char, panic::{catch_unwind, AssertUnwindSafe}};
+
+// The C ABI exchanges `double`; the patched upstream alias must match it.
+const _: () = assert!(std::mem::size_of::<Value>() == 8);
 
 thread_local! { static LAST_ERROR: RefCell<CString> = RefCell::new(CString::new("").unwrap()); }
 
@@ -33,21 +36,23 @@ impl<'a> Reader<'a> {
         self.pos = end; Ok(result)
     }
     fn u64(&mut self) -> Result<u64, String> { Ok(u64::from_le_bytes(self.take(8)?.try_into().unwrap())) }
-    fn f32(&mut self) -> Result<f32, String> { Ok(f32::from_le_bytes(self.take(4)?.try_into().unwrap())) }
+    fn value(&mut self) -> Result<Value, String> {
+        Ok(Value::from_le_bytes(self.take(std::mem::size_of::<Value>())?.try_into().unwrap()))
+    }
     fn bytes(&mut self) -> Result<&'a [u8], String> {
         let len = usize::try_from(self.u64()?).map_err(|_| "length overflow")?;
         self.take(len)
     }
 }
 
-fn encode(values: &[f32], macaque: bool) -> Result<Vec<u8>, String> {
+fn encode(values: &[Value], macaque: bool) -> Result<Vec<u8>, String> {
     // Model fitting identifies -0 and +0 and treats NaNs as equal. Do not
     // promise bitwise preservation for those values with the Fauna model path.
-    if !macaque && values.iter().any(|v| !v.is_finite() || v.to_bits() == 0x80000000) {
-        return Err("Fauna model fitting requires finite f32 values without negative zero".into());
+    if !macaque && values.iter().any(|v| !v.is_finite() || v.to_bits() == (-0.0 as Value).to_bits()) {
+        return Err("Fauna model fitting requires finite values without negative zero".into());
     }
     let mut out = Vec::new();
-    out.extend_from_slice(if macaque { b"GFMAC001" } else { b"GFFAU001" });
+    out.extend_from_slice(if macaque { b"GFMAC002" } else { b"GFFAU002" });
     put_u64(&mut out, values.len() as u64);
     if macaque {
         if !values.is_empty() {
@@ -68,7 +73,7 @@ fn encode(values: &[f32], macaque: bool) -> Result<Vec<u8>, String> {
             put_u64(&mut out, t as u64);
         }
         for col in [5, 6] {
-            let f = batch.column(col).as_any().downcast_ref::<Float32Array>().unwrap().value(row);
+            let f = batch.column(col).as_any().downcast_ref::<ValueArray>().unwrap().value(row);
             out.extend_from_slice(&f.to_le_bytes());
         }
         for col in [4, 7, 8] {
@@ -79,9 +84,9 @@ fn encode(values: &[f32], macaque: bool) -> Result<Vec<u8>, String> {
     Ok(out)
 }
 
-fn decode(bytes: &[u8], count: usize, macaque: bool) -> Result<Vec<f32>, String> {
+fn decode(bytes: &[u8], count: usize, macaque: bool) -> Result<Vec<Value>, String> {
     let mut r = Reader { bytes, pos: 0 };
-    if r.take(8)? != if macaque { b"GFMAC001" } else { b"GFFAU001" } { return Err("wrong codec/frame version".into()); }
+    if r.take(8)? != if macaque { b"GFMAC002" } else { b"GFFAU002" } { return Err("wrong codec/frame version".into()); }
     if r.u64()? != count as u64 { return Err("value count mismatch".into()); }
     let mut ids = UnivariateIdBuilder::new();
     let mut result = ValueBuilder::with_capacity(count);
@@ -98,8 +103,8 @@ fn decode(bytes: &[u8], count: usize, macaque: bool) -> Result<Vec<f32>, String>
             let model = r.take(1)?[0];
             let first = r.u64()? as i64;
             let last = r.u64()? as i64;
-            let min = r.f32()?;
-            let max = r.f32()?;
+            let min = r.value()?;
+            let max = r.value()?;
             let times = r.bytes()?;
             let values = r.bytes()?;
             let residuals = r.bytes()?;
@@ -125,7 +130,7 @@ fn ffi_call(f: impl FnOnce() -> Result<(), String>) -> i32 {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn gef_fauna_compress(input: *const f32, count: usize, macaque: bool,
+pub unsafe extern "C" fn gef_fauna_compress(input: *const Value, count: usize, macaque: bool,
     output: *mut *mut u8, len: *mut usize) -> i32 {
     ffi_call(|| {
         if output.is_null() || len.is_null() || (count > 0 && input.is_null()) { return Err("null FFI pointer".into()); }
@@ -138,7 +143,7 @@ pub unsafe extern "C" fn gef_fauna_compress(input: *const f32, count: usize, mac
 
 #[no_mangle]
 pub unsafe extern "C" fn gef_fauna_decompress(input: *const u8, len: usize, count: usize,
-    macaque: bool, output: *mut f32) -> i32 {
+    macaque: bool, output: *mut Value) -> i32 {
     ffi_call(|| {
         if input.is_null() || (count > 0 && output.is_null()) { return Err("null FFI pointer".into()); }
         if len > isize::MAX as usize || count > isize::MAX as usize / 8 { return Err("frame too large".into()); }

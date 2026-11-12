@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Build original Camel, using its documented maximum-decimal configuration.
-Requires Java 8 JDK + Maven. No codec algorithm edits or precision extensions.
+"""Build the authors' original Java Camel for auditing the native C++ port
+(benchmark/Camel/camel.hpp); the benchmark itself no longer runs Java.
+Uses the documented maximum-decimal configuration. Requires Java 8 JDK + Maven.
+No codec algorithm edits or precision extensions. Also compiles the
+CamelBenchmark (historical harness) and CamelDump (bitstream parity) mains.
 """
 from pathlib import Path
 import argparse,os,shutil,subprocess
-root=Path(__file__).resolve().parents[1]
+root=Path(__file__).resolve().parents[2]
 p=argparse.ArgumentParser();p.add_argument('--build-dir',type=Path,default=root/'build/camel-java');p.add_argument('--integer-bits',type=int,default=16,choices=range(3,32));a=p.parse_args()
 build=a.build_dir.resolve();build.mkdir(parents=True,exist_ok=True)
 source=root/'lib/camel-upstream';pin='c4b55c2226163b0bfb6c330aa78b7c0a97d872b3'
@@ -24,7 +27,7 @@ f.write_text(s)
 f=src/'yyy/ts/compress/camel/CamelDecompressor.java';s=f.read_text();assert s.count('diffVal = in.readInt(16);')==1
 f.write_text(s.replace('diffVal = in.readInt(16);',f'diffVal = in.readInt({a.integer_bits});'))
 classes=build/'classes';classes.mkdir(exist_ok=True)
-subprocess.run([str(java/'javac') if java else 'javac','-encoding','UTF-8','-proc:none','-cp',cp.read_text().strip(),'-sourcepath',str(src),'-d',str(classes)]+[str(src/'yyy/ts/compress/camel'/f) for f in ['Camel.java','CamelDecompressor.java','SourceBTree.java']]+[str(root/'benchmark/CamelOriginal/CamelBenchmark.java')],env=env,check=True)
+subprocess.run([str(java/'javac') if java else 'javac','-encoding','UTF-8','-proc:none','-cp',cp.read_text().strip(),'-sourcepath',str(src),'-d',str(classes)]+[str(src/'yyy/ts/compress/camel'/f) for f in ['Camel.java','CamelDecompressor.java','SourceBTree.java']]+[str(root/'tools/camel'/f) for f in ['CamelBenchmark.java','CamelDump.java']],env=env,check=True)
 # These are the only external classes reached by the compression harness.
 jars=[Path(x) for x in cp.read_text().strip().split(os.pathsep) if Path(x).name.startswith(('dsiutils-','fastutil-','slf4j-api-'))]
 assert len(jars)==3

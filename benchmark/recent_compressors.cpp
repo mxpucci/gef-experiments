@@ -1,15 +1,14 @@
 #include "recent_compressors.hpp"
+#include "range_queries.hpp"
 #include "DeXOR/DeXOR.hpp"
 #include "ElfStar/ElfStar.hpp"
 #include "SElfStar/SElfStar.hpp"
 #include <memory>
 #ifdef GEF_WITH_FAUNA
 #include "Fauna/Fauna.hpp"
-#include "Fauna/Indexed.hpp"
 #endif
 #ifdef GEF_WITH_PCODEC
 #include "Pcodec/Pcodec.hpp"
-#include "Pcodec/Indexed.hpp"
 #endif
 #ifdef GEF_WITH_FLEA
 #include "FLEA/FLEA.hpp"
@@ -37,8 +36,8 @@ std::vector<Codec<double>> codecs() {
         {"selfstar", [stream](const Values<double>& values) { return stream->compress_block(values); },
             gef_compressors::selfstar::decompress, gef_compressors::selfstar::decompress_prefix},
 #ifdef GEF_WITH_FAUNA
-        {"fauna", gef_compressors::fauna::compress, gef_compressors::fauna::decompress, {}, true},
-        {"macaque", gef_compressors::macaque::compress, gef_compressors::macaque::decompress, {}, true},
+        {"fauna", gef_compressors::fauna::compress, gef_compressors::fauna::decompress},
+        {"macaque", gef_compressors::macaque::compress, gef_compressors::macaque::decompress},
 #endif
         {"elfstar", gef_compressors::elfstar::compress, gef_compressors::elfstar::decompress, gef_compressors::elfstar::decompress_prefix},
         {"dexor", gef_compressors::dexor::compress, gef_compressors::dexor::decompress, gef_compressors::dexor::decompress_prefix},
@@ -61,15 +60,13 @@ using Clock = std::chrono::steady_clock;
 double seconds(Clock::time_point start) {
     return std::max(std::chrono::duration<double>(Clock::now() - start).count(), 1e-9);
 }
-template<class T> size_t count_differences(const Values<T>& expected, const Values<T>& actual) {
+// Shared round-trip policy (benchmark_common.hpp): |error| > 1e-9 fails,
+// bit differences are also counted in bitwise_mismatches.
+template<class T> void count_differences(BenchmarkResult& result, const Values<T>& expected,
+    const Values<T>& actual, size_t first_index) {
     if (expected.size() != actual.size())
         throw std::runtime_error("codec decoded the wrong number of values; queries cannot be measured safely");
-    if (expected.empty() || !std::memcmp(expected.data(), actual.data(), expected.size()*sizeof(T)))
-        return 0;
-    size_t mismatches = 0;
-    for (size_t i=0; i<expected.size(); ++i)
-        mismatches += std::memcmp(&expected[i], &actual[i], sizeof(T)) != 0;
-    return mismatches;
+    check_roundtrip(result, expected.data(), actual.data(), expected.size(), first_index);
 }
 // Explicit benchmark preprocessing, kept separate from the strict codec API.
 // Count changes before encoding and validate against exactly this converted input.
@@ -144,13 +141,9 @@ BenchmarkResult benchmark_blocks(const Codec<T>& codec, const Values<T>& values,
         const size_t first = b*block_size, count = std::min(block_size, n-first);
         Values<T> expected(values.begin()+first, values.begin()+first+count);
         if (codec.float32_input) convert_to_float32(expected);
-        result.roundtrip_mismatches += count_differences(expected, codec.decode(blocks[b], count));
+        count_differences(result, expected, codec.decode(blocks[b], count), first);
     }
-    result.validation_status = result.roundtrip_mismatches ? "failed" : "passed";
-    if (result.roundtrip_mismatches) {
-        std::cerr << "\nWarning: " << codec.name << " reconstructed " << result.roundtrip_mismatches
-                  << "/" << n << " values incorrectly; emitting timing metrics with validation_status=failed.\n";
-    }
+    finish_roundtrip_validation(result);
     start = Clock::now();
     for (size_t b = 0; b < nb; ++b) {
         auto output = codec.decode(blocks[b], std::min(block_size, n-b*block_size));
@@ -173,15 +166,19 @@ BenchmarkResult benchmark_blocks(const Codec<T>& codec, const Values<T>& values,
     const double access_time = seconds(start);
     result.random_access_ns = nq ? access_time*1e9/nq : 0;
     result.random_access_mbs = nq*sizeof(T)/(1024.0*1024.0)/access_time;
-    for (size_t range : ranges) {
-        if (range >= n || !range) continue;
-        const auto& indices = data.range_query_indices.at(range);
-        const size_t queries = std::min<size_t>(1000, indices.size());
-        Values<T> output(range);
-        start = Clock::now();
-        for (size_t q = 0; q < queries; ++q) {
-            const size_t begin = indices[q];
-            if (begin > n-range) throw std::out_of_range("range query index");
+    // Range queries (range_queries.hpp). Reference: the codec's own full
+    // decompression, built untimed (the timed full decode above discards it).
+    Values<T> reference;
+    if (data.range_options.verify) {
+        reference.resize(n);
+        for (size_t b = 0; b < nb; ++b) {
+            const size_t count = std::min(block_size, n-b*block_size);
+            const auto decoded = codec.decode(blocks[b], count);
+            std::copy(decoded.begin(), decoded.begin()+std::min(count, decoded.size()), reference.begin()+b*block_size);
+        }
+    }
+    run_range_queries(result, data, ranges, n, reference.empty() ? nullptr : reference.data(),
+        [&](size_t begin, size_t range, Values<T>& output) {
             for (size_t b = begin/block_size; b <= (begin+range-1)/block_size; ++b) {
                 const size_t count = std::min(block_size, n-b*block_size);
                 const size_t needed = std::min(count, begin+range-b*block_size);
@@ -192,11 +189,7 @@ BenchmarkResult benchmark_blocks(const Codec<T>& codec, const Values<T>& values,
                 std::copy(decoded.begin()+(lo-b*block_size), decoded.begin()+(hi-b*block_size),
                           output.begin()+(lo-begin));
             }
-            do_not_optimize(output);
-        }
-        result.range_query_throughputs.emplace_back(range,
-            double(queries)*range*sizeof(T)/(1024.0*1024.0)/seconds(start));
-    }
+        });
     return result;
 }
 
@@ -232,19 +225,13 @@ BenchmarkResult benchmark_indexed(const std::string& name,const Values<T>& value
         Values<T> expected(values.begin()+first,values.begin()+first+count),decoded(count);
         if(float32_input) convert_to_float32(expected);
         index.read(first,count,decoded.data());
-        result.roundtrip_mismatches+=count_differences(expected,decoded);
+        count_differences(result,expected,decoded,first);
     }
-    result.validation_status=result.roundtrip_mismatches?"failed":"passed";
-    if(result.roundtrip_mismatches) {
-        std::cerr << "\nWarning: " << name << " reconstructed " << result.roundtrip_mismatches << "/" << n
-                  << " values incorrectly; emitting timing metrics with validation_status=failed.\n";
-    }
+    finish_roundtrip_validation(result);
+    Values<T> full(n);  // kept as the range-query reference
     start=Clock::now();
-    {
-        Values<T> decoded(n);
-        index.read(0,n,decoded.data());
-        do_not_optimize(decoded);
-    }
+    index.read(0,n,full.data());
+    do_not_optimize(full);
     result.decompression_throughput_mbs=mib/seconds(start);
     const size_t nq=std::min<size_t>(100000,data.random_indices.size());
     start=Clock::now();
@@ -256,37 +243,14 @@ BenchmarkResult benchmark_indexed(const std::string& name,const Values<T>& value
     const double access_time=seconds(start);
     result.random_access_ns=nq?access_time*1e9/nq:0;
     result.random_access_mbs=nq*sizeof(T)/(1024.0*1024.0)/access_time;
-    for(size_t range:ranges) {
-        if(range>=n||!range) continue;
-        const auto& indices=data.range_query_indices.at(range);
-        const size_t queries=std::min<size_t>(1000,indices.size());
-        Values<T> output(range);
-        start=Clock::now();
-        for(size_t q=0;q<queries;++q) {
-            index.read(indices[q],range,output.data());
-            do_not_optimize(output);
-        }
-        result.range_query_throughputs.emplace_back(range,double(queries)*range*sizeof(T)/(1024.0*1024.0)/seconds(start));
-    }
+    run_range_queries(result,data,ranges,n,full.data(),
+        [&](size_t first,size_t range,Values<T>& output){index.read(first,range,output.data());});
     return result;
 }
 
 BenchmarkResult benchmark_recent_compressor(const std::string& name,
     const BenchmarkData& data, const std::vector<size_t>& ranges, size_t block_size,
-    const NativeAccessOptions& native) {
-#ifdef GEF_WITH_FAUNA
-    if(name=="fauna") return benchmark_indexed(name,data.double_data,data,ranges,
-        [&]{return gef_compressors::fauna::Indexed(data.double_data,native.fauna_batch_size);},
-        true,"native_segments",native.fauna_batch_size,0);
-#endif
-#ifdef GEF_WITH_PCODEC
-    if(name=="pcodec") return benchmark_indexed(name,data.double_data,data,ranges,
-        [&]{return gef_compressors::pcodec::Indexed<double>(data.double_data,native.pcodec_chunk_size,native.pcodec_page_size);},
-        false,"native_pages",native.pcodec_chunk_size,native.pcodec_page_size);
-    if(name=="pcodec_i64") return benchmark_indexed(name,data.raw_data,data,ranges,
-        [&]{return gef_compressors::pcodec::Indexed<int64_t>(data.raw_data,native.pcodec_chunk_size,native.pcodec_page_size);},
-        false,"native_pages",native.pcodec_chunk_size,native.pcodec_page_size);
-#endif
+    const NativeAccessOptions&) {
     for (const auto& codec : integer_codecs())
         if (codec.name == name) return benchmark_blocks(codec, data.raw_data, data, ranges, block_size);
     for (const auto& codec : codecs())

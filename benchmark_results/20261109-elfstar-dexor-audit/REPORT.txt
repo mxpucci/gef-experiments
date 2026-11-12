@@ -1,0 +1,74 @@
+Elf* official-C++ evaluation and DeXOR Java-vs-C++ audit — 2026-11-09
+
+No benchmark source was changed by this audit.
+
+Sample
+299 blocks of 1,000 values (298,746 values) from all 16 benchmark datasets:
+the first 10 blocks plus 10 block-aligned blocks evenly spaced over each file
+(fewer where the dataset is short). Values are raw/10^decimals with correctly
+rounded IEEE division (harness/sample.py, harness/convert.py).
+Java: authors' unmodified sources, OpenJDK 21, dsiutils 2.7.0, fastutil 8.5.8.
+  Elf*: Spatio-Temporal-Lab/SElfStar 457ceb0033e98d516fef42e39d17c9d4b8abbfdb
+  DeXOR: SuDIS-ZJU/DeXOR 06128b3df57cc1e8c53681231e235e22eb508c8d
+C++: Apple clang (local, arm64) and GCC 13.4 -O3 -march=native (server, x86-64),
+-fno-fast-math -ffp-contract=off. Both platforms gave identical results.
+All comparisons are bitwise. Per-dataset numbers: summary.csv.
+
+1. Serf C++ Elf* (Spatio-Temporal-Lab/Serf d67587c2959561b38fb71082d82b7d24da80bd50,
+   test/baselines/elf_star; identical on branches `new` and `Elf_star`;
+   Spatio-Temporal-Lab/Crush 9a9b18b has the same design)
+- Builds unmodified with GCC 13. Apple clang needs only a bits/stdc++.h shim
+  (harness/bits_stdcxx_shim.h).
+- It is NOT the Elf* evaluated here. It ports Java ElfStarCompressorNoHuff (the
+  paper's no-Huffman ablation): fixed 1/2/6-bit beta* codes instead of the
+  17-state Huffman code of ElfStarCompressor.
+- It also deviates from that Java variant: utils.cc starts the significant-count
+  search at 17-sp-1 where Java Elf64Utils uses 17-sp. 46/299 blocks therefore
+  differ even from the Java NoHuff bitstream.
+- No end marker; 4-byte count header; NaN payloads canonicalized. A NaN inside a
+  block decodes as -1 and corrupts the rest of the block (harness/edge.cpp).
+- Lossless on all 299 sampled blocks, but payload +4.0% vs Java Elf* overall
+  (per dataset -2.1% UK to +14.3% GE).
+- Our port: payload (after its 8-byte count header) byte-identical to Java Elf*
+  on 299/299 blocks, lossless.
+Decision: keep our Elf* port. No other C/C++ Elf* with Huffman or any non-Java
+SElf* was found (lab's 23 repos incl. Serf/Crush/ACoST/FloatingCompressionSurvey,
+XXL2002/ECHOS_Code (Serf copy), apache/tsfile, apache/iotdb, GitHub code search).
+
+2. DeXOR
+- Our port is lossless on 299/299 blocks; it differs from stock Java on 298
+  blocks. In every one, the first diverging value is one stock Java
+  reconstructs inexactly.
+- harness/diag/ExactDeXOREncoder.java (diagnostic only) is upstream
+  Decimal_XOR plus one condition: accept a decimal encoding only if the upstream
+  decoder's arithmetic reproduces the value bit-for-bit. Our port is
+  byte-identical to it on 299/299 blocks. All differences from stock Java are
+  therefore due solely to the deliberate rejection of upstream's comp(...)
+  tolerance acceptance (DoubleDeXOREncoder.java:113). No other bug was found.
+- Stock Java misdecodes 56,976/298,746 sampled values (19%), all within 1e-9
+  relative.
+- Cost of exactness: our payload is +61% vs stock Java overall (BP +1.4%,
+  BT/BW +18%, UK +22%, AP +135%, US +213%), from values routed to the exception
+  path. Whether to accept upstream's approximate behaviour is a policy decision
+  left to the user; DeXOR behaviour is unchanged.
+
+Disclosure note
+Elf* and SElf* are C++ ports of the authors' Java (SElfStar@457ceb0). The Elf*
+payload is byte-identical to Java on 299 sampled blocks from all 16 datasets.
+The only official C++ (Serf/Crush) implements the no-Huffman ablation, so it was
+not used. DeXOR is a C++ port of the official Java (@06128b3). It accepts a
+decimal encoding only if decoding reproduces the value bit-for-bit, whereas
+upstream accepts approximate reconstructions (19% of sampled values off by
+<=1e-9 relative). This keeps DeXOR lossless at a size cost (+61% on our samples);
+otherwise its output is byte-identical to upstream.
+
+Files
+summary.csv       per-dataset sizes/equalities (Java Elf*, port, Serf, Java NoHuff, DeXOR)
+java.csv          Java harness output: file,java,blocks,elfstar_B,nohuff_B,dexor_B,
+                  elf_mis,nohuff_mis,dexor_mis,dexor_mis_within_1e-9
+cpp_remote.txt    C++ harness output (GCC 13, identical to Apple clang)
+harness/          Audit2.java, AuditExact.java, diag/ExactDeXOREncoder.java,
+                  audit2.cpp (diagnostic-only access hack), edge.cpp, dbg.cpp,
+                  sample.py, convert.py, bits_stdcxx_shim.h
+Source paths in harnesses reflect the audit workspace; datasets and jars are not
+included.

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <iostream>
 #include <limits>
 #include "../lib/BitStream.hpp"
@@ -56,7 +57,7 @@ struct CompressorChimp128 {
         addValue(value);
     }
 
-    auto getBuffer() {
+    const BitStream &getBuffer() const {
         return out;
     }
 
