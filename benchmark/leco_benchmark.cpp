@@ -2,6 +2,7 @@
 // (LeCo redefines std::is_integral<__uint128_t> which conflicts with GCC 13's libstdc++)
 
 #include "benchmark_common.hpp"
+#include "range_queries.hpp"
 #include "piecewise_fix_integer_template.h"
 #include "LeCo/NativeTuning.hpp"
 
@@ -129,16 +130,11 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
         }
     }
     
-    // Range queries - with volatile checksum to prevent optimization
-    const size_t num_range_queries = 1000;
-    for (auto range : range_sizes) {
-        if (range >= n) continue;
-        
-        const auto& range_indices = bench_data.range_query_indices.at(range);
-        std::vector<T> out_buffer(range);
-        std::vector<T> block_buffer(block_size);  // reused native-partition decode buffer
-        // Decode the native partitions overlapping [start_idx, start_idx + range).
-        auto decode_range = [&](size_t start_idx) {
+    // Range queries (range_queries.hpp): decode the native partitions
+    // overlapping [start_idx, start_idx + range) into a reused partition buffer.
+    std::vector<T> block_buffer(block_size);
+    run_range_queries(result, bench_data, range_sizes, n, decompressed.data(),
+        [&](size_t start_idx, size_t range, std::vector<T> &out_buffer) {
             size_t start_block = start_idx / block_size;
             size_t end_block = (start_idx + range - 1) / block_size;
             
@@ -158,38 +154,7 @@ BenchmarkResult benchmark_leco(const BenchmarkData &bench_data,
                 memcpy(out_buffer.data() + out_pos, block_buffer.data() + skip, take * sizeof(T));
                 out_pos += take;
             }
-        };
-        volatile T range_checksum = 0;  // volatile prevents optimization
-        
-        t1 = std::chrono::high_resolution_clock::now();
-        size_t q_count_range = 0;
-        for (auto start_idx : range_indices) {
-            if (q_count_range++ >= num_range_queries) break;
-            decode_range(start_idx);
-            range_checksum += out_buffer[0];  // Force computation
-            do_not_optimize(out_buffer);
-        }
-        compiler_barrier();  // Compiler barrier before timing ends
-        t2 = std::chrono::high_resolution_clock::now();
-        do_not_optimize(range_checksum);
-        
-        auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
-        result.range_query_throughputs.emplace_back(range, throughput);
-
-        // Range correctness (after timing): every timed query, against the input.
-        q_count_range = 0;
-        for (auto start_idx : range_indices) {
-            if (q_count_range++ >= num_range_queries) break;
-            decode_range(start_idx);
-            if (!std::equal(out_buffer.begin(), out_buffer.end(), data.begin() + start_idx,
-                            [](T a, auto b) { return a == static_cast<T>(b); })) {
-                result.validation_status = "failed";
-                std::cerr << "Warning: LeCo range mismatch start=" << start_idx << " len=" << range << std::endl;
-                break;
-            }
-        }
-    }
+        });
     
     // Cleanup
     for(auto* ptr : block_start_vec) {

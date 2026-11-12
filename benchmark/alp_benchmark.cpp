@@ -1,6 +1,7 @@
 // ALP benchmark - uses the ALP library for floating-point compression.
 
 #include "benchmark_common.hpp"
+#include "range_queries.hpp"
 #include "alp.hpp"
 
 #include <chrono>
@@ -443,16 +444,10 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
         }
     }
 
-    // Range queries - with volatile checksum to prevent optimization
-    const size_t num_range_queries = 1000;
-    for (auto range : range_sizes) {
-        if (range >= n) continue; // same convention as the other adapters/CSV header
-
-        const auto& range_indices = bench_data.range_query_indices.at(range);
-        std::vector<double> range_buf(range);
-        volatile double range_checksum = 0;  // volatile prevents optimization
-
-        auto read_range = [&](size_t start_idx) {
+    // Range queries (range_queries.hpp): decode every intersected vector into
+    // vec_buf and copy the requested values into the output slot.
+    run_range_queries(result, bench_data, range_sizes, n, decompressed.data(),
+        [&](size_t start_idx, size_t range, std::vector<double> &range_buf) {
             size_t start_vec = start_idx / VEC;
             size_t end_vec = (start_idx + range - 1) / VEC;
             size_t out_pos = 0;
@@ -473,31 +468,7 @@ BenchmarkResult benchmark_alp(const BenchmarkData &bench_data,
                 memcpy(range_buf.data() + out_pos, vec_buf + skip, take * sizeof(double));
                 out_pos += take;
             }
-        };
-        t1 = std::chrono::high_resolution_clock::now();
-        size_t q_count=0;
-        for(auto start_idx:range_indices) {
-            if(q_count>=num_range_queries)break;
-            ++q_count;
-            read_range(start_idx);
-            range_checksum+=range_buf[0];
-            do_not_optimize(range_buf);
-        }
-        compiler_barrier();  // Compiler barrier before timing ends
-        t2 = std::chrono::high_resolution_clock::now();
-        do_not_optimize(range_checksum);
-
-        auto range_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = (range * sizeof(double) * q_count / 1024.0 / 1024.0) / (range_ns / 1e9);
-        result.range_query_throughputs.emplace_back(range, throughput);
-        for(size_t q=0;q<std::min<size_t>(q_count,3);++q) {
-            read_range(range_indices[q]);
-            if(std::memcmp(range_buf.data(),data.data()+range_indices[q],range*sizeof(double))) {
-                result.validation_status="failed";
-                std::cerr << "Warning: ALP range mismatch\n";
-            }
-        }
-    }
+        });
 
     return result;
 }

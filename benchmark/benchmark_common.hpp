@@ -17,6 +17,26 @@
 #include <utility>
 #include <vector>
 
+// Range-query configuration shared by every codec (CLI: --range-*).
+struct RangeQueryOptions {
+    size_t queries = 10000;        // queries per range size, identical for every codec
+    uint64_t seed = 1234;          // mt19937 seed of the shared random starts
+    size_t trials = 1;             // timed repetitions of all queries; CSV reports the median
+    size_t batch_bytes = 256 * 1024; // output arena per timed batch (see range_queries.hpp)
+    bool verify = true;            // untimed check of every query against full decompression
+};
+
+// One timed trial of all queries of one range size (written by --range-trials-csv).
+struct RangeTrial {
+    size_t range{};
+    size_t trial{};
+    size_t queries{};
+    size_t value_bytes{};          // bytes per returned value (8 for every current codec)
+    uint64_t elapsed_ns{};
+    size_t verified_queries{};
+    size_t mismatched_queries{};
+};
+
 struct BenchmarkResult {
     std::string compressor;
     std::string dataset;
@@ -37,6 +57,8 @@ struct BenchmarkResult {
     size_t compression_unit_values{};
     size_t native_page_values{};
     size_t bitwise_mismatches{}; // informational: values whose bits differ
+    std::vector<RangeTrial> range_trials;  // not part of the main CSV
+    size_t range_mismatched_queries{};     // not part of the main CSV
 
     void print_header(std::ostream &out) const;
     void print(std::ostream &out) const;
@@ -55,6 +77,7 @@ struct BenchmarkData {
     std::vector<size_t> random_indices;
     // Map range size to indices
     std::map<size_t, std::vector<size_t>> range_query_indices;
+    RangeQueryOptions range_options;
 
     // Defined in a strict-IEEE, non-LTO translation unit: callers may use
     // fast-math, but reciprocal multiplication changes the decimal input bits.

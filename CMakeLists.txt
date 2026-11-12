@@ -222,6 +222,7 @@ if(NEATS_ALP_HYBRID_CLANG)
                     -fPIC
                     ${NEATS_ALP_STDLIB_FLAG}
                 DEPENDS "${NEATS_ALP_BENCH_SRC}" "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/benchmark_common.hpp"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/range_queries.hpp"
                 VERBATIM
             )
             add_custom_target(neats_alp_bench_obj DEPENDS "${NEATS_ALP_BENCH_OBJ}")
@@ -274,6 +275,7 @@ if(NEATS_WITH_LECO)
                 -std=gnu++17
                 -fPIC
             DEPENDS "${NEATS_LECO_BENCH_SRC}" "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/benchmark_common.hpp"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/range_queries.hpp"
                     "${CMAKE_CURRENT_SOURCE_DIR}/benchmark/LeCo/NativeTuning.hpp"
             VERBATIM
         )
@@ -493,6 +495,9 @@ if(BUILD_TESTING)
     add_executable(roundtrip_policy_test tests/roundtrip_policy.cpp)
     target_compile_options(roundtrip_policy_test PRIVATE -UNDEBUG -fno-fast-math -ffp-contract=off)
     add_test(NAME roundtrip_policy COMMAND roundtrip_policy_test)
+    add_executable(range_queries_test tests/range_queries.cpp)
+    target_compile_options(range_queries_test PRIVATE -UNDEBUG)
+    add_test(NAME range_queries COMMAND range_queries_test)
     add_executable(streaming_codecs_test tests/streaming_codecs.cpp)
     target_compile_features(streaming_codecs_test PRIVATE cxx_std_20)
     target_compile_options(streaming_codecs_test PRIVATE -fno-fast-math -ffp-contract=off)

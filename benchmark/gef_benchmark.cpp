@@ -26,6 +26,7 @@
 // gef.hpp relies on headers that the benchmark used to include before it.
 #include <sdsl/bit_vectors.hpp>
 #include "benchmark_common.hpp"
+#include "range_queries.hpp"
 #include "gef/gef.hpp"
 
 namespace {
@@ -91,29 +92,11 @@ BenchmarkResult benchmark_gef(const std::string &compressor_name,
     result.random_access_ns = static_cast<double>(ra_time_ns) / num_ra_queries;
     result.random_access_mbs = (num_ra_queries * sizeof(T) / 1024.0 / 1024.0) / (ra_time_ns / 1e9);
     
-    // Range queries
-    const size_t num_range_queries = bench_data.range_query_indices.begin()->second.size();
-    for (auto range : range_sizes) {
-        if (range >= data.size()) continue;
-        
-        const auto& range_indices = bench_data.range_query_indices.at(range);
-        std::vector<T> out_buffer(range);
-        volatile T range_checksum = 0;
-        
-        t1 = std::chrono::high_resolution_clock::now();
-        for (auto start_idx : range_indices) {
-            compressor.get_elements(start_idx, range, out_buffer);
-            range_checksum += out_buffer[0];
-            do_not_optimize(out_buffer);
-        }
-        compiler_barrier();
-        t2 = std::chrono::high_resolution_clock::now();
-        do_not_optimize(range_checksum);
-        
-        auto range_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
-        double throughput = ((range * sizeof(T)) * num_range_queries / 1024.0 / 1024.0) / (range_time_ns / 1e9);
-        result.range_query_throughputs.emplace_back(range, throughput);
-    }
+    // Range queries (range_queries.hpp)
+    run_range_queries(result, bench_data, range_sizes, data.size(), decompressed.data(),
+        [&](size_t start, size_t length, std::vector<T> &out) {
+            compressor.get_elements(start, length, out);
+        });
     
     return result;
 }
