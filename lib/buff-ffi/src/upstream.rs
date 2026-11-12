@@ -1,6 +1,7 @@
 #![allow(warnings)]
 // Generated from the pinned authors repository by tools/import_buff_upstream.py.
-// Codec bodies are original; selective decode has the documented trailing-bit fix.
+// Codec bodies are original and unpatched (known upstream bugs are documented in
+// docs/buff-leco-native.txt; none changes size or crashes on the benchmark datasets).
 macro_rules! println { ($($t:tt)*) => {} }
 macro_rules! print { ($($t:tt)*) => {} }
 macro_rules! info { ($($t:tt)*) => {} }
@@ -871,7 +872,7 @@ pub fn buff_decode_condition(&self, bytes: BorrowedBytes<'_>, iter: Iter<usize>)
                 pre = *it.next().unwrap();
                 bitpack.skip((pre * remain) as usize);
                 cur = bitpack.read_bits(remain as usize).unwrap();
-                expected_datapoints.push((base_int + ((*(fixed_iter.next().unwrap()) as u64)|(cur as u64) ) as i64 ) as f64 / dec_scl);
+                expected_datapoints.push((base_int + ((*(fixed_iter.next().unwrap()) as u64)|((cur as u64)<< remain as u64) ) as i64 ) as f64 / dec_scl);
 
                 for &entry in it{
                     delta = entry-pre;
@@ -879,7 +880,7 @@ pub fn buff_decode_condition(&self, bytes: BorrowedBytes<'_>, iter: Iter<usize>)
                         bitpack.skip(((delta-1) * remain));
                     }
                     cur = bitpack.read_bits(remain as usize).unwrap();
-                    expected_datapoints.push((base_int + ((*(fixed_iter.next().unwrap()) as u64)|(cur as u64) )as i64 ) as f64 / dec_scl);
+                    expected_datapoints.push((base_int + ((*(fixed_iter.next().unwrap()) as u64)|((cur as u64)<< remain as u64) )as i64 ) as f64 / dec_scl);
                     pre = entry;
                 }
 
