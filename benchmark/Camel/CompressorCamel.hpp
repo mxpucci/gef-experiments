@@ -1,7 +1,9 @@
+// HISTORICAL EXPERIMENTAL PORT: not used by LosslessBenchmark.
+// The production Camel adapter executes lib/camel-upstream Java instead.
 #pragma once
 
 /**
- * Camel Compressor - Faithful C++ port from:
+ * Camel Compressor - Legacy extended C++ port, incompatible with the upstream format:
  * https://github.com/yoyo185644/camel
  * 
  * Ported from Camel.java

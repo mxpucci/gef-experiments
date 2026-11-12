@@ -69,3 +69,11 @@ BUFF/LeCo rows use the earlier binary and remain provisional. The separate
 32-case native rerun was cancelled before starting. Only validation evidence
 is available for the corrected adapters; no final native timing results exist.
 See benchmark_results/RUN_STATUS.txt. Original paper figures remain unchanged.
+
+2026-11-05 variant audit
+The above encoder corresponds to the authors' plain scalar `buff` profiler
+route. Their separate `buff-major` outlier/majority route is not integrated.
+An isolated original-code comparison found material savings on some datasets,
+including 19.38% on full BW, with identical decoded bounded-precision values.
+See benchmark_results/20261105-competitor-audit/REPORT.txt. Its different storage
+format requires matching native query handling before it can replace this entry.

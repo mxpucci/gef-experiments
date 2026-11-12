@@ -1,0 +1,912 @@
+{
+  "17CompressorGorillaIdE": [
+    {
+      "sample": "AP-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "AP-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BM-head",
+      "mismatches": 382
+    },
+    {
+      "sample": "BM-tail",
+      "mismatches": 382
+    },
+    {
+      "sample": "BP-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BP-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BT-head",
+      "mismatches": 20445
+    },
+    {
+      "sample": "BT-tail",
+      "mismatches": 20445
+    },
+    {
+      "sample": "BW-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BW-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "CT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "CT-tail",
+      "mismatches": 21283
+    },
+    {
+      "sample": "DP-head",
+      "mismatches": 1637
+    },
+    {
+      "sample": "DP-tail",
+      "mismatches": 5107
+    },
+    {
+      "sample": "DU-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "DU-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "ECG-head",
+      "mismatches": 98656
+    },
+    {
+      "sample": "ECG-tail",
+      "mismatches": 97535
+    },
+    {
+      "sample": "GE-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "GE-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "IT-head",
+      "mismatches": 10685
+    },
+    {
+      "sample": "IT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "LAT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "LAT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "LON-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "LON-tail",
+      "mismatches": 3659
+    },
+    {
+      "sample": "UK-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "UK-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "US-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "US-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "WD-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "WD-tail",
+      "mismatches": 0
+    }
+  ],
+  "15CompressorChimpIdE": [
+    {
+      "sample": "AP-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "AP-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BM-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BM-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BP-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BP-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BW-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BW-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "CT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "CT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "DP-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "DP-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "DU-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "DU-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "ECG-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "ECG-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "GE-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "GE-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "IT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "IT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "LAT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "LAT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "LON-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "LON-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "UK-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "UK-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "US-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "US-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "WD-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "WD-tail",
+      "mismatches": 0
+    }
+  ],
+  "18CompressorChimp128IdE": [
+    {
+      "sample": "AP-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "AP-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BM-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BM-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BP-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BP-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BW-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BW-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "CT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "CT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "DP-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "DP-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "DU-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "DU-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "ECG-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "ECG-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "GE-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "GE-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "IT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "IT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "LAT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "LAT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "LON-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "LON-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "UK-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "UK-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "US-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "US-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "WD-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "WD-tail",
+      "mismatches": 0
+    }
+  ],
+  "15CompressorTSXorIdE": [
+    {
+      "sample": "AP-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "AP-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BM-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BM-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BP-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BP-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BW-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BW-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "CT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "CT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "DP-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "DP-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "DU-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "DU-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "ECG-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "ECG-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "GE-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "GE-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "IT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "IT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "LAT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "LAT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "LON-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "LON-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "UK-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "UK-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "US-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "US-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "WD-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "WD-tail",
+      "mismatches": 0
+    }
+  ],
+  "13CompressorElfIdE": [
+    {
+      "sample": "AP-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "AP-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BM-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BM-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BP-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BP-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BW-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BW-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "CT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "CT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "DP-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "DP-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "DU-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "DU-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "ECG-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "ECG-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "GE-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "GE-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "IT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "IT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "LAT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "LAT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "LON-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "LON-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "UK-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "UK-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "US-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "US-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "WD-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "WD-tail",
+      "mismatches": 0
+    }
+  ],
+  "15CompressorCamelIdE": [
+    {
+      "sample": "AP-head",
+      "mismatches": 567
+    },
+    {
+      "sample": "AP-tail",
+      "mismatches": 242
+    },
+    {
+      "sample": "BM-head",
+      "mismatches": 428
+    },
+    {
+      "sample": "BM-tail",
+      "mismatches": 428
+    },
+    {
+      "sample": "BP-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BP-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BT-head",
+      "mismatches": 3895
+    },
+    {
+      "sample": "BT-tail",
+      "mismatches": 3895
+    },
+    {
+      "sample": "BW-head",
+      "mismatches": 3192
+    },
+    {
+      "sample": "BW-tail",
+      "mismatches": 3192
+    },
+    {
+      "sample": "CT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "CT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "DP-head",
+      "mismatches": 2960
+    },
+    {
+      "sample": "DP-tail",
+      "mismatches": 5837
+    },
+    {
+      "sample": "DU-head",
+      "mismatches": 398
+    },
+    {
+      "sample": "DU-tail",
+      "mismatches": 170
+    },
+    {
+      "sample": "ECG-head",
+      "mismatches": 18
+    },
+    {
+      "sample": "ECG-tail",
+      "mismatches": 614
+    },
+    {
+      "sample": "GE-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "GE-tail",
+      "mismatches": 3105
+    },
+    {
+      "sample": "IT-head",
+      "mismatches": 10174
+    },
+    {
+      "sample": "IT-tail",
+      "mismatches": 109
+    },
+    {
+      "sample": "LAT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "LAT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "LON-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "LON-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "UK-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "UK-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "US-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "US-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "WD-head",
+      "mismatches": 23
+    },
+    {
+      "sample": "WD-tail",
+      "mismatches": 28
+    }
+  ],
+  "16CompressorFalconIdE": [
+    {
+      "sample": "AP-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "AP-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BM-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BM-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BP-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BP-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "BW-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "BW-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "CT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "CT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "DP-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "DP-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "DU-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "DU-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "ECG-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "ECG-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "GE-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "GE-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "IT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "IT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "LAT-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "LAT-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "LON-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "LON-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "UK-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "UK-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "US-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "US-tail",
+      "mismatches": 0
+    },
+    {
+      "sample": "WD-head",
+      "mismatches": 0
+    },
+    {
+      "sample": "WD-tail",
+      "mismatches": 0
+    }
+  ]
+}

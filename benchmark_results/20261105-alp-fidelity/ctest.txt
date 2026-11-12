@@ -1,0 +1,7 @@
+Test project /Users/michelangelopucci/Downloads/gef-experiments/build
+    Start 1: alp_adapter
+1/1 Test #1: alp_adapter ......................   Passed    0.04 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Total Test time (real) =   0.04 sec

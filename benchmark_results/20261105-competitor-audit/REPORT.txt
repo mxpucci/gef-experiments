@@ -1,0 +1,114 @@
+Competitor fidelity audit, 2026-11-05
+
+Scope and method
+32 head/tail samples from 16 real datasets, up to 205,825 values per sample.
+Total 5,507,968 value observations. BP/BM/BT/BW each fit within the limit and
+are tested in full twice; other samples can overlap. Samples are not a substitute
+for full-dataset acceptance. Precompute binary64 inputs with strict division;
+feed identical bits to GCC 13.4 -O3 -march=native builds with strict FP flags
+versus -ffast-math. Sequential CPU 18 tests, separate from CPU 8 ALP timing.
+Original per-codec APIs and 1,000-value external blocks match the suite for the
+stream codecs; DAC and BUFF receive the full sample in their native layouts.
+All test code/evidence is in this directory. No affected production codec other
+than ALP was silently rewritten or replaced.
+
+Priority findings
+
+DAC: no observed inflation bug. All 32 sample sizes are identical between
+strict and fast builds. Every integer decodes exactly, the serialized byte
+stream matches sdsl::size_in_bytes, and reopening reproduces all values.
+This is the original vendored sdsl::dac_vector_dp, default 64-level limit,
+whole-column storage, no forced 1k wrapper. Its DP cost model does use floating
+arithmetic but did not choose differently in this test. The suite shifts
+negative columns to nonnegative values; positive columns retain their absolute
+magnitude plus one. DAC encodes those magnitudes with levels/continuation bits
+and rank support; it does not use GEF's temporal gaps or local partition models.
+Its higher size alone is not evidence of unfair accounting. Original scale/
+shift restoration metadata are not counted by this legacy wrapper, which would
+slightly UNDERstate complete framing, not inflate it. Each sample uses its own
+minimum; exact full-dataset ratios still come from the original full run.
+
+BUFF: no C++ fast-math inflation. Actual encoded bytes (not merely lengths)
+match in every strict/fast comparison because the encoding executes in Rust.
+All sample outputs meet the declared precision bound. Counted size is the exact
+returned vector including 16-byte FFI header. The native fixed-width format's
+per-value width is set by the global range and configured decimal precision;
+this can be large even for smooth, locally compressible values.
+
+Important variant gap: the current entry calls byte_fixed_encode, exactly the
+authors' plain scalar 'buff' profiler route. The paper also describes outlier
+handling (section 3.3). The authors provide a SEPARATE 'buff-major' route using
+buff_encode_majority. An isolated extraction of their original majority encode
+AND decode bodies, original bit-vector library, original Snappy bitmap helper,
+and original SAMPLE=2000 / MAJOR_R=0.6 constants shows smaller output on 7/32
+samples. All decoded outputs match the plain variant bitwise. Reductions:
+BW full dataset 19.38%; DU head 37.52%, tail 44.96%; LAT head 7.87%;
+LON head 4.39%, tail 18.40%. The other 25 samples add just one format byte.
+These comparisons are native payloads with the same original precision.
+This is a material missing optimization/variant, not fabricated plain-codec
+sizes. The plot now names BUFF (plain). Majority should be evaluated next, but
+its different format cannot be fed to the current plain selective decoder;
+size and native-access behavior must be integrated and validated together.
+No majority performance results are claimed here.
+Paper: https://www.vldb.org/pvldb/vol14/p2586-liu.pdf
+Pinned source: lib/buff/database/src/compress/main.rs, buff_simd.rs,
+split_double.rs and query/bit_vec_iter.rs.
+
+Gorilla: LOSSLESSNESS FAILURE in both strict/fast builds.
+280,216 differing values on 11/32 samples. The compressor mutates the XOR
+when leadingZeros==trailingZeros, clearing its last bit. For leading/trailing
+counts both zero this destroys information. It also avoids correctly encoding
+a 64-bit significant width as six-bit zero. An isolated diagnostic removes the
+mutation and masks the width to six bits; all 32 sample round trips then pass.
+This diagnostic is NOT deployed to the production adapter or chart values.
+Maximum observed absolute error is 1.81899e-12, below the existing 1e-9 check.
+Even small changes violate binary64 losslessness. The large reported ratio
+cannot be treated as a valid result for a correct Gorilla implementation.
+
+Camel: LOSSLESSNESS FAILURE in both strict/fast builds.
+39,275 differing values on 19/32 samples. The current decimal port reconstructs
+integer and fractional parts with floating arithmetic and uses epsilon-based
+precision decisions. Maximum observed error is 1.42109e-14; all differences
+are below 1e-9. The current tolerance validation masks the issue. This requires
+comparison with the original implementation/decimal reconstruction, not merely
+changing compiler flags. Sample compression sizes are unchanged by fast-math.
+
+Falcon: COMPILER-DEPENDENT LOSSLESSNESS FAILURE.
+Strict build: every sample value is bitwise correct. Fast build: 5,498,049
+mismatches on all 32 samples (max error 4.36557e-11; all below 1e-9).
+Its reconstruction uses pow(10, decimal_places) and floating division, which
+are unsafe to optimize algebraically for a bitwise-lossless contract. Payload
+size is unchanged in the size audit, so a ratio-only check would miss this.
+It needs strict FP compilation of the codec and bitwise validation, followed
+by fresh timings. The current suite compiles it in the fast-math main TU.
+
+Chimp, Chimp128, TSXor, Elf: no changed sample sizes and zero bitwise mismatches
+under either set of compiler flags. Most of their higher sizes are consistent
+with their representation/bit-pattern compression and external stream blocks.
+The common legacy wrappers omit a persistent block directory and some padding
+from size accounting; this tends to UNDERstate sizes, not explain high sizes.
+This test is not a proof for arbitrary inputs or every full dataset.
+
+Other entries: source/build review
+DeXOR, Elf*, SElf*, FLEA already use strict FP translation units. Pcodec and
+Fauna/Macaque core implementations are Rust. Fauna/Macaque float32 conversion
+is a separate declared change of representation, not lossless binary64.
+The integer lossless general-purpose codecs do not receive float conversion.
+No additional empirical certification is implied for these entries by this
+audit. Pcodec/Fauna access qualifications remain as previously documented.
+
+Plot handling
+All 16 corrected ALP full cases passed. The requested prepool plot retains its
+original 14 common datasets and replaces every ALP metric from the fresh run.
+ALP's arithmetic mean compressed/original percentage changes 32.344541 ->
+26.979270. Gorilla/Camel/Falcon remain visible but hollow and excluded from the
+lossless frontier. BUFF is explicitly plain and precision-bounded. Original
+plot/report/CSVs are backed up before replacement. No invalid rows were quietly
+promoted to successful lossless measurements.
+
+Next priorities
+1. Integrate/validate the authors' majority BUFF variant including native reads.
+2. Correct Gorilla's demonstrated format defect and Camel's bitwise reconstruction.
+3. Compile Falcon strictly; strengthen all legacy validation to bitwise checks.
+4. Rerun affected codecs after corrections. DAC does not currently justify a
+   codec rewrite or arbitrary tuning change merely to reduce its reported size.

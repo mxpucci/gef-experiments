@@ -1,0 +1,178 @@
+[
+  {
+    "dataset": "BP",
+    "status": "completed",
+    "started": "2026-11-05T12:37:41.217279",
+    "returncode": 0,
+    "finished": "2026-11-05T12:37:41.217782",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "BM",
+    "status": "completed",
+    "started": "2026-11-05T12:37:41.218170",
+    "returncode": 0,
+    "finished": "2026-11-05T12:37:41.218543",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "bitwise_failed"
+    }
+  },
+  {
+    "dataset": "BW",
+    "status": "completed",
+    "started": "2026-11-05T12:37:41.218933",
+    "returncode": 0,
+    "finished": "2026-11-05T12:37:59.274291",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "bitwise_failed"
+    }
+  },
+  {
+    "dataset": "BT",
+    "status": "completed",
+    "started": "2026-11-05T12:37:59.275083",
+    "returncode": 0,
+    "finished": "2026-11-05T12:38:17.007117",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "bitwise_failed"
+    }
+  },
+  {
+    "dataset": "DU",
+    "status": "completed",
+    "started": "2026-11-05T12:38:17.008013",
+    "returncode": 0,
+    "finished": "2026-11-05T12:38:28.280014",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "CT",
+    "status": "completed",
+    "started": "2026-11-05T12:38:28.281086",
+    "returncode": 0,
+    "finished": "2026-11-05T12:38:46.450293",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "DP",
+    "status": "completed",
+    "started": "2026-11-05T12:38:46.451264",
+    "returncode": 0,
+    "finished": "2026-11-05T12:39:17.678781",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "LAT",
+    "status": "completed",
+    "started": "2026-11-05T12:39:17.679857",
+    "returncode": 0,
+    "finished": "2026-11-05T12:40:05.297355",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "bitwise_failed"
+    }
+  },
+  {
+    "dataset": "LON",
+    "status": "completed",
+    "started": "2026-11-05T12:40:05.298532",
+    "returncode": 0,
+    "finished": "2026-11-05T12:40:52.510422",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "GE",
+    "status": "completed",
+    "started": "2026-11-05T12:40:52.511602",
+    "returncode": 0,
+    "finished": "2026-11-05T12:41:52.058887",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "UK",
+    "status": "completed",
+    "started": "2026-11-05T12:41:52.060088",
+    "returncode": 0,
+    "finished": "2026-11-05T12:42:42.889738",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "AP",
+    "status": "completed",
+    "started": "2026-11-05T12:42:42.890955",
+    "returncode": 0,
+    "finished": "2026-11-05T12:43:42.338473",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "bitwise_failed"
+    }
+  },
+  {
+    "dataset": "WD",
+    "status": "completed",
+    "started": "2026-11-05T12:43:42.339746",
+    "returncode": 0,
+    "finished": "2026-11-05T12:45:19.838988",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "ECG",
+    "status": "completed",
+    "started": "2026-11-05T12:45:19.840326",
+    "returncode": 0,
+    "finished": "2026-11-05T12:46:54.993963",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "US",
+    "status": "completed",
+    "started": "2026-11-05T12:46:54.995352",
+    "returncode": 0,
+    "finished": "2026-11-05T12:48:42.598627",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  },
+  {
+    "dataset": "IT",
+    "status": "completed",
+    "started": "2026-11-05T12:48:42.600147",
+    "returncode": 0,
+    "finished": "2026-11-05T12:51:46.187568",
+    "validation": {
+      "Gorilla": "bitwise_passed",
+      "Camel": "passed"
+    }
+  }
+]

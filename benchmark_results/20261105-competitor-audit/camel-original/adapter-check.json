@@ -1,0 +1,194 @@
+[
+  {
+    "sample": "AP-head",
+    "n": 205825,
+    "compressed_bits": 4257512,
+    "mismatches": 186142
+  },
+  {
+    "sample": "AP-tail",
+    "n": 205825,
+    "compressed_bits": 4324040,
+    "mismatches": 191336
+  },
+  {
+    "sample": "BM-head",
+    "n": 17964,
+    "compressed_bits": 360872,
+    "mismatches": 12038
+  },
+  {
+    "sample": "BM-tail",
+    "n": 17964,
+    "compressed_bits": 360872,
+    "mismatches": 12038
+  },
+  {
+    "sample": "BP-head",
+    "n": 6782,
+    "compressed_bits": 244408,
+    "mismatches": 0
+  },
+  {
+    "sample": "BP-tail",
+    "n": 6782,
+    "compressed_bits": 244408,
+    "mismatches": 0
+  },
+  {
+    "sample": "BT-head",
+    "n": 129669,
+    "compressed_bits": 2756448,
+    "mismatches": 129669
+  },
+  {
+    "sample": "BT-tail",
+    "n": 129669,
+    "compressed_bits": 2756448,
+    "mismatches": 129669
+  },
+  {
+    "sample": "BW-head",
+    "n": 129669,
+    "compressed_bits": 2948120,
+    "mismatches": 120728
+  },
+  {
+    "sample": "BW-tail",
+    "n": 129669,
+    "compressed_bits": 2948120,
+    "mismatches": 120728
+  },
+  {
+    "sample": "CT-head",
+    "n": 205825,
+    "compressed_bits": 2526616,
+    "mismatches": 0
+  },
+  {
+    "sample": "CT-tail",
+    "n": 205825,
+    "compressed_bits": 3211648,
+    "mismatches": 0
+  },
+  {
+    "sample": "DP-head",
+    "n": 205825,
+    "compressed_bits": 3420024,
+    "mismatches": 0
+  },
+  {
+    "sample": "DP-tail",
+    "n": 205825,
+    "compressed_bits": 3408840,
+    "mismatches": 0
+  },
+  {
+    "sample": "DU-head",
+    "n": 205825,
+    "compressed_bits": 2397160,
+    "mismatches": 0
+  },
+  {
+    "sample": "DU-tail",
+    "n": 205825,
+    "compressed_bits": 2451512,
+    "mismatches": 0
+  },
+  {
+    "sample": "ECG-head",
+    "n": 205825,
+    "compressed_bits": 2845488,
+    "mismatches": 0
+  },
+  {
+    "sample": "ECG-tail",
+    "n": 205825,
+    "compressed_bits": 3112304,
+    "mismatches": 0
+  },
+  {
+    "sample": "GE-head",
+    "n": 205825,
+    "compressed_bits": 2635704,
+    "mismatches": 0
+  },
+  {
+    "sample": "GE-tail",
+    "n": 205825,
+    "compressed_bits": 2928824,
+    "mismatches": 0
+  },
+  {
+    "sample": "IT-head",
+    "n": 205825,
+    "compressed_bits": 2585792,
+    "mismatches": 0
+  },
+  {
+    "sample": "IT-tail",
+    "n": 205825,
+    "compressed_bits": 2595824,
+    "mismatches": 0
+  },
+  {
+    "sample": "LAT-head",
+    "n": 205825,
+    "compressed_bits": 3398192,
+    "mismatches": 0
+  },
+  {
+    "sample": "LAT-tail",
+    "n": 205825,
+    "compressed_bits": 3377448,
+    "mismatches": 0
+  },
+  {
+    "sample": "LON-head",
+    "n": 205825,
+    "compressed_bits": 4150296,
+    "mismatches": 0
+  },
+  {
+    "sample": "LON-tail",
+    "n": 205825,
+    "compressed_bits": 4129328,
+    "mismatches": 0
+  },
+  {
+    "sample": "UK-head",
+    "n": 205825,
+    "compressed_bits": 1973824,
+    "mismatches": 0
+  },
+  {
+    "sample": "UK-tail",
+    "n": 205825,
+    "compressed_bits": 2393064,
+    "mismatches": 0
+  },
+  {
+    "sample": "US-head",
+    "n": 205825,
+    "compressed_bits": 2561872,
+    "mismatches": 0
+  },
+  {
+    "sample": "US-tail",
+    "n": 205825,
+    "compressed_bits": 2559040,
+    "mismatches": 0
+  },
+  {
+    "sample": "WD-head",
+    "n": 205825,
+    "compressed_bits": 5727528,
+    "mismatches": 0
+  },
+  {
+    "sample": "WD-tail",
+    "n": 205825,
+    "compressed_bits": 5293296,
+    "mismatches": 0
+  }
+]
