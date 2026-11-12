@@ -461,12 +461,16 @@ foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFu
     endif()
 endforeach()
 
-# Falcon decimal reconstruction must not become reciprocal multiplication.
-set_source_files_properties(benchmark/falcon_benchmark.cpp PROPERTIES
+# GEF keeps the `gef` target's flags (including -ffast-math) in its own
+# translation unit. Competitor codecs compiled in lossless_benchmark.cpp
+# (Elf, Chimp, Chimp128, TSXor, Gorilla, NeaTS, DAC, BUFF/Squash adapters) use
+# strict IEEE arithmetic: e.g. Elf's decimal reconstruction must not become
+# reciprocal multiplication or be contracted into FMAs.
+set_source_files_properties(benchmark/lossless_benchmark.cpp PROPERTIES
     COMPILE_OPTIONS "-fno-fast-math;-ffp-contract=off;-fno-lto")
 foreach(bench_target LosslessBenchmark LosslessBenchmarkFull LosslessBenchmarkFullNoSIMD)
     if(TARGET ${bench_target})
-        target_sources(${bench_target} PRIVATE benchmark/falcon_benchmark.cpp)
+        target_sources(${bench_target} PRIVATE benchmark/gef_benchmark.cpp)
     endif()
 endforeach()
 
@@ -484,6 +488,13 @@ if(BUILD_TESTING)
     target_compile_features(gorilla_adapter_test PRIVATE cxx_std_20)
     target_compile_options(gorilla_adapter_test PRIVATE -UNDEBUG)
     add_test(NAME gorilla_adapter COMMAND gorilla_adapter_test)
+    add_executable(roundtrip_policy_test tests/roundtrip_policy.cpp)
+    target_compile_options(roundtrip_policy_test PRIVATE -UNDEBUG -fno-fast-math -ffp-contract=off)
+    add_test(NAME roundtrip_policy COMMAND roundtrip_policy_test)
+    add_executable(streaming_codecs_test tests/streaming_codecs.cpp)
+    target_compile_features(streaming_codecs_test PRIVATE cxx_std_20)
+    target_compile_options(streaming_codecs_test PRIVATE -fno-fast-math -ffp-contract=off)
+    add_test(NAME streaming_codecs COMMAND streaming_codecs_test)
     add_executable(alp_adapter_test tests/alp_adapter.cpp)
     target_link_libraries(alp_adapter_test PRIVATE neats_alp)
     target_compile_options(alp_adapter_test PRIVATE -fno-fast-math -ffp-contract=off -fno-lto -fwrapv)

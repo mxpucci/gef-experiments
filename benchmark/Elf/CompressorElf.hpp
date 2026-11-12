@@ -300,7 +300,7 @@ public:
     
     size_t getSize() const { return size; }
     BitStream& getOutputStream() { return out; }
-    BitStream getBuffer() { return out; }
+    const BitStream& getBuffer() const { return out; }
 };
 
 // Main Elf Compressor - ported from AbstractElfCompressor + ElfCompressor
@@ -378,5 +378,5 @@ public:
     }
     
     size_t getSize() const { return size; }
-    BitStream getBuffer() { return xorCompressor.getBuffer(); }
+    const BitStream& getBuffer() const { return xorCompressor.getBuffer(); }
 };
