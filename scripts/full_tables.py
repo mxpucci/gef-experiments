@@ -17,6 +17,8 @@ GENERAL_PURPOSE_KEYS = {"xz", "brotli", "zstd", "lz4", "snappy"}
 
 # 2. GEF Variants Order
 GEF_ORDER = [
+    "rle_gef_f64",
+    "b_star_gef_approximate_f64",
     "rle_gef",
     "u_gef_approximate",
     "u_gef_optimal",
@@ -31,7 +33,10 @@ NAME_MAPPING_FULL = {
     "fauna": "Fauna", "macaque": "MacaqueV", "dexor": "DeXOR",
     "pcodec": "Pcodec", "pcodec_i64": "Pcodec (int64)",
     "elfstar": "Elf*", "selfstar": "SElf*", "flea": "FLEA",
-    # GEF Variants
+    "fastpfor_delta": "FastPFor", "fastpfor": "FastPFor (FOR)", "pef": "Partitioned EF",
+    # GEF Variants (the *_f64 entries are fed doubles; B*-GEF uses the approximate split point)
+    "rle_gef_f64": r"\RLEGEF",
+    "b_star_gef_approximate_f64": r"\BSTARGEF",
     "rle_gef": r"\RLEGEF",
     "u_gef_approximate": r"$\hat{\UGEF}$",
     "u_gef_optimal": r"$\UGEF^*$",

@@ -24,4 +24,7 @@ diagnostic checks, not final performance measurements.
 Aggregate results, configurations, runners, audits and validation evidence are
 versioned here. Raw per-case logs, dependency file inventories, local watcher
 scripts, build caches and source/sample archives remain local or on the server
-and are excluded from Git. Original paper plots and results.csv are unchanged.
+and are excluded from Git.
+
+results.csv was replaced on 2026-11-12 by the paper's final results (see the
+README, "Generating Plots and Tables").

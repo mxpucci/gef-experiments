@@ -3,7 +3,8 @@
 # Configuration
 VENV_DIR=".venv"
 REQUIREMENTS_FILE="requirements.txt"
-PLOT_SCRIPT="scripts/pareto_plots.py"
+PARETO_SCRIPT="scripts/paper_pareto.py"
+RANGE_SCRIPT="scripts/paper_range_queries.py"
 # Default input/output if not provided as arguments
 DEFAULT_CSV="benchmark_results/results.csv"
 DEFAULT_OUT_DIR="plots"
@@ -46,9 +47,10 @@ if [ ! -f "$CSV_FILE" ]; then
     echo "Default CSV not found, using found CSV: $CSV_FILE"
 fi
 
-# Run the plotting script
+# Pareto plots (ratio vs. throughputs) and the range-query figure
 echo "Generating plots from $CSV_FILE to $OUT_DIR..."
-python3 "$PLOT_SCRIPT" "$CSV_FILE" "$OUT_DIR"
+python3 "$PARETO_SCRIPT" "$CSV_FILE" "$OUT_DIR"
+python3 "$RANGE_SCRIPT" "$CSV_FILE" "$OUT_DIR"
 
 echo "Done."
 

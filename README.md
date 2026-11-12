@@ -241,25 +241,38 @@ The benchmark automatically detects the format based on the file size.
 
 ## 📊 Generating Plots and Tables
 
-After running the benchmarks, you can generate visualizations and LaTeX tables using the provided scripts.
+`benchmark_results/results.csv` holds the paper's results: 27 compressors on the 16
+datasets, in the benchmark's CSV format. GEF appears as `rle_gef_f64` and
+`b_star_gef_approximate_f64` (fed doubles, approximate split point for B\*-GEF).
+The scripts below regenerate the paper's figures and table from it. Throughputs in
+the CSV are MiB/s; the figures and tables report decimal MB/s.
 
 ### Plots
-Generates Pareto charts and throughput comparisons.
 
 ```bash
 ./generate_plots.sh [benchmark_results.csv] [output_dir]
 ```
 *   Default input: `benchmark_results/results.csv`
 *   Default output: `plots/`
+*   `scripts/paper_pareto.py`: compression ratio vs. compression, decompression and
+    random-access throughput (arithmetic means over the datasets) and `legend_box.pdf`.
+    The dashed line is plain bit packing, from `benchmark_results/bitpack.csv`.
+*   `scripts/paper_range_queries.py`: `range_queries.pdf`, throughput vs. range size,
+    averaged over the datasets with every range size measured; `--codecs` picks the series.
 
 ### Tables
-Generates LaTeX tables for compression ratios and speeds.
 
 ```bash
 ./generate_tables.sh [benchmark_results.csv] [output_dir]
 ```
 *   Default input: `benchmark_results/results.csv`
 *   Default output: `tables/`
+*   `scripts/paper_table.py` writes `table_paper.tex`: per-dataset compression ratio,
+    compression and random-access throughput; bold is the best within each group (with and
+    without native random access), underlined the best overall. Run it directly to choose
+    compressors and metrics, e.g.
+    `python3 scripts/paper_table.py benchmark_results/results.csv "Pcodec,Lz4 | DAC,\\RLEGEF" --metrics ratio,decomp`.
+*   `scripts/full_tables.py` writes one table per metric for every compressor.
 
 ## 📂 Project Structure
 

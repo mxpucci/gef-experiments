@@ -4,6 +4,7 @@
 VENV_DIR=".venv"
 REQUIREMENTS_FILE="requirements.txt"
 TABLE_SCRIPT="scripts/full_tables.py"
+PAPER_TABLE_SCRIPT="scripts/paper_table.py"
 # Default input/output if not provided as arguments
 DEFAULT_CSV="benchmark_results/results.csv"
 DEFAULT_OUT_DIR="tables"
@@ -71,5 +72,8 @@ fi
 # Run the table script
 echo "Generating tables from $CSV_FILE to $OUT_DIR..."
 python3 "$TABLE_SCRIPT" "$CSV_FILE" "$OUT_DIR" "${EXTRA_ARGS[@]}"
+# The paper's combined table (ratio, compression and random-access throughput)
+mkdir -p "$OUT_DIR"
+python3 "$PAPER_TABLE_SCRIPT" "$CSV_FILE" -o "$OUT_DIR/table_paper.tex"
 
 echo "Done."
