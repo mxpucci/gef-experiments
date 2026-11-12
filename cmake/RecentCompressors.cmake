@@ -1,0 +1,32 @@
+include_guard(GLOBAL)
+include("${CMAKE_CURRENT_LIST_DIR}/BenchmarkInput.cmake")
+add_library(gef_recent_compressors STATIC
+    "${CMAKE_CURRENT_LIST_DIR}/../benchmark/recent_compressors.cpp")
+target_compile_features(gef_recent_compressors PUBLIC cxx_std_17)
+target_compile_options(gef_recent_compressors PRIVATE -fno-fast-math -ffp-contract=off)
+target_include_directories(gef_recent_compressors PUBLIC "${CMAKE_CURRENT_LIST_DIR}/../benchmark")
+target_link_libraries(gef_recent_compressors PUBLIC gef_benchmark_input)
+
+option(GEF_WITH_PCODEC "Build official Rust Pcodec adapter" ON)
+if(GEF_WITH_PCODEC)
+    include("${CMAKE_CURRENT_LIST_DIR}/Pcodec.cmake")
+    target_link_libraries(gef_recent_compressors PUBLIC gef_pcodec)
+    target_compile_definitions(gef_recent_compressors PRIVATE GEF_WITH_PCODEC=1)
+endif()
+
+option(GEF_WITH_FAUNA "Build official Rust Fauna/Macaque adapters (float32)" ON)
+if(GEF_WITH_FAUNA)
+    include("${CMAKE_CURRENT_LIST_DIR}/Fauna.cmake")
+    target_link_libraries(gef_recent_compressors PUBLIC gef_fauna)
+    target_compile_definitions(gef_recent_compressors PRIVATE GEF_WITH_FAUNA=1)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/ElfStar.cmake")
+target_link_libraries(gef_recent_compressors PRIVATE gef_elfstar)
+
+option(GEF_WITH_FLEA "Build official C++ FLEA adapter and FFTW" ON)
+if(GEF_WITH_FLEA)
+    include("${CMAKE_CURRENT_LIST_DIR}/FLEA.cmake")
+    target_link_libraries(gef_recent_compressors PUBLIC gef_flea)
+    target_compile_definitions(gef_recent_compressors PRIVATE GEF_WITH_FLEA=1)
+endif()

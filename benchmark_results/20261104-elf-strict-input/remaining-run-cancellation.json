@@ -1,0 +1,13 @@
+{
+  "previous_run": "20261104-remaining",
+  "completed_cases_preserved": 366,
+  "cancelled_case": [
+    "IT",
+    "brotli"
+  ],
+  "not_started_case": [
+    "IT",
+    "neats"
+  ],
+  "plot_completion_watcher_stopped": true
+}

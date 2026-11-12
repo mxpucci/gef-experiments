@@ -1,0 +1,17 @@
+ LeCo native partition size=800 (authors' 1% sampler)synthetic n=50123 native_partition=800 bits=526440 validation=passed
+ LeCo native partition size=400 (authors' 1% sampler)/dev/shm/testPF-gef-20261103/extracted/datasets/AP.bin n=30000 native_partition=400 bits=454184 validation=passed
+ LeCo native partition size=200 (authors' 1% sampler)/dev/shm/testPF-gef-20261103/extracted/datasets/BM.bin n=17964 native_partition=200 bits=297952 validation=passed
+ LeCo native partition size=200 (authors' 1% sampler)/dev/shm/testPF-gef-20261103/extracted/datasets/BP.bin n=6782 native_partition=200 bits=176344 validation=passed
+ LeCo native partition size=400 (authors' 1% sampler)/dev/shm/testPF-gef-20261103/extracted/datasets/BT.bin n=30000 native_partition=400 bits=1053936 validation=passed
+ LeCo native partition size=400 (authors' 1% sampler)/dev/shm/testPF-gef-20261103/extracted/datasets/BW.bin n=30000 native_partition=400 bits=914992 validation=passed
+ LeCo native partition size=200 (authors' 1% sampler)/dev/shm/testPF-gef-20261103/extracted/datasets/CT.bin n=30000 native_partition=200 bits=277088 validation=passed
+ LeCo native partition size=400 (authors' 1% sampler)/dev/shm/testPF-gef-20261103/extracted/datasets/DP.bin n=30000 native_partition=400 bits=376168 validation=passed
+ LeCo native partition size=200 (authors' 1% sampler)/dev/shm/testPF-gef-20261103/extracted/datasets/DU.bin n=30000 native_partition=200 bits=214048 validation=passed
+ LeCo native partition size=400 (authors' 1% sampler)/dev/shm/testPF-gef-20261103/extracted/datasets/ECG.bin n=30000 native_partition=400 bits=312816 validation=passed
+ LeCo native partition size=200 (authors' 1% sampler)/dev/shm/testPF-gef-20261103/extracted/datasets/GE.bin n=30000 native_partition=200 bits=330720 validation=passed
+ LeCo native partition size=200 (authors' 1% sampler)/dev/shm/testPF-gef-20261103/extracted/datasets/IT.bin n=30000 native_partition=200 bits=230624 validation=passed
+ LeCo native partition size=400 (authors' 1% sampler)/dev/shm/testPF-gef-20261103/extracted/datasets/LAT.bin n=30000 native_partition=400 bits=525152 validation=passed
+ LeCo native partition size=400 (authors' 1% sampler)/dev/shm/testPF-gef-20261103/extracted/datasets/LON.bin n=30000 native_partition=400 bits=453536 validation=passed
+ LeCo native partition size=200 (authors' 1% sampler)/dev/shm/testPF-gef-20261103/extracted/datasets/UK.bin n=30000 native_partition=200 bits=211872 validation=passed
+ LeCo native partition size=200 (authors' 1% sampler)/dev/shm/testPF-gef-20261103/extracted/datasets/US.bin n=30000 native_partition=200 bits=178464 validation=passed
+ LeCo native partition size=400 (authors' 1% sampler)/dev/shm/testPF-gef-20261103/extracted/datasets/WD.bin n=30000 native_partition=400 bits=500144 validation=passed

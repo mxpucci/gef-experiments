@@ -1,0 +1,27 @@
+Experiment record status, 2026-11-04
+
+All benchmark runs and automatic watchers were stopped at user request.
+No complete corrected 512-case comparison is available.
+
+20261103-recent, 20261103-float32-warnings, 20261103-native-access,
+and 20261104-remaining predate the strict input-conversion fix. Retained only
+as historical diagnostics, not final paper results. The remaining run was
+cancelled after 366 completed cases. Native-access measurements additionally
+have the adapter/layout qualifications documented in docs/fauna.md and pcodec.md.
+
+20261104-elf-fidelity-audit records the investigation that identified the input
+conversion bug. 20261104-elf-strict-input completed all 32 Elf*/SElf* cases
+with corrected input and successful bitwise validation.
+
+20261104-all-strict-input is a partial, stopped corrected-input run. Its
+results.txt and status.json were retrieved after stopping. BUFF/LeCo rows
+still use the earlier adapters and must be superseded. Status counts: {"OK": 216, "STOPPED": 1, "WARNING": 14}.
+
+20261104-buff-leco-native contains implementation validation only. Its queued
+32-case full benchmark was cancelled before starting. CLI timing samples are
+diagnostic checks, not final performance measurements.
+
+Aggregate results, configurations, runners, audits and validation evidence are
+versioned here. Raw per-case logs, dependency file inventories, local watcher
+scripts, build caches and source/sample archives remain local or on the server
+and are excluded from Git. Original paper plots and results.csv are unchanged.

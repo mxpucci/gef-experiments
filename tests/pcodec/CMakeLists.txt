@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.22)
+project(PcodecAdapterTests LANGUAGES CXX)
+include(../../cmake/Pcodec.cmake)
+add_executable(pcodec_roundtrip pcodec_roundtrip.cpp)
+target_compile_features(pcodec_roundtrip PRIVATE cxx_std_11)
+target_link_libraries(pcodec_roundtrip PRIVATE gef_pcodec)
+enable_testing()
+add_test(NAME pcodec_roundtrip COMMAND pcodec_roundtrip)

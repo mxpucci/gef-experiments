@@ -1,0 +1,16 @@
+Completed 2026-11-03 17:32:24 CET; audited after connectivity was restored.
+All 144 requested cases attempted across 16 complete datasets.
+112 successful measurements, 32 unsupported inputs, zero failed cases or crashes.
+Fauna and Macaque rejected all 16 datasets because exact float32 conversion was impossible.
+No lossy conversion was used to obtain results.
+The tmux run continued through the SSH outage; runner exit status was zero.
+Post-run audit verified dataset hashes, executable hash, complete case coverage, and all metrics.
+The recorded build test suite passed all 8 tests.
+Pcodec uses 1000-value standalone chunks; shared-metadata native paging was not used.
+Full Fauna segment-access limitations are documented in native-access-review.txt; no Fauna metrics were emitted.
+
+Monitoring history: SSH access was lost after the 17:02:29 CET snapshot.
+The run completed at 17:32:24 CET while disconnected. Access was restored,
+completion was audited, and all text logs/results were retrieved locally.
+The retrieved archive SHA-256 matched the remote archive:
+4b33e84384754bec458ea614030e3ebe134a3826c0e445af324d600f7ee25133

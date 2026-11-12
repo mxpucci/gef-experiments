@@ -1,0 +1,19 @@
+[package]
+name = "gef-fauna-ffi"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.87"
+publish = false
+
+[lib]
+crate-type = ["staticlib"]
+path = "@GEF_FAUNA_FFI_SOURCE@/src/lib.rs"
+
+[dependencies]
+arrow = "=53.3.0"
+# Arrow 53 predates chrono's conflicting Datelike::quarter method.
+chrono = "=0.4.39"
+modelardb_types = { path = "@GEF_FAUNA_UPSTREAM@/crates/modelardb_types" }
+
+[profile.release]
+panic = "unwind"

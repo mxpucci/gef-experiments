@@ -1,0 +1,22 @@
+Archive:  datasets_complete.zip
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+        0  12-27-2025 13:08   datasets/
+348525272  12-27-2025 13:08   datasets/GE.bin
+1806000016  12-27-2025 13:08   datasets/ECG.bin
+1101771640  12-27-2025 13:08   datasets/AP.bin
+199015840  12-27-2025 13:08   datasets/LON.bin
+2256609440  12-27-2025 13:08   datasets/US.bin
+   143728  12-27-2025 13:08   datasets/BM.bin
+199015840  12-27-2025 13:08   datasets/LAT.bin
+474442616  12-27-2025 13:08   datasets/UK.bin
+  1037368  12-27-2025 13:08   datasets/BT.bin
+  1037368  12-27-2025 13:08   datasets/BW.bin
+1591190112  12-27-2025 13:08   datasets/WD.bin
+ 22613248  12-27-2025 13:08   datasets/CT.bin
+    54272  12-27-2025 13:08   datasets/BP.bin
+  2679056  12-27-2025 13:08   datasets/DU.bin
+ 43311328  12-27-2025 13:08   datasets/DP.bin
+3816406096  12-27-2025 13:09   datasets/IT.bin
+---------                     -------
+11863853240                     17 files

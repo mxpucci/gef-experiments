@@ -1,0 +1,98 @@
+[
+  {
+    "dataset": "AP",
+    "values": 10000,
+    "identical_to_strict_reference": true,
+    "sha256": "6b2d8e3de52eb6eb3d8f4e755981abf1023106db8d9eed5fff406921721bb8d0"
+  },
+  {
+    "dataset": "BM",
+    "values": 10000,
+    "identical_to_strict_reference": true,
+    "sha256": "e0c9984a1ada41614cd0cce1d8a796b12ade29786286accd1f733ebce79245e0"
+  },
+  {
+    "dataset": "BP",
+    "values": 6782,
+    "identical_to_strict_reference": true,
+    "sha256": "e4ca85d6b9170b90b4f6a24c4cb4d17e7d1f21cac9821137691dc0da49d4103e"
+  },
+  {
+    "dataset": "BT",
+    "values": 10000,
+    "identical_to_strict_reference": true,
+    "sha256": "99954950802e76a5eb2f3725196914c9a5fb5c214012a7354042b182e8fef4e8"
+  },
+  {
+    "dataset": "BW",
+    "values": 10000,
+    "identical_to_strict_reference": true,
+    "sha256": "c96c23b7bd5368a1d651ee714fd56cdec51320a554b954ae54f0c9e1b95ffa58"
+  },
+  {
+    "dataset": "CT",
+    "values": 10000,
+    "identical_to_strict_reference": true,
+    "sha256": "a1058f12f6ac48cb5971b8819a947b70745f803e555ea50c4a06ca5af40b3e34"
+  },
+  {
+    "dataset": "DP",
+    "values": 10000,
+    "identical_to_strict_reference": true,
+    "sha256": "65d84d7ac5091375b32f412bf19df7ed6ac97374f960948e4f13b2810d2b76fc"
+  },
+  {
+    "dataset": "DU",
+    "values": 10000,
+    "identical_to_strict_reference": true,
+    "sha256": "94532605eb7974bf01f24a7cdfd415d7e374b7321d7fe5b4af81bfbe3ee0ec7a"
+  },
+  {
+    "dataset": "ECG",
+    "values": 10000,
+    "identical_to_strict_reference": true,
+    "sha256": "70ba82eda1d54c0b604bc0fc70fc1131796250f85b188307ed5f7dc7497fe91f"
+  },
+  {
+    "dataset": "GE",
+    "values": 10000,
+    "identical_to_strict_reference": true,
+    "sha256": "885bc9d3ad9fe8419896894def46a837a6801b1425d99bdc5ca748f00d889884"
+  },
+  {
+    "dataset": "IT",
+    "values": 10000,
+    "identical_to_strict_reference": true,
+    "sha256": "f412fcbb2b78c7b36bb6fff39a5cc8826ca5724688d282a05bf3b40b20b96bdf"
+  },
+  {
+    "dataset": "LAT",
+    "values": 10000,
+    "identical_to_strict_reference": true,
+    "sha256": "37c2a28363367d4b28c61022226443a894fb65a0c097b903202a2719407ba9ab"
+  },
+  {
+    "dataset": "LON",
+    "values": 10000,
+    "identical_to_strict_reference": true,
+    "sha256": "b5e98293e12095a2a7e2ec359d175f7f20b389dcc8bbc5bd1f3f53ca983799a3"
+  },
+  {
+    "dataset": "UK",
+    "values": 10000,
+    "identical_to_strict_reference": true,
+    "sha256": "810279d4589d72cbb7f6ce84a73f31315acc6f24c6c4e2e8c6a967c679c4bd80"
+  },
+  {
+    "dataset": "US",
+    "values": 10000,
+    "identical_to_strict_reference": true,
+    "sha256": "1a03c20d6e561a8c41b189ca3c185123deb7ce28b45adf859836e61d61126d0b"
+  },
+  {
+    "dataset": "WD",
+    "values": 10000,
+    "identical_to_strict_reference": true,
+    "sha256": "3ee0ede7745426e21e645fde61f708cc931f78d748c4411ec815b55e4e6375be"
+  }
+]

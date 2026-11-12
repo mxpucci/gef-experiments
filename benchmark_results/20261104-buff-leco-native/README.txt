@@ -1,0 +1,73 @@
+STATUS: STOPPED/CANCELLED at user request on 2026-11-04. No automatic restart.
+See ../RUN_STATUS.txt; scheduling descriptions below are historical.
+
+BUFF and LeCo native access / provenance correction (2026-11-04)
+
+BUFF
+Paper: https://www.vldb.org/pvldb/vol14/p2586-liu.pdf
+Source: https://github.com/Tranway1/buff
+Pinned commit d6550b25a247e34b0dd88079b05e1ce83905630f (MIT, included LICENSE).
+
+The previous buff-ffi crate adapted the codec and implemented its own point
+extractor. It was not verbatim upstream code despite its old opening comment.
+The replacement compiles original scalar byte_fixed_encode, byte_fixed_decode,
+and buff_decode_condition method bodies, with their original precision/bitpack
+helpers. tools/import_buff_upstream.py extracts them reproducibly from the
+pinned submodule; upstream-items.json records original item hashes. This is a
+small extracted codec crate, not a build of the authors' entire database app.
+Unrelated RocksDB/Parquet/Tokio infrastructure is excluded.
+
+The original scalar format supports indexed selective decoding. We now encode
+one complete dataset column and use the authors' selective method for both point
+and range queries; the generic -b 1000 does not affect BUFF. The column header
+contains a u32 count; current datasets fit that limit. Our counted FFI header
+adds 16 bytes (value count and decimal scale).
+
+Explicit adaptations:
+- Thin borrowed Segment and byte views at the C ABI; encoding reads the caller's
+  input slice directly, and decoding borrows compressed
+  storage instead of copying an entire Vec for every query.
+- Disable original diagnostic print/info macros during timing.
+- Fix two identical trailing-bit expressions in buff_decode_condition: replace
+  ((cur as u64) << remain) with (cur as u64). The bits read are already the low
+  bits. Unpatched original selective/full decoders disagree on 13/16 real-data
+  prefixes. With this correction all 156,782 points and tested ranges match the
+  original full decoder bit-for-bit, and all 16 encoded payloads match the
+  unmodified original encoder byte-for-byte.
+- Boundary validation and panic-to-error handling in FFI. Original encoder
+  assumptions are not replaced by a different compression algorithm.
+
+BUFF preserves the authors' bounded decimal precision; it is NOT bitwise
+lossless binary64 compression. Metrics explicitly report precision_bounded and
+count input/output bit mismatches. Out-of-bound or query errors produce warnings
+and qualified metrics. This qualification must remain visible in comparisons.
+
+LeCo
+Paper: https://arxiv.org/pdf/2306.15374 (Sections 3.2.1 and 4.2).
+Source: https://github.com/yhliu918/Learn-to-Compress
+Pinned commit 28bf8bf3d0dd721baa2d6c714d8b454529af41aa.
+
+The codec was already the original C++ Leco_int template. The integration now
+uses its authors-demonstrated uint64 specialization on nonnegative shifted
+integers. Fixed-length native partitions remain part of the codec: replacing
+all partitions with one global regression would not reproduce LeCo.
+
+The generic benchmark -b 1000 no longer selects LeCo partitions. We use the
+published 1% sampling helper and the authors' candidate grid from
+experiments/search_hyper_regress.cpp: 200,400,800,1600,3200,6400,10000. The original
+search_hyper.h control flow is retained, with a thin API/type adapter from its
+uint32 factory API to the original uint64 codec (and an 8-byte denominator).
+If the 1% sample is shorter than the smallest candidate, the first candidate is
+used; all candidates otherwise encode that same short sample in the helper.
+Sampling is included in measured compression time. The selected native size is
+reported in compression_unit_values, with native_fixed_partitions_tuned layout.
+Point reads call original randomdecodeArray8 directly. Counted storage includes
+encoded partitions, the offset directory/count/partition-size metadata, and any
+native correction records. Existing GCC compatibility changes are confined to
+generated headers (duplicate type traits / register), not codec algorithms.
+
+Run handling
+The ongoing full-suite run uses its immutable earlier binary and is unaffected.
+Its BUFF/LeCo rows will be superseded by a separate 32-case native rerun, queued
+after it, with final results-all.txt replacing those two codecs only. No existing
+measurements or original paper figures are overwritten.

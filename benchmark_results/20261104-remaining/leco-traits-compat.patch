@@ -1,0 +1,39 @@
+--- lib/Learn-to-Compress/headers/string/leco_uint256.h	2026-11-03 15:39:27.044166151 +0100
++++ /dev/shm/testPF-gef-extra-20261104/leco-headers/string/leco_uint256.h	2026-11-04 00:21:52.394512069 +0100
+@@ -8,21 +8,21 @@
+ const __uint128_t leco_uint128_128(128);
+ const __uint128_t leco_uint128_256(256);
+ 
+-namespace std
+-{
+-  template <>
+-  struct is_arithmetic<__uint128_t> : std::true_type
+-  {
+-  };
+-  template <>
+-  struct is_integral<__uint128_t> : std::true_type
+-  {
+-  };
+-  template <>
+-  struct is_unsigned<__uint128_t> : std::true_type
+-  {
+-  };
+-}
++// CI compatibility: namespace std
++// CI compatibility: {
++// CI compatibility:   template <>
++// CI compatibility:   struct is_arithmetic<__uint128_t> : std::true_type
++// CI compatibility:   {
++// CI compatibility:   };
++// CI compatibility:   template <>
++// CI compatibility:   struct is_integral<__uint128_t> : std::true_type
++// CI compatibility:   {
++// CI compatibility:   };
++// CI compatibility:   template <>
++// CI compatibility:   struct is_unsigned<__uint128_t> : std::true_type
++// CI compatibility:   {
++// CI compatibility:   };
++// CI compatibility: }
+ 
+ 
+ 

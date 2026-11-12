@@ -1,0 +1,67 @@
+Elf*/SElf* implementation and input-fidelity audit — 2026-11-04
+
+Finding
+Both benchmark entries are local C++ ports of the authors' Java implementations,
+not calls into the official implementation. SElf* additionally serializes custom
+cross-window checkpoints. Elf* has an extra 8-byte count header per block. Both
+use a counted external block directory. The erasure guard is a local extension.
+
+Reference
+Unmodified https://github.com/Spatio-Temporal-Lab/SElfStar
+commit 457ceb0033e98d516fef42e39d17c9d4b8abbfdb.
+Java 8 Corretto 1.8.0_432. Existing compiled official compressor classes plus
+original decoder sources, dsiutils 2.7.0 and fastutil 8.5.6.
+
+Experiment
+First 10,000 values from each of the 16 benchmark datasets; all 6,782 BP values.
+156,782 values per conversion variant. Dataset prefix bytes are in samples.zip.
+Converted each raw integer using both division by 10^decimals and multiplication
+by its rounded reciprocal; wrote exact binary64 bits and supplied identical bits
+to Java and C++. Used 1,000-value blocks, carrying original SElf refresh state.
+Compared complete native payload bytes after stripping our headers/checkpoints.
+All 628 per-block payload comparisons matched exactly. Both original Java
+compressor/decompressor pairs round-tripped every tested value bit-for-bit.
+This is sample-based fidelity evidence, not exhaustive full-dataset equivalence.
+
+Root cause of inflated sampled compression results
+benchmark_common.hpp:55-66 converts integer inputs to doubles in the main
+translation unit, whose flags include -ffast-math (CMakeLists.txt:91).
+A remote probe invoking that exact conversion method, compiled using GCC 13.4,
+-O3 -march=native -mfpmath=sse -ffast-math -funroll-loops -flto=auto -std=gnu++23,
+matched reciprocal multiplication on every sample and differed from strict
+division on every dataset. See remote-conversion-check.json and manifest.json.
+The compiler's reciprocal optimization changes many values by one ULP, which
+breaks their short decimal representation and defeats erasure. The strict flags
+on the codec translation unit do not repair already altered input values.
+
+Examples (native payload bits/value, excluding all local framing)
+Dataset   Elf* reciprocal / division   SElf* reciprocal / division
+CT        33.959 / 11.996                34.066 / 12.064
+BM        38.166 / 15.737                39.317 / 19.165
+BP        38.501 / 26.969                38.763 / 27.460
+Original Java and C++ give identical figures on these samples.
+
+For full BP, including all framing and directory bytes:
+Elf*: 38.6611618991 -> 27.1294603362 bits/value.
+SElf*: 39.1837216160 -> 27.8808611029 bits/value.
+The reciprocal-mode totals exactly reproduce the saved benchmark compressed
+sizes of 262,200 and 265,744 bits, respectively. Correct division produces
+183,992 and 189,088 bits. This confirms relevance to the recorded results.
+
+Status and necessary follow-up
+No benchmark source or existing result files were changed by this audit.
+Current results/plots for codecs consuming the converted binary64 input must be
+considered provisional. Correct the shared input conversion using strict IEEE
+arithmetic, verify exact input bits under production compiler/linker flags, and
+rerun every affected codec. Integer-input codecs are outside this conversion
+path. Merely replacing the ports with Java would preserve this input problem.
+The ports' performance remains performance of our C++ implementations, even
+where compressed payloads match the original Java implementation.
+
+Artifacts
+comparison.csv: per-input native sizes, framing costs, byte equality, mismatches.
+cpp.csv / java.csv: raw diagnostic output.
+manifest.json: sample sizes, decimal scale, conversion-change counts.
+audit.cpp / Audit.java: cross-language diagnostic harnesses.
+conversion.cpp: remote probe invoking the actual BenchmarkData method.
+Source paths in diagnostic harnesses reflect the current local/remote workspaces.

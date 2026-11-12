@@ -1,0 +1,10 @@
+{
+  "finished": "2026-11-04T10:42:57.351364+00:00",
+  "total": 32,
+  "counts": {
+    "OK": 32,
+    "WARNING": 0,
+    "UNSUPPORTED": 0,
+    "FAILED": 0
+  }
+}

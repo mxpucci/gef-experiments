@@ -1,0 +1,97 @@
+[
+  {
+    "file": "segment.rs",
+    "item": "pub fn get_data(",
+    "sha256": "f07ef00189ff4f6ac04b4650628f03c5102ca1c79417f4f508b28521b7fbe236"
+  },
+  {
+    "file": "methods/prec_double.rs",
+    "item": "pub struct PrecisionBound",
+    "sha256": "2725874a752ca04c30de8727c44e396cf45054f258f33e6b97749264bb434a84"
+  },
+  {
+    "file": "methods/prec_double.rs",
+    "item": "pub fn new(",
+    "sha256": "c02586a32275722a4e8974baf53cde40eca0f34b99992b3c74633f995ee6eaef"
+  },
+  {
+    "file": "methods/prec_double.rs",
+    "item": "pub fn set_length(",
+    "sha256": "92029f0fd2af39d7868bb2334094ee2f4754e989ab3bedf67285100ba5d0c168"
+  },
+  {
+    "file": "methods/prec_double.rs",
+    "item": "pub fn fetch_fixed_aligned(",
+    "sha256": "74a70bc36e1d6f90b8345177d880ebb03a8f257b133ac085e8073e20c38699ea"
+  },
+  {
+    "file": "methods/prec_double.rs",
+    "item": "pub fn get_precision_bound(",
+    "sha256": "690b4ad149e659e5a92e5e9b84ae165edea67492e8b1c731a1ccc83363584064"
+  },
+  {
+    "file": "methods/bit_packing.rs",
+    "item": "pub struct BitPack<B>",
+    "sha256": "e1afd7caa4fc9de960b7b3f33d85d8ee5b0cf10dcfd6f72039c8b34dd4adf83f"
+  },
+  {
+    "file": "methods/bit_packing.rs",
+    "item": "impl<B> BitPack<B>",
+    "sha256": "626b9f33768c2c84045b7d5eb50bcac9ab7a9734d208a21c84f3a51ab6d0570e"
+  },
+  {
+    "file": "methods/bit_packing.rs",
+    "item": "impl<B: AsRef<[u8]>> BitPack<B>",
+    "sha256": "54099d461e385a9f0a77d3d994a90edd413d0d0a3b81cea01121ed166e93c999"
+  },
+  {
+    "file": "methods/bit_packing.rs",
+    "item": "impl<'a> BitPack<&'a [u8]>",
+    "sha256": "d3fd7e0c20e4bad3075c98ac1cb16812bd7e685f1671d77a167b8f64f0560a5e"
+  },
+  {
+    "file": "methods/bit_packing.rs",
+    "item": "impl<'a> BitPack<&'a mut [u8]>",
+    "sha256": "f30c8dd4c65f9897516334c15cab69fefb1eff28b9f011802fc8e0982f5f89b8"
+  },
+  {
+    "file": "methods/bit_packing.rs",
+    "item": "impl Default for BitPack<Vec<u8>>",
+    "sha256": "239c854094bafb388720a174d7b63afa45c9631df7f8b3ddd610019715aa80d7"
+  },
+  {
+    "file": "methods/bit_packing.rs",
+    "item": "impl BitPack<Vec<u8>>",
+    "sha256": "3b95a1eb56e09d6c39bb724f35da3e377d7d7726383c1357e55724356086fdb6"
+  },
+  {
+    "file": "compress/buff_slice.rs",
+    "item": "pub fn flip(",
+    "sha256": "277a743bc169a912586b1f4f08f77816810f11b1038dbbc8cddd7696caedd757"
+  },
+  {
+    "file": "compress/split_double.rs",
+    "item": "pub struct SplitBDDoubleCompress",
+    "sha256": "e957744bf15c2e6b5c8b5899fd49ef3b73da83faebca434c68c5e8ecec8abc54"
+  },
+  {
+    "file": "compress/split_double.rs",
+    "item": "pub fn new(",
+    "sha256": "68248075b8add1fd89d12896d748972a5409f22729bc1af10368d42441516edf"
+  },
+  {
+    "file": "compress/split_double.rs",
+    "item": "pub fn byte_fixed_encode",
+    "sha256": "31e840d53eb543976136234846f0d17920ab789b480f5012a0cdafa7792babb2"
+  },
+  {
+    "file": "compress/split_double.rs",
+    "item": "pub fn byte_fixed_decode",
+    "sha256": "e0da10782fac940ac503a37c036d7c633ab00d72a8be85da161c81e796addda0"
+  },
+  {
+    "file": "compress/buff_simd.rs",
+    "item": "pub fn buff_decode_condition",
+    "sha256": "ee3a542808262a359a31fe647fc20c18e97b8c775529982a1ce27654fc40d9d0"
+  }
+]

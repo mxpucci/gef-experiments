@@ -1,0 +1,34 @@
+{
+  "started": "2026-11-03T18:48:08.452389+00:00",
+  "runner_pid": 135510,
+  "cpu": 2,
+  "block_size": 1000,
+  "gef_uniform_partition_size": 32000,
+  "codecs": [
+    "fauna",
+    "pcodec",
+    "pcodec_i64"
+  ],
+  "ranges": [
+    10,
+    100,
+    1000,
+    10000,
+    100000
+  ],
+  "fauna_batch_size": 65536,
+  "pcodec_chunk_size": 262144,
+  "pcodec_page_size": 262144,
+  "binary_sha256": "5f5500e609b82da4ef46bbea77099e5d224102bea84c420e9716f8df6f123d53",
+  "binary": "/home/testPF/gef-benchmark-runs/20261103-native-access/LosslessBenchmark",
+  "source_commit": "0888e798ff2a691d1281c2d4b591a216c2a78eac",
+  "total_cases": 48,
+  "point_queries": {
+    "gef": 1000000,
+    "new_codecs": 100000
+  },
+  "queries_per_range": {
+    "gef": 10000,
+    "new_codecs": 1000
+  }
+}

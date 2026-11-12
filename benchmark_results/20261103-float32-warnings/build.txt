@@ -1,0 +1,146 @@
+-- Target Architecture Flags: -march=native -mtune=native -mfpmath=sse
+-- LTO enabled
+-- TLX CMAKE_CXX_FLAGS: -Wshadow -Wold-style-cast -std=c++20 -W -Wall -Wextra -fPIC  -march=native -mtune=native -mfpmath=sse -O3 -DNDEBUG -fno-math-errno -funroll-loops -ftree-vectorize -Wcast-qual -Winit-self -Wnoexcept -Woverloaded-virtual -Wredundant-decls
+-- Found cargo: /home/testPF/.local/share/gef-toolchain/envs/build/bin/cargo — BUFF compressor enabled
+CMake Warning (dev) at /usr/local/share/cmake-3.28/Modules/FetchContent.cmake:1331 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  cmake/Fauna.cmake:3 (FetchContent_Declare)
+  cmake/RecentCompressors.cmake:17 (include)
+  CMakeLists.txt:448 (include)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /usr/local/share/cmake-3.28/Modules/FetchContent.cmake:1331 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  cmake/FLEA.cmake:4 (FetchContent_Declare)
+  cmake/RecentCompressors.cmake:27 (include)
+  CMakeLists.txt:448 (include)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /usr/local/share/cmake-3.28/Modules/FetchContent.cmake:1331 (message):
+  The DOWNLOAD_EXTRACT_TIMESTAMP option was not given and policy CMP0135 is
+  not set.  The policy's OLD behavior will be used.  When using a URL
+  download, the timestamps of extracted files should preferably be that of
+  the time of extraction, otherwise code that depends on the extracted
+  contents might not be rebuilt if the URL changes.  The OLD behavior
+  preserves the timestamps from the archive instead, but this is usually not
+  what you want.  Update your project to the NEW behavior or specify the
+  DOWNLOAD_EXTRACT_TIMESTAMP option with a value of true to avoid this
+  robustness issue.
+Call Stack (most recent call first):
+  cmake/FLEA.cmake:33 (FetchContent_Declare)
+  cmake/RecentCompressors.cmake:27 (include)
+  CMakeLists.txt:448 (include)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Deprecation Warning at build/_deps/gef_fftw-src/CMakeLists.txt:1 (cmake_minimum_required):
+  Compatibility with CMake < 3.5 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value or use a ...<max> suffix to tell
+  CMake that the project does not need compatibility with older versions.
+
+
+-- Performing Test HAVE_SSE2
+-- Performing Test HAVE_SSE2 - Success
+-- Performing Test HAVE_AVX2
+-- Performing Test HAVE_AVX2 - Success
+-- Performing Test HAVE_FMA
+-- Performing Test HAVE_FMA - Success
+-- Configuring done (3.1s)
+CMake Warning (dev) at build/_deps/gef_fftw-src/CMakeLists.txt:311 (add_library):
+  Policy CMP0069 is not set: INTERPROCEDURAL_OPTIMIZATION is enforced when
+  enabled.  Run "cmake --help-policy CMP0069" for policy details.  Use the
+  cmake_policy command to set the policy and suppress this warning.
+
+  INTERPROCEDURAL_OPTIMIZATION property will be ignored for target 'fftw3'.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Generating done (0.2s)
+-- Build files have been written to: /home/testPF/gef-experiments/build
+[  0%] Built target buff_ffi_build
+[  0%] Built target neats_alp
+[  0%] Built target gef_pcodec_build
+[  0%] Building official Fauna/Macaque Rust implementation
+[  0%] Building CXX object tests/recent/CMakeFiles/recent_warning_policy.dir/warning_policy.cpp.o
+[  5%] Built target tlx
+[  5%] Built target dexor_roundtrip
+    Finished `release` profile [optimized] target(s) in 0.07s
+[  5%] Built target gef_fauna_build
+[  5%] Built target elfstar_roundtrip
+[  6%] Built target pcodec_roundtrip
+[  6%] Built target selfstar_roundtrip
+[  6%] Built target pasta_memory_monitor
+[  6%] Built target fauna_roundtrip
+[ 99%] Built target fftw3
+[100%] Built target gef_flea
+[100%] Building CXX object CMakeFiles/gef_recent_compressors.dir/benchmark/recent_compressors.cpp.o
+[100%] Built target flea_roundtrip
+[100%] Linking CXX executable recent_warning_policy
+[100%] Built target recent_warning_policy
+[100%] Linking CXX static library libgef_recent_compressors.a
+[100%] Built target gef_recent_compressors
+[100%] Building CXX object tests/recent/CMakeFiles/recent_harness_test.dir/harness.cpp.o
+[100%] Building CXX object CMakeFiles/LosslessBenchmark.dir/benchmark/lossless_benchmark.cpp.o
+[100%] Building CXX object CMakeFiles/LosslessBenchmark.dir/benchmark/alp_benchmark.cpp.o
+In file included from /home/testPF/gef-experiments/build/alp-compat/alp.hpp:6,
+                 from /home/testPF/gef-experiments/benchmark/alp_benchmark.cpp:4:
+/home/testPF/gef-experiments/build/alp-compat/alp/decoder.hpp:10:32: warning: unknown option after '#pragma GCC diagnostic' kind [-Wpragmas]
+   10 | #pragma GCC diagnostic ignored "-Wimplicit-int-float-conversion"
+      |                                ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/testPF/gef-experiments/build/alp-compat/alp/decoder.hpp:10:32: note: did you mean '-Wdeprecated-enum-float-conversion'?
+[100%] Linking CXX executable recent_harness_test
+In file included from /home/testPF/gef-experiments/build/alp-compat/alp.hpp:7:
+/home/testPF/gef-experiments/build/alp-compat/alp/encoder.hpp:28:32: warning: unknown option after '#pragma GCC diagnostic' kind [-Wpragmas]
+   28 | #pragma GCC diagnostic ignored "-Wimplicit-int-conversion"
+      |                                ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/testPF/gef-experiments/build/alp-compat/alp/encoder.hpp:28:32: note: did you mean '-Wno-int-conversion'?
+In file included from /home/testPF/gef-experiments/build/alp-compat/alp.hpp:9:
+/home/testPF/gef-experiments/build/alp-compat/alp/rd.hpp:13:32: warning: unknown option after '#pragma GCC diagnostic' kind [-Wpragmas]
+   13 | #pragma GCC diagnostic ignored "-Wimplicit-int-conversion"
+      |                                ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/testPF/gef-experiments/build/alp-compat/alp/rd.hpp:13:32: note: did you mean '-Wno-int-conversion'?
+[100%] Built target recent_harness_test
+[100%] Linking CXX executable LosslessBenchmark
+[100%] Built target LosslessBenchmark
+Internal ctest changing into directory: /home/testPF/gef-experiments/build
+Test project /home/testPF/gef-experiments/build
+    Start 1: recent_harness
+1/9 Test #1: recent_harness ...................   Passed    0.01 sec
+    Start 2: recent_warning_policy
+2/9 Test #2: recent_warning_policy ............   Passed    0.00 sec
+    Start 3: dexor_roundtrip
+3/9 Test #3: dexor_roundtrip ..................   Passed    0.05 sec
+    Start 4: fauna_roundtrip
+4/9 Test #4: fauna_roundtrip ..................   Passed    0.01 sec
+    Start 5: elfstar_roundtrip
+5/9 Test #5: elfstar_roundtrip ................   Passed    0.05 sec
+    Start 6: selfstar_roundtrip
+6/9 Test #6: selfstar_roundtrip ...............   Passed    0.02 sec
+    Start 7: pcodec_roundtrip
+7/9 Test #7: pcodec_roundtrip .................   Passed    0.04 sec
+    Start 8: flea_roundtrip
+8/9 Test #8: flea_roundtrip ...................   Passed    0.02 sec
+    Start 9: recent_cli_smoke
+9/9 Test #9: recent_cli_smoke .................   Passed    2.31 sec
+
+100% tests passed, 0 tests failed out of 9
+
+Total Test time (real) =   2.52 sec

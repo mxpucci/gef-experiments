@@ -1,0 +1,6 @@
+PASS: 32/32 complete measurements (two codecs, all 16 full datasets).
+PASS: all dataset counts and SHA-256 hashes match the previous run.
+PASS: all aggregate rows exactly match their individual case metrics.
+PASS: four GCC 13.4/LTO tests passed; fast-math caller input regression included.
+PASS: full BP compressed sizes exactly match the independently checked strict-input Java/C++ diagnostic.
+PASS: all 32 cases passed bitwise round-trip validation.
