@@ -42,49 +42,27 @@ with tempfile.TemporaryDirectory(prefix="gef-codec-smoke-") as directory:
         if row['validation_status'] != 'passed' or int(row['roundtrip_mismatches']) != 0:
             raise RuntimeError('exact inputs did not pass validation')
         if int(row['input_changed_values']) != 0:
-            raise RuntimeError('exact float32 inputs were incorrectly reported as changed')
-        if row['compressor']=='fauna' and (row['access_layout']!='native_segments' or int(row['compression_unit_values'])!=65536):
-            raise RuntimeError('Fauna still uses external -b blocking')
-        if row['compressor'] in ['pcodec','pcodec_i64'] and (row['access_layout']!='external_blocks' or int(row['compression_unit_values'])!=16):
-            raise RuntimeError('Pcodec does not use external -b blocking')
-    # External -b must not change the native Fauna layout or stored size.
-    def native_run(block):
-        args=[binary,'-b',str(block),'-r','3,35','-c','fauna',
-              '--fauna-batch-size','53',str(exact)]
-        process=subprocess.run(args,capture_output=True,text=True)
-        if process.returncode:raise RuntimeError(process.stderr)
-        return {r['compressor']:r for r in csv.DictReader(io.StringIO(process.stdout))}
-    small,large=native_run(7),native_run(1000)
-    for name in small:
-        if small[name]['compressed_bits']!=large[name]['compressed_bits']:
-            raise RuntimeError('external block size changed native layout')
-        if small[name]['validation_status']!='passed':raise RuntimeError('native query validation failed')
+            raise RuntimeError('exact inputs were incorrectly reported as changed')
+        if row['compressor'] in ['fauna','macaque','pcodec','pcodec_i64'] and (row['access_layout']!='external_blocks' or int(row['compression_unit_values'])!=16):
+            raise RuntimeError(row['compressor'] + ' must use external -b blocks')
     # The integer route must retain all 64 bits without passing through double.
     integers = root / "integers.bin"
     dataset(integers, [-(1 << 63) + i for i in range(97)])
     run(integers, ["pcodec_i64"])
     inexact = root / "hundredths.bin"
     dataset(inexact, [i + 1 for i in range(97)], 2)
-    p = run(inexact, ["fauna", "macaque", "dexor"])
-    for row in csv.DictReader(io.StringIO(p.stdout)):
-        if row['compressor'] in ['fauna','macaque']:
-            if row['input_conversion'] != 'float32' or int(row['input_changed_values']) == 0:
-                raise RuntimeError('missing input conversion flag/count')
-            if row['validation_status'] != 'passed' or int(row['roundtrip_mismatches']) != 0:
-                raise RuntimeError('codec did not preserve its converted float32 input')
-        elif row['input_conversion'] != 'none' or int(row['input_changed_values']) != 0:
-            raise RuntimeError('float32 preprocessing affected another codec')
-    if p.stderr.count('Warning:') != 2 or 'Original float64 bits are not preserved' not in p.stderr:
-        raise RuntimeError('expected one explicit conversion warning per affected codec')
-    # Conversion can also change the original fixed-decimal values, not just
-    # their binary64 representation. Still emit flagged, validated metrics.
+    # Values that float32 cannot represent (hundredths, and 9 significant
+    # digits) must be compressed as unconverted float64 by every codec.
     precision_loss = root / 'precision_loss.bin'
     dataset(precision_loss, [197054018+i for i in range(97)], 4)
-    p = run(precision_loss, ['fauna','macaque','pcodec'])
-    for row in csv.DictReader(io.StringIO(p.stdout)):
-        if row['validation_status'] != 'passed':
-            raise RuntimeError('converted-input round trip failed')
-        if row['compressor'] in ['fauna','macaque'] and int(row['input_changed_values']) == 0:
-            raise RuntimeError('precision loss was not recorded')
+    for path, names in [(inexact, ["fauna", "macaque", "dexor"]), (precision_loss, ['fauna','macaque','pcodec'])]:
+        p = run(path, names)
+        for row in csv.DictReader(io.StringIO(p.stdout)):
+            if row['input_conversion'] != 'none' or int(row['input_changed_values']) != 0:
+                raise RuntimeError('unexpected input conversion: ' + repr(row))
+            if row['validation_status'] != 'passed' or int(row['roundtrip_mismatches']) != 0:
+                raise RuntimeError('codec did not preserve its float64 input: ' + repr(row))
+        if 'Warning:' in p.stderr:
+            raise RuntimeError('unexpected warning: ' + p.stderr)
     run(exact, ["unknown_codec"], success=False)
-print("CLI smoke: all eight entries, exact int64 route, conversion warnings, continued metrics and CSV passed")
+print("CLI smoke: all eight entries, exact int64 route, unconverted float64 input and CSV passed")
