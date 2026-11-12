@@ -1374,7 +1374,7 @@ int main(int argc, char *argv[]) {
                     result = benchmark_bitstream_compressor<CompressorElf<double>, DecompressorElf<double>, double>(
                         "Elf", bench_data, range_sizes, block_size);
                 } else if (comp == "camel") {
-                    result = benchmark_camel(bench_data, range_sizes);
+                    result = benchmark_camel(bench_data, range_sizes, block_size);
                 } else if (comp == "alp") {
                     result = benchmark_alp(bench_data, range_sizes);
 #ifdef NEATS_ENABLE_BUFF

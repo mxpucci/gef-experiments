@@ -1,0 +1,51 @@
+AP,20,port_eq=20,port_bytes=30819,port_mis=0,serf_prefix_ok=18,serf_lossless=20,serf_bytes=31492,dexor_eq=0,dexor_eq_exactjava=20,dexor_bytes=75047,dexor_mis=0,dexor_div_java_inexact=20,dexor_div_other=0
+AP block 5: serf/java nohuff first diff at bit 1/14968
+AP block 18: serf/java nohuff first diff at bit 1/8200
+BM,14,port_eq=14,port_bytes=27846,port_mis=0,serf_prefix_ok=12,serf_lossless=14,serf_bytes=30328,dexor_eq=0,dexor_eq_exactjava=14,dexor_bytes=50662,dexor_mis=0,dexor_div_java_inexact=14,dexor_div_other=0
+BM block 1: serf/java nohuff first diff at bit 1/21112
+BM block 3: serf/java nohuff first diff at bit 1/16464
+BP,7,port_eq=7,port_bytes=22919,port_mis=0,serf_prefix_ok=6,serf_lossless=7,serf_bytes=23364,dexor_eq=0,dexor_eq_exactjava=7,dexor_bytes=22722,dexor_mis=0,dexor_div_java_inexact=7,dexor_div_other=0
+BP block 3: serf/java nohuff first diff at bit 118/28680
+BT,19,port_eq=19,port_bytes=69971,port_mis=0,serf_prefix_ok=19,serf_lossless=19,serf_bytes=71880,dexor_eq=0,dexor_eq_exactjava=19,dexor_bytes=83048,dexor_mis=0,dexor_div_java_inexact=19,dexor_div_other=0
+BW,19,port_eq=19,port_bytes=72598,port_mis=0,serf_prefix_ok=16,serf_lossless=19,serf_bytes=76128,dexor_eq=0,dexor_eq_exactjava=19,dexor_bytes=86250,dexor_mis=0,dexor_div_java_inexact=19,dexor_div_other=0
+BW block 7: serf/java nohuff first diff at bit 1/32280
+BW block 8: serf/java nohuff first diff at bit 1/31968
+BW block 10: serf/java nohuff first diff at bit 1/31896
+CT,20,port_eq=20,port_bytes=30687,port_mis=0,serf_prefix_ok=17,serf_lossless=20,serf_bytes=30280,dexor_eq=0,dexor_eq_exactjava=20,dexor_bytes=44602,dexor_mis=0,dexor_div_java_inexact=20,dexor_div_other=0
+CT block 13: serf/java nohuff first diff at bit 1/10968
+CT block 14: serf/java nohuff first diff at bit 1/10840
+CT block 19: serf/java nohuff first diff at bit 86/12920
+DP,20,port_eq=20,port_bytes=30896,port_mis=0,serf_prefix_ok=15,serf_lossless=20,serf_bytes=32248,dexor_eq=0,dexor_eq_exactjava=20,dexor_bytes=60861,dexor_mis=0,dexor_div_java_inexact=20,dexor_div_other=0
+DP block 6: serf/java nohuff first diff at bit 1/13936
+DP block 9: serf/java nohuff first diff at bit 1/12224
+DP block 11: serf/java nohuff first diff at bit 1/13736
+DP block 13: serf/java nohuff first diff at bit 1/13728
+DP block 15: serf/java nohuff first diff at bit 1/13520
+DU,20,port_eq=20,port_bytes=17301,port_mis=0,serf_prefix_ok=19,serf_lossless=20,serf_bytes=17216,dexor_eq=0,dexor_eq_exactjava=20,dexor_bytes=29405,dexor_mis=0,dexor_div_java_inexact=20,dexor_div_other=0
+DU block 11: serf/java nohuff first diff at bit 1/9416
+ECG,20,port_eq=20,port_bytes=29267,port_mis=0,serf_prefix_ok=17,serf_lossless=20,serf_bytes=30492,dexor_eq=0,dexor_eq_exactjava=20,dexor_bytes=38412,dexor_mis=0,dexor_div_java_inexact=20,dexor_div_other=0
+ECG block 4: serf/java nohuff first diff at bit 1/12096
+ECG block 15: serf/java nohuff first diff at bit 1/11848
+ECG block 17: serf/java nohuff first diff at bit 1/8952
+GE,20,port_eq=20,port_bytes=25177,port_mis=0,serf_prefix_ok=19,serf_lossless=20,serf_bytes=28676,dexor_eq=0,dexor_eq_exactjava=20,dexor_bytes=62409,dexor_mis=0,dexor_div_java_inexact=20,dexor_div_other=0
+GE block 18: serf/java nohuff first diff at bit 1/7976
+IT,20,port_eq=20,port_bytes=23965,port_mis=0,serf_prefix_ok=17,serf_lossless=20,serf_bytes=24448,dexor_eq=0,dexor_eq_exactjava=20,dexor_bytes=48706,dexor_mis=0,dexor_div_java_inexact=20,dexor_div_other=0
+IT block 4: serf/java nohuff first diff at bit 1/6952
+IT block 6: serf/java nohuff first diff at bit 1/9536
+IT block 7: serf/java nohuff first diff at bit 1/10184
+LAT,20,port_eq=20,port_bytes=27378,port_mis=0,serf_prefix_ok=19,serf_lossless=20,serf_bytes=28508,dexor_eq=0,dexor_eq_exactjava=20,dexor_bytes=59750,dexor_mis=0,dexor_div_java_inexact=20,dexor_div_other=0
+LAT block 11: serf/java nohuff first diff at bit 1/15264
+LON,20,port_eq=20,port_bytes=30364,port_mis=0,serf_prefix_ok=16,serf_lossless=20,serf_bytes=31592,dexor_eq=0,dexor_eq_exactjava=20,dexor_bytes=71485,dexor_mis=0,dexor_div_java_inexact=20,dexor_div_other=0
+LON block 2: serf/java nohuff first diff at bit 1/12768
+LON block 6: serf/java nohuff first diff at bit 1/10872
+LON block 12: serf/java nohuff first diff at bit 1/12888
+LON block 19: serf/java nohuff first diff at bit 1/12440
+UK,20,port_eq=20,port_bytes=19499,port_mis=0,serf_prefix_ok=20,serf_lossless=20,serf_bytes=19016,dexor_eq=1,dexor_eq_exactjava=20,dexor_bytes=26508,dexor_mis=0,dexor_div_java_inexact=19,dexor_div_other=0
+US,20,port_eq=20,port_bytes=15499,port_mis=0,serf_prefix_ok=16,serf_lossless=20,serf_bytes=16444,dexor_eq=0,dexor_eq_exactjava=20,dexor_bytes=59203,dexor_mis=0,dexor_div_java_inexact=20,dexor_div_other=0
+US block 1: serf/java nohuff first diff at bit 1/7000
+US block 8: serf/java nohuff first diff at bit 1/6584
+US block 10: serf/java nohuff first diff at bit 1/8016
+US block 12: serf/java nohuff first diff at bit 1/7312
+WD,20,port_eq=20,port_bytes=48397,port_mis=0,serf_prefix_ok=18,serf_lossless=20,serf_bytes=50160,dexor_eq=0,dexor_eq_exactjava=20,dexor_bytes=59520,dexor_mis=0,dexor_div_java_inexact=20,dexor_div_other=0
+WD block 0: serf/java nohuff first diff at bit 1/20704
+WD block 18: serf/java nohuff first diff at bit 1/19888

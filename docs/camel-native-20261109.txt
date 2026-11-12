@@ -1,0 +1,46 @@
+Camel: native C++ port (2026-11-09; supersedes the Java-subprocess setup
+described in codec-fidelity-20261105.txt)
+
+Source search. The paper authors publish no C/C++ code: github.com/yoyo185644
+/camel (only branch master, pinned c4b55c2) is 100% Java; yoyo185644/Camel_full
+holds only the paper PDF; the author's TDengine fork carries no Camel commits.
+Apache TsFile's C++ Camel (cpp/src/encoding/camel_encoder.h) was contributed
+by TsFile developers (PR apache/tsfile#560, Hongzhi Gao; later C++ work by
+Colin Lee), not by the paper authors, and uses a different format (4-bit
+decimal count, Gorilla fallback), so it is not an official implementation.
+
+Implementation. benchmark/Camel/camel.hpp translates Camel.java and
+CamelDecompressor.java statement by statement (same double arithmetic, Java
+(int)/Math.round semantics, same OutputBitStream bit order, close() bit and
+byte padding). Compiled without fast-math (#error guard, per-file flags).
+The benchmark (benchmark/camel_benchmark.cpp) uses independent 1000-value
+blocks, keeps the final partial block, and counts the bytes actually written.
+
+Configuration: DECIMAL_MAX_COUNT = max(4, dataset decimals) (the Java run
+used 4); integer-difference width = the Java's 16 for every dataset. Per the
+policy of patching only issues that block meaningful aggregate metrics, the
+16-bit truncation is not patched: LAT's one larger within-block jump decodes
+wrongly exactly as in the Java and is logged as a round-trip warning.
+
+Deviation from upstream (kept because the Java cannot represent more than 4
+decimals, so AP/BM/BT/BW would otherwise not be lossless; reached only there):
+  * the decimal-count field widens from 2 bits to ceil(log2(max decimals));
+  * for l > 4 decimals, dxor' uses the paper's l > 2 rule (Algorithm 2 lines
+    19-22): max = ceil(log2(5^l)), 2-bit selector, widths floor((i+1)max/4).
+The Java tables for l <= 4 are kept verbatim (they differ from the paper's
+formula for l = 4). Not patched: the Java's 1e-7 decimal-count heuristic and
+its (I*10^l + dec*10^l)/10^l reconstruction (can be an ulp off for long
+decimals); none of the 16 datasets triggers either.
+
+Verification (server, full datasets): with DECIMAL_MAX_COUNT=4 and the Java
+integer width the C++ byte stream and the decoded doubles are byte-identical
+to the authors' Java (tools/camel/CamelDump.java vs tests/camel_dump) on all
+16 datasets (LAT checked at both 16 and 19 bits), including the four where
+both are lossy at 4 decimals. With the benchmark configuration 15 datasets
+round-trip bitwise and LAT has 1 logged mismatch (16-bit truncation). tests/camel_roundtrip checks
+golden Java bytes and random 1..12-decimal series.
+Reproduce: tools/camel/build_camel_java.py, then compile CamelDump.java against
+the produced classpath and compare its output with
+  camel_dump <dataset.bin> --doubles x.f64 --blocks c.blocks --decoded c.dec \
+             --decimal-max-count 4 [--integer-bits 19]
+  java -cp <dump>:<classpath> CamelDump x.f64 j.blocks j.dec
