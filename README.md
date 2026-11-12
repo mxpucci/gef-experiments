@@ -107,6 +107,52 @@ build machine. CMake and network access are needed initially. To build without
 individual fetched codecs, set `GEF_WITH_PCODEC`, `GEF_WITH_FAUNA`, or
 `GEF_WITH_FLEA` to `OFF`. Full test builds default to `BUILD_TESTING=ON`.
 
+## Integer-sequence competitors, GEF on doubles and memory
+
+| CLI name | Implementation | Access |
+| --- | --- | --- |
+| `pef` | Partitioned Elias-Fano, authors' ds2i (`lib/ds2i` @ 2cf8237), default parameters, over prefix sums of the shifted values | Native point access |
+| `fastpfor`, `fastpfor_delta` | lemire/FastPFor @ ae4e62d, 64-bit `CompositeCodec<FastPFor<4>, VariableByte>`, unmodified (FetchContent) | Independent 1,000-value blocks |
+| `fastlanes`, `fastlanes_delta` | cwida/FastLanes @ f0edc10 generated kernels (FFOR; transposed delta), `-DGEF_FASTLANES_ROOT` | 1,024-value vectors |
+| `btrblocks` | maxi-k/btrblocks @ c950c3c, default configuration, one DOUBLE column chunk per block, `-DGEF_BTRBLOCKS_ROOT` | Independent 1,000-value blocks |
+| `rle_gef_f64`, `b_star_gef_approximate_f64` | GEF floating-point forks (`gef/gef_fp.hpp`) | Native point access |
+
+Deviations from upstream and adaptations:
+
+- **PEF.** EF needs a monotone sequence, so values (shifted to be non-negative)
+  are encoded as prefix sums and a value is the difference of two consecutive
+  ones. ds2i truncates to 32 bits in two places (`auto ub = 0` in the
+  single-partition path, `typedef uint32_t posting_t` in `optimal_partition.hpp`),
+  which corrupts universes above 2^32. CMake writes patched copies of the two
+  headers into the build tree and fails if a pattern is missing; the submodule is
+  untouched. Disable with `-DGEF_WITH_PEF=OFF`.
+- **FastPFor.** The library has no single-value access, so it runs on independent
+  1,000-value blocks. `fastpfor` encodes values minus the block minimum;
+  `fastpfor_delta` encodes zigzagged consecutive differences after the block's
+  first value. TurboPFor was not integrated: its direct access is 32-bit only.
+- **FastLanes.** The public FastLanes API is a file format with no single-value
+  access; these entries call the library's generated kernels on its native
+  1,024-value vectors (FFOR with per-vector base and bit width; transposed delta
+  decoded with `unffor`, `rsum`, `untranspose_i`). Point access decodes the
+  vector holding the value. This is an adapter around kernels, not an
+  out-of-the-box API, and the paper does not report it.
+- **BtrBlocks.** INTEGER columns are 32-bit only, so values go in as a DOUBLE
+  column, one chunk per 1,000-value block.
+- **GEF on doubles.** `rle_gef_f64` and `b_star_gef_approximate_f64` take the
+  double input and return doubles from decompression, point access and range
+  queries, so every metric includes the double/integer conversions. Each decoded
+  double is checked bit for bit against the input.
+
+**Memory (`ram_bytes`).** `tools/heapcount` is an `LD_PRELOAD` counter of live
+malloc-family bytes. `ram_bytes` is the heap a codec holds after compression,
+with harness-owned buffers released outside the timed region first. Without the
+preload the column is 0 and other metrics are unaffected:
+
+```sh
+gcc -O2 -shared -fPIC -o build/libheapcount.so tools/heapcount/heapcount.c
+LD_PRELOAD=$PWD/build/libheapcount.so ./build/LosslessBenchmark -c pef,fastpfor_delta data.bin
+```
+
 ## 🚀 Running Benchmarks
 
 You can run the benchmarks using the provided helper script. It requires a directory containing binary data files (`.bin`).
