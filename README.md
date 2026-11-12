@@ -157,6 +157,25 @@ You can run the benchmarks using the provided helper script. It requires a direc
 
 The results will be saved in the `benchmark_results/` directory as text files.
 
+### Reproducible runs (recommended for reported numbers)
+
+On multi-socket machines, a single benchmark process per dataset can be off by 2x or more on large datasets. The result depends on which NUMA node the kernel places the process's memory on, which changes with how much memory is free on each node. `scripts/run_reproducible.py` (Linux, Python ≥ 3.6, standard library only) wraps the same benchmark binary and treats every compressor identically:
+
+- **One process per measurement.** Each (dataset, compressor, repetition) runs in its own process. Repetitions interleave the compressors in a rotating random order, so drift affects all of them equally.
+- **CPU and memory pinning.** Each process is pinned to one CPU, and its memory is bound to that CPU's NUMA node (`MPOL_BIND`, no `numactl` needed), so pages cannot spill to a remote node. By default it uses an idle CPU on the node with the most free memory. It refuses to run if that node lacks room for the largest dataset; tune this with `--mem-factor`.
+- **No overlapping runs.** Runs are serialized with an `flock` (`/tmp/gef-bench.lock`), so concurrent sessions cannot run at the same time.
+- **No runs on a busy node.** Before each run it waits until the pinned NUMA node is at most 15% busy (`--max-node-busy`), since other users' jobs share its L3 and memory bandwidth. The measured load is recorded for every run, and runs that started anyway after `--busy-timeout` are flagged.
+- **Provenance.** It records sha256 of the binary and every dataset, and git revisions of the repo and `lib/*` (with a hash of any uncommitted diff). It also records the compiler and flags from CMake, CPU, kernel and THP settings, and for each run its placement, the node's free memory, load average, wall time and exit status.
+- **Statistics.** It writes the median of every metric to `results.csv` (same columns as the benchmark CSV, plus `repetitions`), and min/max/CV to `summary.json`. Latency/throughput metrics whose CV exceeds 5% are flagged as unstable.
+
+```bash
+scripts/run_reproducible.py --bin build/LosslessBenchmarkFull \
+    --datasets /path/to/datasets --compressors leco,b_star_gef_optimal,rle_gef --reps 5
+# -> benchmark_results/run-<timestamp>/{results.csv,summary.json,metadata.json,runs.jsonl,raw/}
+```
+
+Options: `--cpu N` pins to a specific CPU, `--thp off` disables transparent huge pages for the benchmark process only, and `--no-membind` turns off memory binding (not recommended). For the tables, point `generate_tables.sh` at the run's `results.csv`.
+
 ## 📂 Datasets
 
 The datasets used for benchmarking are stored as a **split zip archive** to accommodate file size limits. They are managed via **Git LFS** and excluded from the default clone.
